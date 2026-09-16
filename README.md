@@ -92,13 +92,30 @@ npm run dev
 
 ---
 
-## 🌐 النشر على GitHub Pages
+## ☁️ النشر على Cloudflare Pages (الخيار الموصى به - فائق السرعة)
+
+المشروع جاهز ومُهيّأ تماماً للنشر على **Cloudflare Pages**:
+
+1. في لوحة تحكم [Cloudflare Dashboard](https://dash.cloudflare.com/)، اذهب إلى **Workers & Pages** > اضغط **Create application** > تبويب **Pages** > ثم **Connect to Git**.
+2. اختر مستودعك: `mostafaYasserDev/Stories.Prophets`.
+3. اضبط إعدادات البناء (Build settings) كالتالي:
+   - **Framework preset**: اختر `Next.js (Static HTML Export)` أو اتركها `None`.
+   - **Build command**: `npm run build`
+   - **Build output directory**: `out`
+4. في خيار **Environment variables (advanced)**، تأكد من إضافة:
+   - **Variable name**: `NODE_VERSION`
+   - **Value**: `20`
+5. اضغط **Save and Deploy**. سيبدأ البناء وينتهي بنجاح، وسيعمل موقعك مباشرة مع سرعة شبكة Cloudflare العالمية وبشهادة SSL مجانية مدى الحياة!
+
+---
+
+## 🌐 النشر على GitHub Pages (خيار بديل)
 
 المشروع مزود بملف سير عمل تلقائي جاهز (`.github/workflows/deploy.yml`):
 
 1. في مستودعك على GitHub، اذهب إلى تبويب **Settings**.
 2. من القائمة الجانبية، اختر **Pages**.
-3. تحت خيار **Build and deployment**:
-   - غيّر **Source** من Deploy from a branch إلى: **GitHub Actions**.
-4. بمجرد رفع الكود عبر `git push`، سيقوم GitHub ببناء الموقع ونشره تلقائياً ليكون متاحاً على الرابط:
+3. تحت خيار **Build and deployment > Source**، اختر: **GitHub Actions**.
+4. سيبدأ سير العمل التلقائي بنشر الموقع ليكون متاحاً على الرابط:
    `https://mostafayasserdev.github.io/Stories.Prophets/`
+
