@@ -1,0 +1,2875 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="midnight" data-font="amiri">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>السيرة النبوية الشريفة | رحلة مباركة في سيرة خير الأنام ﷺ</title>
+  
+  <meta name="description" content="تطبيق تفاعلي سحابي للسيرة النبوية الشريفة من المولد النبوي الشريف إلى الرفيق الأعلى ﷺ، بحلقات يومية وتأملات وتسجيلات صوتية وقراءة ذكية.">
+  <meta name="theme-color" content="#0a0d14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Aref+Ruqaa:wght@400;700&family=Cairo:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome (Icons) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    /* CSS Variables & Themes */
+    :root {
+      --font-body: 'Amiri', serif;
+      --font-title: 'Aref Ruqaa', serif;
+      --font-ui: 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-size-base: 18px;
+      --line-height-base: 2.2;
+      
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+      
+      --transition-fast: 0.18s ease;
+      --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="midnight"] {
+      --bg-base: #090c12;
+      --bg-surface: #101520;
+      --bg-card: #151b29;
+      --bg-card-hover: #1c2436;
+      --bg-glass: rgba(16, 21, 32, 0.85);
+      --border-color: rgba(212, 175, 55, 0.22);
+      --border-light: rgba(255, 255, 255, 0.08);
+      --text-title: #f8f5ee;
+      --text-body: #e4e0d5;
+      --text-muted: #8d94a5;
+      --gold: #d4af37;
+      --gold-light: #f5e6a8;
+      --gold-dark: #aa851e;
+      --gold-glow: rgba(212, 175, 55, 0.25);
+      --accent: #10b981;
+      --danger: #ef4444;
+      --shadow-card: 0 10px 30px -10px rgba(0,0,0,0.5), 0 0 1px rgba(212, 175, 55, 0.3);
+      --shadow-header: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    [data-theme="obsidian"] {
+      --bg-base: #0b0b0d;
+      --bg-surface: #131317;
+      --bg-card: #191921;
+      --bg-card-hover: #22222d;
+      --bg-glass: rgba(19, 19, 23, 0.85);
+      --border-color: rgba(229, 185, 60, 0.22);
+      --border-light: rgba(255, 255, 255, 0.07);
+      --text-title: #fff9e6;
+      --text-body: #eae4d8;
+      --text-muted: #8c8985;
+      --gold: #e5b93c;
+      --gold-light: #fbe69d;
+      --gold-dark: #b88d18;
+      --gold-glow: rgba(229, 185, 60, 0.28);
+      --accent: #14b8a6;
+      --danger: #f87171;
+      --shadow-card: 0 12px 36px -8px rgba(0,0,0,0.6), 0 0 1px rgba(229, 185, 60, 0.3);
+      --shadow-header: 0 4px 24px rgba(0,0,0,0.5);
+    }
+
+    [data-theme="sepia"] {
+      --bg-base: #f6f0e2;
+      --bg-surface: #ede3d0;
+      --bg-card: #fdfaf3;
+      --bg-card-hover: #f7f0e1;
+      --bg-glass: rgba(237, 227, 208, 0.88);
+      --border-color: rgba(160, 120, 40, 0.28);
+      --border-light: rgba(0, 0, 0, 0.08);
+      --text-title: #2a1f12;
+      --text-body: #3c3022;
+      --text-muted: #7d6e5a;
+      --gold: #a67c2e;
+      --gold-light: #7c5c1f;
+      --gold-dark: #5c4111;
+      --gold-glow: rgba(166, 124, 46, 0.2);
+      --accent: #059669;
+      --danger: #dc2626;
+      --shadow-card: 0 8px 24px -6px rgba(90, 60, 20, 0.12), 0 0 1px rgba(160, 120, 40, 0.3);
+      --shadow-header: 0 4px 16px rgba(90, 60, 20, 0.08);
+    }
+
+    [data-theme="light"] {
+      --bg-base: #f9f9fb;
+      --bg-surface: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f3f4f6;
+      --bg-glass: rgba(255, 255, 255, 0.88);
+      --border-color: rgba(190, 150, 40, 0.25);
+      --border-light: rgba(0, 0, 0, 0.06);
+      --text-title: #111827;
+      --text-body: #28303f;
+      --text-muted: #6b7280;
+      --gold: #b48c26;
+      --gold-light: #8e6d17;
+      --gold-dark: #6e540e;
+      --gold-glow: rgba(180, 140, 38, 0.15);
+      --accent: #0d9488;
+      --danger: #ef4444;
+      --shadow-card: 0 8px 24px -4px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.1);
+      --shadow-header: 0 2px 14px rgba(0,0,0,0.06);
+    }
+
+    /* Font Family Modifiers */
+    [data-font="amiri"] .reading-text { font-family: 'Amiri', serif; }
+    [data-font="naskh"] .reading-text { font-family: 'Noto Naskh Arabic', serif; }
+    [data-font="ruqaa"] .reading-text { font-family: 'Aref Ruqaa', serif; }
+    [data-font="cairo"] .reading-text { font-family: 'Cairo', sans-serif; }
+
+    /* Base Elements */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    html {
+      font-size: var(--font-size-base);
+      scroll-behavior: smooth;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      background-image: 
+        radial-gradient(ellipse at 50% 0%, var(--gold-glow), transparent 65%),
+        radial-gradient(circle at 10% 20%, rgba(212, 175, 55, 0.03) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(212, 175, 55, 0.03) 0%, transparent 40%);
+      color: var(--text-body);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      line-height: 1.6;
+      transition: background-color var(--transition-normal), color var(--transition-normal);
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+    /* Top Header */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: var(--bg-glass);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: var(--shadow-header);
+      transition: all var(--transition-normal);
+    }
+
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-emblem {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #090c12;
+      font-size: 20px;
+      box-shadow: 0 4px 14px var(--gold-glow);
+      flex-shrink: 0;
+    }
+
+    .brand-info h1 {
+      font-family: var(--font-title);
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--gold);
+      line-height: 1.2;
+    }
+
+    .brand-info p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      color: var(--text-body);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 15px;
+      transition: all var(--transition-fast);
+      position: relative;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-card-hover);
+      color: var(--gold);
+      border-color: var(--gold);
+      transform: translateY(-2px);
+    }
+
+    .btn-icon:active { transform: scale(0.96); }
+
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      color: #090c12;
+      font-weight: 700;
+      border: none;
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-ui);
+      font-size: 0.88rem;
+      box-shadow: 0 4px 14px var(--gold-glow);
+      transition: all var(--transition-fast);
+    }
+
+    .btn-gold:hover {
+      filter: brightness(1.08);
+      transform: translateY(-2px);
+    }
+
+    .btn-gold:active { transform: scale(0.96); }
+
+    /* Layout Wrapper */
+    .app-layout {
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 20px 40px;
+      display: grid;
+      grid-template-columns: 380px minmax(0, 1fr);
+      gap: 28px;
+      flex: 1;
+    }
+
+    /* Sidebar / Episodes Index */
+    .episodes-sidebar {
+      position: sticky;
+      top: 86px;
+      height: calc(100vh - 110px);
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 18px 16px;
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+      transition: all var(--transition-normal);
+    }
+
+    .sidebar-header {
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .search-box {
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .search-box i.search-icon {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+      font-size: 14px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 10px 40px 10px 36px;
+      background: var(--bg-base);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      color: var(--text-body);
+      font-family: var(--font-ui);
+      font-size: 0.88rem;
+      transition: all var(--transition-fast);
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px var(--gold-glow);
+    }
+
+    .search-clear {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      display: none;
+    }
+
+    .search-clear:hover { color: var(--gold); }
+
+    .era-chips {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 4px 2px 8px;
+      scrollbar-width: none;
+    }
+    .era-chips::-webkit-scrollbar { display: none; }
+
+    .era-chip {
+      padding: 5px 12px;
+      font-size: 0.75rem;
+      border-radius: var(--radius-full);
+      background: var(--bg-base);
+      border: 1px solid var(--border-light);
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all var(--transition-fast);
+      font-weight: 500;
+    }
+
+    .era-chip:hover {
+      border-color: var(--gold);
+      color: var(--gold-light);
+    }
+
+    .era-chip.active {
+      background: var(--gold);
+      color: #090c12;
+      border-color: var(--gold);
+      font-weight: 700;
+    }
+
+    .sidebar-stats {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 6px 4px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .sidebar-stats b { color: var(--gold); }
+
+    .episode-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 4px 10px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .episode-card-item {
+      padding: 12px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      transition: all var(--transition-fast);
+      position: relative;
+    }
+
+    .episode-card-item:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-color);
+      transform: translateX(-3px);
+    }
+
+    .episode-card-item.active {
+      border-color: var(--gold);
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), transparent);
+      box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+    }
+
+    .episode-card-item.active::before {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 10%;
+      bottom: 10%;
+      width: 4px;
+      background: var(--gold);
+      border-radius: 4px 0 0 4px;
+    }
+
+    .ep-item-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .ep-badge-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--gold);
+      flex-shrink: 0;
+    }
+
+    .episode-card-item.active .ep-badge-num {
+      background: var(--gold);
+      color: #090c12;
+    }
+
+    .ep-item-meta {
+      min-width: 0;
+    }
+
+    .ep-item-title {
+      font-family: var(--font-title);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-title);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+
+    .ep-item-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ep-item-badges {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .icon-badge {
+      font-size: 11px;
+      color: var(--gold);
+      opacity: 0.85;
+    }
+
+    /* Main Reader Area */
+    .reader-main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .reading-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      position: relative;
+      overflow: hidden;
+      transition: all var(--transition-normal);
+    }
+
+    .reading-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, transparent, var(--gold), var(--gold-light), var(--gold), transparent);
+    }
+
+    .progress-bar-container {
+      position: relative;
+      height: 4px;
+      background: var(--bg-surface);
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-dark), var(--gold), var(--gold-light));
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .reader-card-header {
+      padding: 28px 32px 18px;
+      border-bottom: 1px solid var(--border-light);
+      text-align: center;
+      position: relative;
+    }
+
+    .reading-stage-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 16px;
+      background: rgba(212, 175, 55, 0.1);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-full);
+      color: var(--gold);
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .reading-title {
+      font-family: var(--font-title);
+      font-size: 2.1rem;
+      color: var(--gold-light);
+      margin-bottom: 6px;
+      line-height: 1.3;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    }
+
+    .reading-subtitle {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    .reading-meta-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .meta-item i { color: var(--gold); }
+
+    /* Reader Controls Toolbar */
+    .reader-toolbar {
+      padding: 12px 28px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tool-btn {
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-body);
+      font-family: var(--font-ui);
+      font-size: 0.82rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all var(--transition-fast);
+    }
+
+    .tool-btn:hover {
+      background: var(--bg-card-hover);
+      color: var(--gold);
+      border-color: var(--gold);
+    }
+
+    .tool-btn.active {
+      background: var(--gold);
+      color: #090c12;
+      font-weight: 700;
+    }
+
+    .tool-btn.accent {
+      background: rgba(212, 175, 55, 0.15);
+      color: var(--gold-light);
+      border-color: var(--gold);
+    }
+
+    .tool-btn.danger-action {
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+    .tool-btn.danger-action:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: var(--danger);
+    }
+
+    /* Audio Widget */
+    .audio-player-widget {
+      margin: 20px 28px 4px;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.08), rgba(212, 175, 55, 0.02));
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .audio-widget-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .audio-title-tag {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .audio-controls-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .audio-controls-row audio {
+      flex: 1;
+      height: 40px;
+      outline: none;
+      border-radius: var(--radius-sm);
+    }
+
+    .speed-select {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--gold);
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-ui);
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    /* Audio Recorder View */
+    .rec-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: var(--bg-surface);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-light);
+    }
+
+    .rec-pulse-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ef4444;
+      animation: pulseRecord 1s infinite;
+    }
+    @keyframes pulseRecord {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(1.25); }
+    }
+
+    .rec-timer {
+      font-family: monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-title);
+    }
+
+    .upload-progress-bar {
+      width: 100%;
+      height: 6px;
+      background: var(--bg-surface);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 6px;
+      display: none;
+    }
+
+    .upload-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold), #10b981);
+      width: 0%;
+      transition: width 0.2s ease;
+    }
+
+    /* Reading Body Content */
+    .reading-content-body {
+      padding: 28px 34px 36px;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    .reading-text {
+      font-size: 1.18rem;
+      line-height: var(--line-height-base);
+      color: var(--text-body);
+      text-align: justify;
+      word-spacing: 0.05em;
+    }
+
+    .reading-text p {
+      margin-bottom: 22px;
+      position: relative;
+    }
+
+    /* Islamic Calligraphic Highlights */
+    .quran-verse {
+      display: inline;
+      font-family: 'Amiri', serif;
+      color: var(--gold-light);
+      font-weight: 700;
+      padding: 2px 6px;
+      background: rgba(212, 175, 55, 0.09);
+      border-radius: 6px;
+      border-bottom: 1px dashed var(--border-color);
+    }
+
+    .quran-bracket {
+      color: var(--gold);
+      font-size: 1.15em;
+      margin: 0 2px;
+    }
+
+    .prophet-blessing {
+      display: inline-block;
+      font-family: 'Amiri', serif;
+      color: var(--gold);
+      font-weight: 700;
+      margin: 0 4px;
+    }
+
+    /* Poetry Bayt */
+    .poetry-block {
+      margin: 24px auto;
+      padding: 16px 20px;
+      background: rgba(212, 175, 55, 0.05);
+      border-right: 3px solid var(--gold);
+      border-left: 3px solid var(--gold);
+      border-radius: var(--radius-sm);
+      text-align: center;
+      font-family: 'Amiri', serif;
+      font-size: 1.25rem;
+      color: var(--gold-light);
+      line-height: 2.2;
+    }
+
+    /* Reflections Area */
+    .reflections-section {
+      margin: 10px 28px 30px;
+      padding: 20px 24px;
+      background: var(--bg-surface);
+      border: 1px dashed var(--border-color);
+      border-radius: var(--radius-md);
+    }
+
+    .reflections-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .reflections-title {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .reflection-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      position: relative;
+    }
+
+    .reflection-item p {
+      font-size: 0.95rem;
+      line-height: 1.8;
+      color: var(--text-body);
+      margin-bottom: 6px;
+    }
+
+    .reflection-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .reflection-del-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 12px;
+      padding: 2px 6px;
+    }
+    .reflection-del-btn:hover { color: var(--danger); }
+
+    .reflection-input-box {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .reflection-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--text-body);
+      font-family: var(--font-ui);
+      font-size: 0.88rem;
+      resize: vertical;
+    }
+
+    .reflection-textarea:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+
+    /* Nav Bottom Controls */
+    .reader-nav-footer {
+      padding: 20px 28px;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .nav-btn {
+      flex: 1;
+      min-width: 140px;
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      font-family: var(--font-ui);
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-body);
+      transition: all var(--transition-fast);
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      background: var(--bg-card-hover);
+      border-color: var(--gold);
+      color: var(--gold);
+      transform: translateY(-2px);
+    }
+
+    .nav-btn.primary {
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      color: #090c12;
+      border: none;
+      box-shadow: 0 4px 14px var(--gold-glow);
+    }
+
+    .nav-btn.primary:hover:not(:disabled) {
+      filter: brightness(1.08);
+      color: #090c12;
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* Global Audio Card */
+    .global-audio-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 18px 24px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .global-audio-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .global-audio-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: rgba(212, 175, 55, 0.12);
+      border: 1px solid var(--border-color);
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .global-audio-text h4 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--gold-light);
+    }
+    .global-audio-text p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .global-audio-player-wrap {
+      flex: 1;
+      min-width: 260px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .global-audio-player-wrap audio {
+      width: 100%;
+      height: 38px;
+    }
+
+    /* Dedication Footer */
+    .dedication-card {
+      margin-top: 10px;
+      padding: 26px 20px;
+      text-align: center;
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.06), rgba(212, 175, 55, 0.02));
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      position: relative;
+    }
+
+    .dedication-card::after {
+      content: '۝';
+      display: block;
+      font-size: 1.6rem;
+      color: var(--gold);
+      margin-top: 8px;
+      opacity: 0.8;
+    }
+
+    .dedication-badge {
+      font-size: 0.85rem;
+      color: var(--gold);
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    .dedication-name {
+      font-family: var(--font-title);
+      font-size: 1.6rem;
+      color: var(--gold-light);
+      font-weight: 700;
+      margin: 4px 0;
+    }
+
+    .dedication-parents {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+    }
+
+    .social-share-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .share-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      color: var(--gold);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      text-decoration: none;
+    }
+
+    .share-btn:hover {
+      background: var(--gold);
+      color: #090c12;
+      transform: translateY(-2px);
+    }
+
+    /* Mobile Bottom Bar */
+    .mobile-bottom-bar {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: calc(62px + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
+      background: var(--bg-glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border-color);
+      z-index: 40;
+      justify-content: space-around;
+      align-items: center;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+    }
+
+    .mobile-tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.72rem;
+      font-family: var(--font-ui);
+      cursor: pointer;
+      padding: 6px 12px;
+      transition: all var(--transition-fast);
+    }
+
+    .mobile-tab-btn i { font-size: 17px; }
+
+    .mobile-tab-btn.active, .mobile-tab-btn:hover {
+      color: var(--gold);
+    }
+
+    /* Modals & Dialogs */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 16px;
+    }
+
+    .modal-overlay.active { display: flex; }
+
+    .modal-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 640px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: var(--shadow-card);
+      position: relative;
+      animation: modalSlideUp 0.25s ease;
+    }
+
+    @keyframes modalSlideUp {
+      from { opacity: 0; transform: translateY(20px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-light);
+      margin-bottom: 18px;
+    }
+
+    .modal-header h3 {
+      font-family: var(--font-title);
+      font-size: 1.35rem;
+      color: var(--gold-light);
+    }
+
+    .modal-close-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .modal-close-btn:hover { color: var(--gold); }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+
+    .form-input, .form-textarea {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      color: var(--text-body);
+      font-family: var(--font-ui);
+      font-size: 0.95rem;
+      direction: rtl;
+    }
+
+    .form-input:focus, .form-textarea:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px var(--gold-glow);
+    }
+
+    .form-textarea {
+      min-height: 180px;
+      line-height: 1.8;
+      font-family: 'Amiri', serif;
+      font-size: 1.1rem;
+      resize: vertical;
+    }
+
+    .modal-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      color: var(--text-body);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      font-family: var(--font-ui);
+      font-size: 0.88rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: auto;
+      animation: toastIn 0.3s ease;
+      max-width: 360px;
+    }
+
+    .toast.success { border-color: #10b981; }
+    .toast.success i { color: #10b981; }
+    .toast.error { border-color: #ef4444; }
+    .toast.error i { color: #ef4444; }
+    .toast.info i { color: var(--gold); }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Speech Synthesis Floating Banner */
+    .speech-active-banner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 16px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: var(--radius-sm);
+      margin: 10px 28px 0;
+      font-size: 0.82rem;
+      color: #10b981;
+    }
+    .speech-active-banner.active { display: flex; }
+
+    /* Responsive Breakpoints */
+    @media (max-width: 1023px) {
+      .app-layout {
+        grid-template-columns: 1fr;
+        padding: 16px 14px 80px;
+        gap: 18px;
+      }
+
+      .episodes-sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        width: 320px;
+        max-width: 85vw;
+        height: 100vh;
+        border-radius: 0;
+        z-index: 90;
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: none;
+        border-left: 1px solid var(--border-color);
+      }
+
+      .episodes-sidebar.drawer-open {
+        transform: translateX(0);
+      }
+
+      .drawer-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(4px);
+        z-index: 85;
+        display: none;
+      }
+      .drawer-backdrop.active { display: block; }
+
+      .mobile-bottom-bar { display: flex; }
+
+      .reader-card-header { padding: 22px 18px 14px; }
+      .reading-title { font-size: 1.6rem; }
+      .reading-content-body { padding: 20px 18px 24px; }
+      .reading-text { font-size: 1.1rem; }
+      .reader-toolbar { padding: 10px 16px; }
+      .audio-player-widget { margin: 16px 16px 4px; }
+      .reflections-section { margin: 10px 16px 20px; }
+      .reader-nav-footer { padding: 16px; }
+
+      .toast-container {
+        bottom: 76px;
+        left: 14px;
+        right: 14px;
+      }
+      .toast { max-width: 100%; }
+    }
+
+    @media (max-width: 480px) {
+      .brand-info h1 { font-size: 1.25rem; }
+      .brand-info p { display: none; }
+      .btn-gold span { display: none; }
+      .header-inner { padding: 8px 14px; }
+      .reading-title { font-size: 1.45rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top App Navigation -->
+  <header class="app-header">
+    <div class="header-inner">
+      <a href="#" class="brand">
+        <div class="brand-emblem">
+          <i class="fa-solid fa-mosque"></i>
+        </div>
+        <div class="brand-info">
+          <h1>السيرة النبوية الشريفة</h1>
+          <p>رحلة تفاعلية مباركة في سيرة خير الأنام ﷺ</p>
+        </div>
+      </a>
+
+      <div class="header-actions">
+        <!-- Theme Switcher -->
+        <button class="btn-icon" id="themeToggleBtn" title="تغيير المظهر / الثيم">
+          <i class="fa-solid fa-palette"></i>
+        </button>
+
+        <!-- Font Switcher -->
+        <button class="btn-icon" id="fontToggleBtn" title="نوع الخط">
+          <i class="fa-solid fa-font"></i>
+        </button>
+
+        <!-- Font Size Zoom -->
+        <button class="btn-icon" id="zoomInBtn" title="تكبير الخط">
+          <i class="fa-solid fa-magnifying-glass-plus"></i>
+        </button>
+        <button class="btn-icon" id="zoomOutBtn" title="تصغير الخط">
+          <i class="fa-solid fa-magnifying-glass-minus"></i>
+        </button>
+
+        <!-- Add Episode Button -->
+        <button class="btn-gold" id="addEpModalBtn" title="إضافة حلقة جديدة">
+          <i class="fa-solid fa-plus"></i>
+          <span>حلقة جديدة</span>
+        </button>
+
+        <!-- Mobile Drawer Toggle -->
+        <button class="btn-icon" id="drawerToggleBtn" title="قائمة الحلقات" style="display:none;">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Drawer Backdrop (Mobile) -->
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+
+  <!-- Main Application Layout -->
+  <div class="app-layout">
+
+    <!-- Sidebar: Episodes Index -->
+    <aside class="episodes-sidebar" id="episodesSidebar">
+      <div class="sidebar-header">
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" class="search-input" id="searchInput" placeholder="ابحث في عناوين ونصوص السيرة...">
+          <button class="search-clear" id="searchClearBtn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="era-chips" id="eraChipsList">
+          <div class="era-chip active" data-era="all">الكل</div>
+        </div>
+
+        <div class="sidebar-stats">
+          <span>الحلقات: <b id="statTotalEps">0</b></span>
+          <span id="statReadProgress">المقروء: <b>0%</b></span>
+        </div>
+      </div>
+
+      <div class="episode-list" id="episodeListContainer">
+        <!-- Injected dynamically -->
+      </div>
+    </aside>
+
+    <!-- Main Content Reader -->
+    <main class="reader-main">
+      
+      <article class="reading-card" id="mainReadingCard">
+        <!-- Progress Bar -->
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+
+        <!-- Card Header -->
+        <div class="reader-card-header">
+          <div class="reading-stage-tag" id="readingStageTag">
+            <i class="fa-solid fa-feather"></i>
+            <span id="readingEraText">جارٍ التحميل...</span>
+          </div>
+
+          <h2 class="reading-title" id="readingTitle">السيرة النبوية الشريفة</h2>
+          <div class="reading-subtitle" id="readingSubtitle">حلقة يومية من سيرة النبي ﷺ</div>
+
+          <div class="reading-meta-bar">
+            <div class="meta-item">
+              <i class="fa-regular fa-clock"></i>
+              <span id="readingTimeEst">وقت القراءة: دقيقتان</span>
+            </div>
+            <div class="meta-item">
+              <i class="fa-solid fa-hashtag"></i>
+              <span id="readingEpNumberBadge">الحلقة 1 من 8</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reader Controls Toolbar -->
+        <div class="reader-toolbar">
+          <div class="toolbar-group">
+            <!-- Built-in Speech Voice Reader -->
+            <button class="tool-btn accent" id="speechReadBtn" title="استماع صوتي آلي للنص">
+              <i class="fa-solid fa-volume-high"></i>
+              <span>استماع آلي</span>
+            </button>
+
+            <!-- Gemini Voice Reader Copy -->
+            <button class="tool-btn" id="geminiPromptBtn" title="نسخ النص لـ Gemini">
+              <i class="fa-solid fa-robot"></i>
+              <span>Gemini</span>
+            </button>
+
+            <!-- Bookmark Button -->
+            <button class="tool-btn" id="bookmarkBtn" title="حفظ في المفضلة">
+              <i class="fa-regular fa-bookmark"></i>
+              <span>حفظ</span>
+            </button>
+          </div>
+
+          <div class="toolbar-group">
+            <!-- Share Button -->
+            <button class="tool-btn" id="shareEpisodeBtn" title="مشاركة الحلقة">
+              <i class="fa-solid fa-share-nodes"></i>
+              <span>مشاركة</span>
+            </button>
+
+            <!-- Edit Episode Button -->
+            <button class="tool-btn" id="editCurrentEpBtn" title="تعديل الحلقة">
+              <i class="fa-solid fa-pen"></i>
+              <span>تعديل</span>
+            </button>
+
+            <!-- Delete Episode Button -->
+            <button class="tool-btn danger-action" id="deleteCurrentEpBtn" title="حذف الحلقة">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Speech Active Indicator -->
+        <div class="speech-active-banner" id="speechActiveBanner">
+          <div>
+            <i class="fa-solid fa-waveform-lines fa-fade"></i>
+            <span>القارئ الآلي يقرأ نص الحلقة الآن...</span>
+          </div>
+          <button class="tool-btn" id="stopSpeechBtn" style="padding:4px 10px;font-size:0.75rem">
+            <i class="fa-solid fa-stop"></i> إيقاف
+          </button>
+        </div>
+
+        <!-- Episode Audio Box -->
+        <div class="audio-player-widget" id="episodeAudioWidget">
+          <!-- Injected dynamically -->
+        </div>
+
+        <!-- Reading Content Body -->
+        <div class="reading-content-body">
+          <div class="reading-text" id="readingTextContent">
+            <!-- Formatted episode text injected here -->
+          </div>
+        </div>
+
+        <!-- Reflections & Notes Section -->
+        <div class="reflections-section" id="reflectionsSection">
+          <div class="reflections-header">
+            <div class="reflections-title">
+              <i class="fa-solid fa-lightbulb"></i>
+              <span>تأملات وفوائد من الحلقة</span>
+            </div>
+            <button class="tool-btn" id="toggleAddNoteBtn">
+              <i class="fa-solid fa-plus"></i>
+              <span>إضافة تأمل</span>
+            </button>
+          </div>
+
+          <div id="reflectionsList">
+            <!-- Injected notes -->
+          </div>
+
+          <div class="reflection-input-box" id="reflectionInputBox" style="display:none;">
+            <textarea class="reflection-textarea" id="reflectionTextInput" placeholder="اكتب هنا فائدة أو تأملاً أو خاطرة استفدتها من هذه الحلقة المباركة..."></textarea>
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+              <button class="btn-gold" id="saveReflectionBtn">حفظ التأمل</button>
+              <button class="tool-btn" id="cancelReflectionBtn">إلغاء</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reader Navigation Footer -->
+        <div class="reader-nav-footer">
+          <button class="nav-btn" id="prevEpBtn">
+            <i class="fa-solid fa-arrow-right"></i>
+            <span>الحلقة السابقة</span>
+          </button>
+
+          <button class="tool-btn" id="jumpLatestBtn" title="الانتقال لأحدث حلقة">
+            <i class="fa-solid fa-forward-step"></i>
+            <span>أحدث حلقة</span>
+          </button>
+
+          <button class="nav-btn primary" id="nextEpBtn">
+            <span>الحلقة التالية</span>
+            <i class="fa-solid fa-arrow-left"></i>
+          </button>
+        </div>
+
+      </article>
+
+      <!-- Global Audio Bar (مقطع صوتي عام) -->
+      <section class="global-audio-card" id="globalAudioCard">
+        <div class="global-audio-info">
+          <div class="global-audio-icon">
+            <i class="fa-solid fa-headphones"></i>
+          </div>
+          <div class="global-audio-text">
+            <h4>مقطع صوتي عام للسيرة</h4>
+            <p>تسجيل صوتي أو مقدمة شاملة</p>
+          </div>
+        </div>
+
+        <div class="global-audio-player-wrap" id="globalAudioPlayerWrap">
+          <span style="font-size:0.8rem; color:var(--text-muted);">لا يوجد مقطع صوتي عام مضاف</span>
+        </div>
+
+        <button class="tool-btn" id="editGlobalAudioBtn">
+          <i class="fa-solid fa-upload"></i>
+          <span>رفع مقطع</span>
+        </button>
+      </section>
+
+      <!-- Dedication Footer (صدقة جارية) -->
+      <footer class="dedication-card">
+        <div class="dedication-badge">صدقة جارية عني</div>
+        <div class="dedication-name">محمد هاشم ضيف الله</div>
+        <div class="dedication-parents">وعن أبي وأمي رحمهم الله</div>
+
+        <div class="social-share-row">
+          <a href="#" class="share-btn" id="shareWhatsappBtn" title="مشاركة عبر واتساب"><i class="fa-brands fa-whatsapp"></i></a>
+          <a href="#" class="share-btn" id="shareTelegramBtn" title="مشاركة عبر تيليجرام"><i class="fa-brands fa-telegram"></i></a>
+          <a href="#" class="share-btn" id="shareTwitterBtn" title="مشاركة عبر تويتر / X"><i class="fa-brands fa-x-twitter"></i></a>
+          <button class="share-btn" id="copyLinkBtn" title="نسخ الرابط"><i class="fa-solid fa-link"></i></button>
+        </div>
+      </footer>
+
+    </main>
+
+  </div>
+
+  <!-- Mobile Bottom App Bar -->
+  <nav class="mobile-bottom-bar">
+    <button class="mobile-tab-btn" id="mobilePrevBtn">
+      <i class="fa-solid fa-arrow-right"></i>
+      <span>السابقة</span>
+    </button>
+    <button class="mobile-tab-btn" id="mobileDrawerBtn">
+      <i class="fa-solid fa-list-ul"></i>
+      <span>الفهرس</span>
+    </button>
+    <button class="mobile-tab-btn" id="mobileAudioBtn">
+      <i class="fa-solid fa-microphone-lines"></i>
+      <span>الصوت</span>
+    </button>
+    <button class="mobile-tab-btn" id="mobileThemeBtn">
+      <i class="fa-solid fa-palette"></i>
+      <span>المظهر</span>
+    </button>
+    <button class="mobile-tab-btn" id="mobileNextBtn">
+      <i class="fa-solid fa-arrow-left"></i>
+      <span>التالية</span>
+    </button>
+  </nav>
+
+  <!-- Add / Edit Episode Modal -->
+  <div class="modal-overlay" id="episodeModalOverlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="epModalTitle">إضافة حلقة جديدة</h3>
+        <button class="modal-close-btn" id="closeEpModalBtn">&times;</button>
+      </div>
+      <form id="episodeForm">
+        <input type="hidden" id="formEpDocId" value="">
+        
+        <div class="form-group">
+          <label class="form-label">اسم المرحلة أو النبي</label>
+          <input type="text" class="form-input" id="formEpEra" placeholder="مثال: الجزيرة العربية في العصر الجاهلي" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">عنوان الحلقة</label>
+          <input type="text" class="form-input" id="formEpTitle" placeholder="مثال: ظلام مطبق ويأس قاتل" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">الوصف الفرعي (اختياري)</label>
+          <input type="text" class="form-input" id="formEpSubtitle" placeholder="مثال: الحلقة 008">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">نص الحلقة (افصل بين الفقرات بسطر فارغ)</label>
+          <textarea class="form-textarea" id="formEpContent" placeholder="اكتب نص الحلقة بالتفصيل هنا..." required></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="tool-btn" id="cancelEpModalBtn">إلغاء</button>
+          <button type="submit" class="btn-gold" id="saveEpSubmitBtn">حفظ الحلقة في السحابة</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Global Audio Upload Modal -->
+  <div class="modal-overlay" id="globalAudioModalOverlay">
+    <div class="modal-card" style="max-width:480px">
+      <div class="modal-header">
+        <h3>رفع مقطع صوتي عام للسيرة</h3>
+        <button class="modal-close-btn" id="closeGlobalAudioModalBtn">&times;</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">اختر ملف صوتي (MP3 / M4A / WAV)</label>
+        <input type="file" accept="audio/*" class="form-input" id="globalAudioFileInput">
+        <div class="upload-progress-bar" id="globalUploadProgressBar">
+          <div class="upload-progress-fill" id="globalUploadProgressFill"></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="tool-btn danger-action" id="removeGlobalAudioBtn" style="margin-left:auto; display:none;">إزالة المقطع</button>
+        <button class="tool-btn" id="cancelGlobalAudioModalBtn">إلغاء</button>
+        <button class="btn-gold" id="saveGlobalAudioFileBtn">رفع وحفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gemini Prompt Modal -->
+  <div class="modal-overlay" id="geminiModalOverlay">
+    <div class="modal-card" style="max-width:500px">
+      <div class="modal-header">
+        <h3>قراءة النص عبر Gemini</h3>
+        <button class="modal-close-btn" id="closeGeminiModalBtn">&times;</button>
+      </div>
+      <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:14px; line-height:1.7;">
+        تم تجهيز نص الحلقة أدناه. اضغط على "نسخ النص" ثم "فتح تطبيق Gemini" واطلب منه أن يقرأه لك بصوت واضح وهادئ.
+      </p>
+      <textarea class="form-textarea" id="geminiPromptTextarea" style="min-height:120px; font-size:0.85rem;" readonly></textarea>
+      <div class="modal-actions">
+        <button class="btn-gold" id="copyGeminiTextBtn"><i class="fa-regular fa-copy"></i> نسخ النص</button>
+        <button class="tool-btn" id="openGeminiAppBtn"><i class="fa-solid fa-arrow-up-right-from-square"></i> فتح Gemini</button>
+        <button class="tool-btn" id="cancelGeminiModalBtn">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Firebase Modular SDK v10 Scripts -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+    import { 
+      getFirestore, 
+      collection, 
+      doc, 
+      getDocs, 
+      addDoc, 
+      updateDoc, 
+      deleteDoc, 
+      query, 
+      orderBy, 
+      onSnapshot, 
+      writeBatch, 
+      serverTimestamp, 
+      where 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { 
+      getStorage, 
+      ref as sRef, 
+      uploadBytesResumable, 
+      getDownloadURL, 
+      deleteObject 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAC0_e_yfgCxGWB6Xc_XpQh1KW_rLF2Xyg",
+      authDomain: "stories-prophets.firebaseapp.com",
+      projectId: "stories-prophets",
+      storageBucket: "stories-prophets.firebasestorage.app",
+      messagingSenderId: "591771663942",
+      appId: "1:591771663942:web:2ba5e99cb82fc8ded7d447",
+      measurementId: "G-PZ73596G06"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    let analytics = null;
+    try { analytics = getAnalytics(app); } catch(e) { console.warn('Analytics init error:', e); }
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    // Initial 8 Seed Episodes
+    const INITIAL_SEED_EPISODES = [{"id": "ep_1789306359490", "era": "الجزيرة العربية في العصر الجاهلي", "title": "البداية", "subtitle": "الحلقة 001", "html": "<p>الجزيرة العربية في العصر الجاهلي<br>تعالوا كده نحكي عن حال العرب قبل الإسلام، أو زي ما بنسميها العصر الجاهلي. في الفترة دي، أخلاق ناس كتير منهم كانت ساءت جدًا؛ فانتشر بينهم شرب الخمر والقمار، ووصلت القسوة والحمية المزعومة عند بعضهم لدرجة إنهم كانوا يئدوا البنات، يعني يدفنوهن وهنّ أحياء.<br>وكمان كانت الغارات منتشرة بينهم، وكانوا بيقطعوا الطريق على القوافل. ومكانة المرأة كانت قليلة جدًا، فكانوا بيتعاملوا معاها كأنها متاع أو دابة، وكانت تُورث زي ما بيورثوا الممتلكات. وكان فيه أكلات معينة مخصصة للرجال ومحرمة على النساء، وكمان كان مسموح للرجل إنه يتجوز عددًا من النساء من غير تحديد.<br>أما العصبية القبلية والرغبة في الانتقام، فكانوا شديدين جدًا فيها، لدرجة إنهم اتعلّقوا بالحرب وأحبوها، وبقت بالنسبة لهم وسيلة للتسلية واللهو وقضاء رغبات النفس. وكانوا أحيانًا يشعلوا حربًا بسبب حجة، أو من غير أي حجة حقيقية.<br>والشاعر الجاهلي الرُّقَّاد بن المنذر بن ضرار الضبي بيصوّر لنا المعنى ده في الأبيات دي:<br>إذَا المُهْرَةُ الشَّقْرَاءُ أَدْرَكَ ظَهْرُهَا ... فَشَبَّ الإِلَهُ الحَرْبَ بَيْنَ القَبَائِلِ</p>\n<p>وأَوْقَدَ نَارًا بَيْنَهُمْ بِضِرَامِهَا ... لَهَا وَهْجٌ لِلْمُصْطَلِي غَيْرُ طَائِلِ<br>يعني كانوا ممكن يدخلوا في حرب كبيرة بسبب موقف بسيط أو سبب تافه، وكانت إراقة الدماء عندهم حاجة سهلة وماكانوش بيعملوا لها حساب. حادثة صغيرة كانت كفيلة إنها تشعل القتال، وبعد كده تستمر الحرب سنين طويلة، لدرجة إن الحرب كانت ممكن تستمر أربعين سنة، ويموت فيها ألوف من الناس.<br>أما من ناحية الأخلاق، فكان عندهم أمراض وأخلاق سيئة متأصلة في المجتمع، وكانت أسبابها منتشرة وشائعة بينهم.</p>"}, {"id": "ep_1789306417321", "era": "الجزيرة العربية في العصر الجاهلي", "title": "شُرب الخمر", "subtitle": "الحلقة 002", "html": "<p>شُرب الخمر</p>\n<p>ومن العادات اللي كانت منتشرة جدًا في العصر الجاهلي شُرب الخمر. الموضوع ماكانش مجرد عادة عابرة، لكنه كان راسخ في حياتهم بشكل كبير. حتى إن الشعراء كانوا بيتكلموا عن مجالس شُرب الخمر والاجتماع عليها، واحتلت الخمر جانبًا واسعًا من شعرهم وتاريخهم وأدبهم.</p>\n<p>وكان عندهم أسماء وصفات كتيرة للخمر في لغتهم، وكانوا بيدققوا في وصفها ويتكلموا عن أنواعها وتأثيرها وتفاصيلها بشكل كبير جدًا، لدرجة تثير العجب.</p>\n<p>وكمان كانت حوانيت الخمّارين مفتوحة طول الوقت، وكان بيرفرف فوقها علم اسمه «غاية»، عشان الناس تعرف إنها أماكن لبيع الخمر.</p>\n<p>والشاعر لبيد بن ربيعة العامري -رضي الله عنه- بيقول:</p>\n<p>قَدْ بِتُّ سَامِرَهَا وغَايَةَ تَاجِرٍ ... وَافَيْتُ إِذْ رُفِعَتْ وَعَزَّ مُدَامُهَا</p>\n<p>ومِن كتر ما كانت تجارة الخمر منتشرة بينهم، بقت كلمة التجارة نفسها تُستخدم أحيانًا بمعنى بيع الخمر. يعني لما كانوا يقولوا «تجارة»، كان المقصود بيها في بعض السياقات تجارة الخمر، وده يوضح قد إيه كانت منتشرة في حياتهم.</p>\n<p>وطبيعي إن مجالس الخمر في الجاهلية ماكانتش بتقف عند حد الشرب بس. كانت غالبًا بوابة لعادة تانية منتشرة بنفس القدر، بل ومرتبطة بيها ارتباط وثيق. تخيل معايا: الراجل بعد ما يشرب ويفقد صوابه شوية، بيبقى جاهز إنه يدخل في مغامرة تانية أخطر بكتير - وهي القمار. وده واضح من بيت شعري هيجيلنا في الحلقة الجاية، لما يقول الشاعر:</p>\n<p>نُحَابِي بِهَا أكْفَاءَنَا ونُهِينُهَا ... ونَشْرَبُ في أثْمَانِهَا ونُقَامِرُ</p>\n<p>شايف إزاي الخمر والقمار جم مع بعض في بيت شعر واحد؟ \"نشرب في أثمانها ونقامر\" - يعني الاتنين كانوا بيسيروا جنب بعض، الواحد بيولّد التاني. وعشان كده، تعال نكمل الرحلة ونشوف إزاي كانت عادة القمار ديه شكلها في حياة العرب قبل الإسلام.</p>"}, {"id": "ep_1789306555049", "era": "الجزيرة العربية في العصر الجاهلي", "title": "القِمار", "subtitle": "الحلقة 003", "html": "<p>تعال نرجع بالزمن شوية، لقبل الإسلام بسنين طويلة، ونقعد في مجلس من مجالس العرب في الجاهلية، ونشوف بعنينا إزاي كانت حكاية \"الميسر\" ديه شكلها في حياتهم اليومية.</p>\n<p>كان في عادة غريبة منتشرة بينهم، مش بس منتشرة، لأ كانوا شايفينها كمان مصدر فخر واعتزاز. تخيل معايا: الراجل اللي بيقعد في مجلس القمار ويراهن، كان الناس تشوفه إنه راجل كريم وشجاع، أما اللي يحاول يبعد عن الموضوع ده، كانوا يبصولّه على إنه بخيل أو جبان، وده كان عار عليه في نظرهم!</p>\n<p>وعشان تتخيل الصورة أكتر، فيه شاعر جاهلي قال أبيات بتلخص الجو ده كله، بيقول فيها:</p>\n<p>أعَيَّرْتَنَا أَلْبَانَهَا ولُحُومَهَا ... وذَلِكَ عَارٌ يَا ابْنَ رَيْطَةَ ظَاهِرُنُحَابِي بِهَا أكْفَاءَنَا ونُهِينُهَا ... ونَشْرَبُ في أثْمَانِهَا ونُقَامِرُ</p>\n<p>يعني إيه ببساطة؟ كان بيرد على واحد عيّره بإنهم بيدوا الناس ألبان ولحوم، فقال له: ده مش عيب، ده فخر! إحنا بنقامر على ثمن الألبان واللحوم دي، وبنكرم بيها اللي زينا وبنستهين بيها كمان، وكمان بنشرب من ثمنها ونرجع نقامر تاني.</p>\n<p>طب وإيه اللي كان بيحصل لما الموضوع يكبر ويوصل لحد أبعد من كده؟ هنا لازم نسمع كلام قتادة، اللي وصف لنا مشهد مؤلم كان بيتكرر كتير، قال:</p>\n<p>\"كانَ الرَّجُلُ في الجَاهِلِيَّةِ يُقَامِرُ عَلَى أَهْلِهِ ومَالِهِ، فَيَقْعُدُ حَرِيبًا سَلِيبًا، يَنْظُرُ إلى مَالِهِ في يَدِ غَيْرِهِ.\"</p>\n<p>تخيل الموقف: راجل بيراهن مش بس بفلوسه، لأ بيراهن بأهله وماله كله! ولو خسر، يقعد \"حريبًا سليبًا\" - يعني ماعندوش حاجة خالص، لا مال ولا ملك - وأصعب حاجة إنه يقعد قدامه يشوف ثروته وممتلكاته اللي كانت بتاعته وبقت في إيد واحد تاني، وهو مش قادر يعمل حاجة.</p>\n<p>وطبعًا اللعبة دي ماكانتش بس بتاخد فلوس وتدي فلوس، كانت بتزرع في القلوب حقد وعداوة مابتنساش. اللي بيخسر بيحس إن نار الغيظ بتتقد جواه على اللي كسب، واللي بيكسب أحيانًا كان بيزيد الطين بلة ويفتخر بانتصاره على حساب ضعف التاني. وعشان كده بالظبط قال قتادة إن القمار كان \"يُورِّث العداوة والبغضاء\" بين الناس - مش مجرد خسارة مادية، ده كان مرض بيفتت المجتمع من جواه.</p>\n<p>وده يخلينا نفهم أكتر عمق الحكمة اللي جت بعد كده في تحريم الميسر.</p>\n<p>وطبعًا مش بس القمار كان بيورّث العداوة والبغضاء بين الناس، كان فيه كمان وجه تاني من أوجه الظلم الاجتماعي منتشر بنفس القوة في الجاهلية، ولو إنه كان بيلبس قناع \"التجارة\" و\"التعامل المالي المشروع\". العرب كانوا بيمارسوه بشكل يومي، وبيعتبروه من طبائع الأمور، مع إنه كان بيحطم بيوت وناس زي ما القمار بالظبط كان بيعمل، لكن بطريقة أبطأ وأمكر - وده اللي هنتكلم عنه في الحلقة الجاية: تعاطيهم الرِّبا.</p>"}, {"id": "ep_1789306792607", "era": "الجزيرة العربية في العصر الجاهلي", "title": "تعاطيهم الرِّبا", "subtitle": "الحلقة 004", "html": "<p>تمام، خلينا نكمل الرحلة ونتفرج على عادة تالتة كانت متغلغلة في حياة العرب في الجاهلية، وهي التعامل بالربا.</p>\n<p>بعد ما شفنا إزاي كانت الخمر بتفتح الباب للقمار، وإزاي كان القمار بيدمر بيوت كاملة، تعال نشوف دلوقتي وش تاني من أوش الظلم الاجتماعي اللي كان منتشر وقتها - الربا.</p>\n<p>المفاجأة هنا إن الموضوع ماكانش مقصور على العرب بس، لأ، كان أهل الحجاز كله، من العرب واليهود، غارقين فيه، ووصل بيهم الحال أحيانًا لدرجة من التشدد والقسوة والظلم مالهاش حدود.</p>\n<p>طب إزاي كان شكل الربا ده بالظبط؟ خلينا نسمع من الإمام الطبري -رحمه الله تعالى- اللي وصفلنا الصورة بدقة شديدة، بيقول:</p>\n<p>كانَ الرِّبَا في الجَاهِلِيَّةِ في التَّضْعِيفِ وفي السِّنِينَ، يكُونُ لِلرَّجُلِ فَضْلُ دَيْنٍ، فَيَأْتِيهِ إِذَا حَلَّ الأَجَلُ، فَيَقُولُ له: تَقْضِيني أوْ تَزِيدُنِي؟ فإنْ كَانَ عِنْدَهُ شَيْءٌ يَقْضِيهِ قَضَى، وإلَّا حَوَّلهُ إلَى السِّنِّ التِي فَوْقَ ذَلِكَ، إنْ كَانَتْ ابْنَةَ مَخَاضٍ يَجْعَلُهَا... ابْنَةَ لَبُونٍ في السَّنَةِ الثَّانِيَةِ، ثُمَّ حِقَّةً، ثُمَّ جَذْعَةً، ثُمَّ رُبَاعِيًّا، هَكَذا إلَى فَوْقٍ.</p>\n<p>تخيل معايا الموقف: صاحب الدَّين بييجي في الموعد المتفق عليه، وبيواجه المدين بسؤال واحد بس، لكنه سؤال قاسي: \"هتسدّد اللي عليك، ولا أزوّد لك في المبلغ وأديك مهلة تانية؟\" لو المدين معاه فلوس، يسدد ويخلص. أما لو معندوش، فهنا تبدأ المأساة. لو كان عليه مثلًا جمل صغير السن، يرفعوا عليه السن درجة، ويطلبوا منه جمل أكبر شوية، وكل ما يعدي الوقت من غير سداد، يرفعوا السن أكتر وأكتر.</p>\n<p>ونفس المنطق القاسي ده كان بيتطبق على الديون النقدية كمان. لو كان الدَّين مئة، وماقدرش صاحبه يسدد، يتضاعف في السنة اللي بعدها ليبقى مئتين. ولو استمر عاجز، يتضاعف تاني ليبقى أربعمئة! وهكذا، سنة ورا سنة، لحد ما يسدد كل حاجة، أو يعجز تمامًا ويخسر كل حاجة يملكها.</p>\n<p>ويكمل الإمام الطبري -رحمه الله تعالى- الصورة، فيقول:</p>\n<p>وفي العَيْنِ يَأْتيهِ، فإنْ لَمْ يَكُنْ عِنْدَهُ أضْعَفَهُ في العَامِ القَابِلِ، وإنْ لَمْ يَكُنْ عِنْدَهُ أضْعَفَهُ أَيْضًا، فتَكُونُ مِئَةً، فَيَجْعَلُهَا إلَى القَابِلِ مِئتَيْنِ، فإنْ لَمْ يَكُنْ عِنْدَهُ جَعَلَهَا أرْبَعَمِئَةٍ يُضْعِفُهَا له كُلَّ سَنَةٍ أوْ يَقْضِيهِ.</p>\n<p>والأغرب من كل ده، إن العادة دي مع مرور الوقت اتأصلت في حياتهم لدرجة إنهم بقوا يشوفوها حاجة طبيعية جدًا، وماعادوش يفرّقوا بينها وبين البيع العادي أصلًا. لدرجة إنهم قالوا كلمة خطيرة، حكاها لنا القرآن الكريم عنهم:</p>\n<p>﴿إِنَّمَا الْبَيْعُ مِثْلُ الرِّبَا﴾</p>\n<p>وعشان نفهم عمق التبرير ده اللي كانوا بيقولوه، يوضحلنا الإمام الطبري -رحمه الله تعالى- خلفية الكلام ده، فيقول:</p>\n<p>إِنَّ الذِينَ كانُوا يَأْكُلُونَ الرِّبَا مِنْ أهْلِ الجَاهِلِيَّةِ، كانَ إذا حَلَّ مَالُ أحَدِهِمْ عَلَى غَرِيمِهِ، يَقُولُ الغَرِيمُ لِغَرِيمِ الحَقِّ: زِدْنِي في الأَجَلِ وأزِيدُكَ في مَالِكَ، كَانَ يُقَالُ لَهُمَا إذا فَعَلَا ذَلِكَ: هذَا رِبًا لا يَحِلُّ، فَإِذَا قِيلَ لَهُمَا ذَلِكَ، قالُوا: سَوَاءٌ عَلَيْنَا زِدْنَا في أوَّلِ البَيْعِ، أوْ عِنْدَ مَحَلِّ المَالِ.</p>\n<p>يعني كانوا بيردوا على أي حد بيقولهم إن ده حرام، بمنطق ظاهره بسيط لكنه في الحقيقة مغالطة كبيرة: \"إيه الفرق؟ سواء زوّدنا في السعر وإحنا بنبيع من الأول، أو زوّدنا المبلغ وقت ما يحين موعد السداد، النتيجة واحدة!\" وبكده كانوا بيحاولوا يغطوا على ظلم الربا بمقارنته بالبيع المشروع، مع إن الفرق بينهم - زي ما هنعرف بعدين - جوهري وعميق جدًا.<br>وكده كان الربا واحد من أخطر مظاهر الظلم الاجتماعي في الجاهلية، ظلم بيستغل حاجة الإنسان وضعفه المادي، ويحوّل الدَّين البسيط لعبء ما بيتحملوش. لكن الظلم في المجتمع الجاهلي ماكانش مقصور على الجانب المالي بس؛ كان فيه ظلم أعمق وأخطر، بيمس كرامة الإنسان نفسه، وبيستغل ضعف الفئات الأضعف في المجتمع، وعلى رأسهم النساء. وهنا نوصل لواحدة من أكتر العادات إيلامًا في تاريخ الجاهلية، وهي انتشار الزنا، واللي هنشوف فيها إزاي كان بعض الناس يستغلوا ضعف المرأة عشان مكاسب دنيوية زي ما شفنا بالظبط في الربا، لكن بصورة أقسى وأشد إيلامًا.</p>"}, {"id": "ep_1789307767906", "era": "الجزيرة العربية في العصر الجاهلي", "title": "انتشار الزنا", "subtitle": "الحقة 005", "html": "<p>تعالوا نرجع تاني بالزمن، ونشوف وش تاني من أوجه المجتمع الجاهلي، وهي عادة خطيرة جدًا كانت منتشرة، وهي انتشار الزنا.</p>\n<p>الموضوع هنا ماكانش نادر أو مستنكر زي ما المفروض يكون في أي مجتمع سليم، لأ، كان في رجال بيتخذوا خليلات من غير عقد زواج، وكمان بعض النساء كان ليهم أخلاء من غير زواج. يعني العلاقات المحرمة دي كانت شكل من أشكال الحياة الاجتماعية المقبولة عندهم.</p>\n<p>لكن الظلم ماوقفش عند حد \"العلاقة الحرة\" بمفهومها عندهم، لأ، وصل لحد إن بعض الرجال كانوا يجبروا النساء - وخصوصًا الإماء والجواري - على الفاحشة عشان يكسبوا من وراهن المال. وهنا كان لازم يتنزل كلام ربنا سبحانه وتعالى يوجّه الناس للطريق الصح، فقال:</p>\n<p>﴿وَمَنْ لَمْ يَسْتَطِعْ مِنْكُمْ طَوْلًا أَنْ يَنْكِحَ الْمُحْصَنَاتِ الْمُؤْمِنَاتِ فَمِنْ مَا مَلَكَتْ أَيْمَانُكُمْ مِنْ فَتَيَاتِكُمُ الْمُؤْمِنَاتِ وَاللَّهُ أَعْلَمُ بِإِيمَانِكُمْ بَعْضُكُمْ مِنْ بَعْضٍ فَانْكِحُوهُنَّ بِإِذْنِ أَهْلِهِنَّ وَآتُوهُنَّ أُجُورَهُنَّ بِالْمَعْرُوفِ مُحْصَنَاتٍ غَيْرَ مُسَافِحَاتٍ وَلَا مُتَّخِذَاتِ أَخْدَانٍ﴾</p>\n<p>يعني ربنا سبحانه وتعالى فتح الباب الحلال، وهو الزواج الشرعي بشروطه، وسدّ في نفس الوقت باب العلاقات الخفية المحرمة، وباب اتخاذ الأخدان من غير عقد.</p>\n<p>وعشان نفهم أكتر شكل الزواج في الجاهلية، الإمام البخاري روى لنا في صحيحه عن أم المؤمنين عائشة -رضي الله عنها- إن النكاح في الجاهلية كان له أربعة أشكال، وواحد من الأشكال دي كان صورة غريبة جدًا: ناس كتير كانوا يدخلوا على امرأة واحدة، وهي ماكانتش تمنع حد ييجي لها. وكانت النساء دول اللي معروفات بالبغاء يحطّوا علامة على أبواب بيوتهن، رايات، عشان أي حد عايز يدخل يعرف إنهم أهل لكده.</p>\n<p>جاء في الحديث الشريف:</p>\n<p>النِّكَاحُ في الجَاهِلِيَّةِ كانَ عَلَى أَرْبَعَةِ أنْحَاءَ... والنِّكَاحُ الرَّابع: يَجْتَمعُ النَّاسُ الكَثِيرُ فَيَدْخُلُونَ عَلَى المَرْأَةِ لا تَمْنَعُ مَنْ جَاءَهَا، وهُنَّ البَغَايَا كُنَّ يَنْصِبْنَ عَلَى أبْوَابِهِنَّ رَايَاتٍ تَكُونُ عَلَمًا، فمَنْ أرَادَهُّنَّ دَخَلَ عَلَيْهِنَّ</p>\n<p>وزي ما قلنا، الموضوع تحول لاستغلال في إيد بعض الرجال، اللي كانوا يجبروا النساء الضعيفات على البغاء عشان الكسب المادي. فنزل النهي الصريح من ربنا سبحانه:</p>\n<p>﴿وَلَا تُكْرِهُوا فَتَيَاتِكُمْ عَلَى الْبِغَاءِ إِنْ أَرَدْنَ تَحَصُّنًا لِتَبْتَغُوا عَرَضَ الْحَيَاةِ الدُّنْيَا﴾</p>\n<p>يعني ماينفعش إنسان يستغل ضعف امرأة تحت إيده عشان يحقق مكسب دنيوي. والآية دي بتبين قد إيه الإسلام وقف بحسم في وجه الاستغلال، ودافع عن أضعف الناس في المجتمع.</p>\n<p>وحتى بعد نزول الإسلام، الصحابة استمروا يوصوا بنفس المبدأ. فروى الإمام مالك في الموطأ بسند صحيح عن سيدنا عثمان بن عفان -رضي الله عنه- أنه قال:</p>\n<p>لَا تُكَلِّفُوا الأَمَةَ غَيْرَ ذَاتِ الصَّنْعَةِ الكَسْبَ، فَإنَّكُمْ مَتَى كَلَّفْتُمُوهَا ذَلِكَ كَسَبَتْ بِفَرْجِهَا</p>\n<p>يعني لو عندك جارية ماعندهاش حرفة تكسب بيها، ماينفعش تضغط عليها وتطالبها بمال، لأنك بكده بتفتحلها باب الحرام من غير قصد.</p>\n<p>وكمان النبي -ﷺ- نهى صراحة عن أكل المال الناتج عن البغاء. فأخرج الإمام أحمد في مسنده بسند صحيح على شرط الشيخين عن أبي هريرة -رضي الله عنه- أنه قال:</p>\n<p>نَهَى رسُولُ اللَّهِ -ﷺ- عَنْ كَسْبِ الحَجَّامِ، وكَسْبِ البَغِيِّ، وثَمَنِ الكَلْبِ</p>\n<p>ولو حبينا نشوف مثال حي على المعاناة اللي كانت بتعيشها بعض النساء، روى الإمام مسلم في صحيحه عن جابر بن عبد الله -رضي الله عنهما- قصة مؤثرة: جارية لعبد الله بن أُبيّ بن سلول، اسمها مُسَيْكَة، وجارية تانية اسمها أُمَيْمَة، كان سيدهما يجبرهما على الزنا.</p>\n<p>الجاريتان ماقدرتش تتحملا الظلم ده، فراحوا يشتكوا أمرهما للنبي -ﷺ-. وهنا نزل قول الله تعالى:</p>\n<p>﴿وَلَا تُكْرِهُوا فَتَيَاتِكُمْ عَلَى الْبِغَاءِ إِنْ أَرَدْنَ تَحَصُّنًا لِتَبْتَغُوا عَرَضَ الْحَيَاةِ الدُّنْيَا وَمَنْ يُكْرِهْهُنَّ فَإِنَّ اللَّهَ مِنْ بَعْدِ إِكْرَاهِهِنَّ غَفُورٌ رَحِيمٌ﴾</p>\n<p>وهنا بتظهر عظمة رحمة الإسلام وعدله؛ فماحملش المظلومة وزر حاجة اتجبرت عليها، لكنه حرّم على المُجبِر فعلته، وفتح للمظلومة باب الرحمة والمغفرة، ووقف بكل قوته ضد أي إنسان بيستغل ضعف حد تحت سلطته.</p>\n<p>ظلم المرأة في المجتمع الجاهلي</p>\n<p>ولو كانت المرأة بتتعرض للاستغلال في الجانب ده، فده ماكانش الظلم الوحيد اللي كانت بتواجهه في حياتها اليومية. المرأة في المجتمع الجاهلي كانت في أوقات كتيرة عُرضة للغبن والحيف بكل صوره؛ حقوقها كانت بتضيع، أموالها ممكن تتاخد منها بكل بساطة، وميراثها كان بيتحرم عليها بالكامل.</p>\n<p>وكان ممكن كمان، بعد ما تترمّل أو تتطلق، إنهم يمنعوها من الزواج برجل تاني هي راضية عنه وحابة تكمل حياتها معاه. والأسوأ من كل ده، إنهم أحيانًا كانوا يعاملوها كأنها متاع من المتاع أو دابة من الدواب، فتُورث هي نفسها زي ما بتتورث الأرض أو الماشية.</p>\n<p>تخيلوا معايا إنسانة ليها مشاعر وكرامة وعقل، لكنها تتحول في نظر مجتمعها لشيء يُملَك ويُورَث، وتُحرم من مالها وميراثها، وممكن كمان تُمنع من أبسط حق ليها وهو اختيار شريك حياتها. دي كانت صورة قاسية جدًا من صور الظلم اللي عاشتها المرأة في الجاهلية، وشاهد حي على مدى الانحطاط اللي وصل له المجتمع في التعامل مع نصفه الآخر.</p>\n<p>وعشان كده بالظبط، جاء الإسلام ليقلب الموازين رأسًا على عقب: رفع عنها الظلم، وأثبت لها حقها الكامل في الكرامة والميراث والمال، وصان إنسانيتها التي كانت مهدرة، وأعاد لها مكانتها اللي اتسلبت منها لسنين طويلة.</p>\n<p>وكده شفنا إزاي كانت المرأة في الجاهلية بتتعرض لألوان مختلفة من الظلم والاستغلال، من إجبارها على البغاء، لحرمانها من مالها وميراثها وحقها في اختيار زوجها. لكن الحقيقة المؤلمة إن ظلم المرأة في المجتمع الجاهلي ماكانش بيبدأ لما تكبر وتتزوج، لأ، كان بيبدأ من أول لحظة في حياتها، بل قبل حتى ما تعيش أصلًا. فبعض الآباء كانوا بيشوفوا في مجرد ولادة بنت مصيبة وعار، لدرجة إنهم كانوا يحرموها من أبسط حق ليها في الوجود - حق الحياة نفسه. وهنا نوصل لواحدة من أظلم وأقسى العادات اللي عرفتها الجاهلية على الإطلاق: وأد البنات.</p>"}, {"id": "ep_1789332119997", "era": "الجزيرة العربية في العصر الجاهلي", "title": "وأد البنات", "subtitle": "الحلقة 006", "html": "<p>تعالوا نكمل رحلتنا في عمق الجاهلية، ونوصل لواحدة من أقسى وأظلم العادات اللي عرفها التاريخ الإنساني على الإطلاق: وأد البنات.</p>\n<p>الكراهية اللي كانت موجودة تجاه البنات ماوقفتش عند حد التمييز أو الإهمال، لأ، وصلت لأبشع صورة ممكن تتخيلها: دفن البنت وهي حية! يحكي لنا الهيثم بن عدي، على ما نقله عنه الميداني، إن الوأد كان معروف ومستعمل في كل قبائل العرب تقريبًا، لكن مش كل واحد كان بيمارسه؛ فكان في واحد يعمله، وعشرة يمتنعوا عنه. ولما جه الإسلام، لقى مذاهب العرب مختلفة في الموضوع ده:</p>\n<p>فمنهم مين كان بيئد بناته بدافع الغيرة الزايدة، وخوفًا من إن العار يلحق بيه بسببهن - يعني كان خايف يكبروا ويحصل منهم أو ليهم حاجة تجيب العار على العيلة. ومنهم مين كان بيئد بس البنات اللي بتتولد بصفة معينة، زي إنها زرقاء العينين، أو شيماء، أو برشاء، أو كسحاء - يعني كان بيتشاءم من الصفات دي، ويشوفها نذير شؤم!</p>\n<p>والأقسى من كده، إن بعضهم كان بيمارس القسوة دي بشكل نادر في وحشيته. تخيل معايا: أحيانًا كان الأب مشغول أو مسافر، فيتأخر وأد البنت لحد ما تكبر شوية وتبقى عارفة وعاقلة الدنيا حواليها. وحكوا هما نفسهم عن التجربة دي حكايات بتبكي القلب. وكان في مين منهم كان بيرمي البنت من فوق مكان عالي.</p>\n<p>ولوصف حال الأب وقت ما يجيله خبر إنه رزق ببنت، نزل قول ربنا سبحانه وتعالى يفضح المشاعر القبيحة دي بكل وضوح:</p>\n<p>﴿وَإِذَا بُشِّرَ أَحَدُهُمْ بِالْأُنْثَى ظَلَّ وَجْهُهُ مُسْوَدًّا وَهُوَ كَظِيمٌ يَتَوَارَى مِنَ الْقَوْمِ مِنْ سُوءِ مَا بُشِّرَ بِهِ أَيُمْسِكُهُ عَلَى هُونٍ أَمْ يَدُسُّهُ فِي التُّرَابِ أَلَا سَاءَ مَا يَحْكُمُونَ﴾</p>\n<p>شايف الصورة إزاي؟ الراجل ييجيله خبر إنه أبو بنت، فوشه يسود من الغضب والحزن، وقلبه يمتلئ بالكظم والضيق. وبعدين يروح يختبي من قومه من شدة سوء الخبر اللي اتبشر بيه، وهو حاير بين حاجتين، كل واحدة فيهم أسوأ من التانية: يمسك البنت دي على مضض وهو شايفها عار وذل عليه، ولا \"يدسها في التراب\" - يعني يدفنها وهي حية تحت الأرض! وربنا سبحانه بيختم الآية بحكم قاطع: ﴿أَلَا سَاءَ مَا يَحْكُمُونَ﴾ - يعني بشاعة الحكم ده وقساوته ماليهاش وصف.</p>\n<p>وكده شفنا صورة من أقسى صور الظلم في الجاهلية، لما كانت البنت بتُدفن وهي حية، مجرد لأنها بنت. لكن المؤسف إن دايرة القسوة دي ماكانتش مقتصرة بس على البنات بسبب العار المتوهم أو التشاؤم؛ كان في ناس تانية بتمد إيدها لتقتل أولادها - ذكورًا كانوا أو إناثًا - لسبب مختلف تمامًا، مش عار ولا تشاؤم، لكنه خوف من المستقبل نفسه، خوف من الفقر والجوع. وهنا نوصل لصورة تانية من صور القسوة دي، لا تقل إيلامًا عن الوأد، وهي قتل الأولاد خشية الفقر.</p>"}, {"id": "ep_1789332552160", "era": "الجزيرة العربية في العصر الجاهلي", "title": "قتل الاولاد خشية الفقر", "subtitle": "الحلقة 007", "html": "<p>تعالوا نكمل الرحلة المؤلمة في عمق الجاهلية، ونشوف وش تاني من أوجه القسوة اللي كانت بتمارس ضد الأطفال، وهي قتل الأولاد خشية الفقر.</p>\n<p>الظلم هنا ماكانش بس مقصور على البنات بسبب العار المتوهم، لأ، كان في ناس تانية بتقتل أولادها - ذكور وإناث - بس بسبب خوف من المستقبل المادي. كانوا فقراء من بعض قبائل العرب، وخوفهم من الإنفاق على الطفل، ورعبهم من الفقر، كان بيخليهم ياخدوا قرار مروع زي ده.</p>\n<p>ومن رحمة بعض أشراف العرب وسادتهم، إنهم كانوا يشتروا الأطفال دول من آباءهم عشان ينقذوهم من الموت. وصعصعة بن ناجية -وهو جد الشاعر المشهور الفرزدق- بيحكي عن نفسه فخرًا، بيقول: \"جَاءَ الإِسْلَامُ وقَدْ فَدَيْتُ ثَلَاثَ مِائَةِ مَوْءُودَةٍ\" - يعني قبل ما يجي الإسلام، كان قد أنقذ بنفسه ثلاثمية بنت من الموت المحتم!</p>\n<p>وفيه صورة تانية من صور القتل دي، أغرب وأقسى، وهي النذر. كان في ناس بينذروا لنفسهم: لو ربنا رزقهم بعشرة أولاد، هيدبحوا واحد منهم قربان! وده اللي حصل بالظبط مع عبد المطلب، جد الرسول -ﷺ- نفسه، قبل الإسلام طبعًا.</p>\n<p>وقدام الظلم ده كله، حذّر ربنا سبحانه وتعالى منه بشكل واضح وصريح، فقال:</p>\n<p>﴿قُلْ تَعَالَوْا أَتْلُ مَا حَرَّمَ رَبُّكُمْ عَلَيْكُمْ أَلَّا تُشْرِكُوا بِهِ شَيْئًا وَبِالْوَالِدَيْنِ إِحْسَانًا وَلَا تَقْتُلُوا أَوْلَادَكُمْ مِنْ إِمْلَاقٍ نَحْنُ نَرْزُقُكُمْ وَإِيَّاهُمْ...﴾</p>\n<p>وقال سبحانه وتعالى في آية تانية بنفس القوة:</p>\n<p>﴿وَلَا تَقْتُلُوا أَوْلَادَكُمْ خَشْيَةَ إِمْلَاقٍ نَحْنُ نَرْزُقُهُمْ وَإِيَّاكُمْ إِنَّ قَتْلَهُمْ كَانَ خِطْئًا كَبِيرًا﴾</p>\n<p>شايف الرد الإلهي إزاي بيهدم الفكرة من أساسها؟ ربنا مش بس بيحرم الفعل، لكنه كمان بيطمّن الأب: \"نحن نرزقكم وإياهم\" - يعني الرزق مش في إيدك أنت، الرزق من عند ربنا، فمالك وخوفك ده اللي بيخليك تقتل ابنك؟</p>\n<p>وعشان تتخيل خطورة الذنب ده في ميزان ربنا سبحانه، روى الشيخان (البخاري ومسلم) في صحيحيهما عن عبد الله بن مسعود -رضي الله عنه- قصة بتوضح ترتيب الذنوب عند الله، قال:</p>\n<p>قُلْتُ: يَا رَسُولَ اللَّهِ! أيُّ الذَّنْبِ أعْظَمُ عِنْدَ اللَّهِ؟قَالَ -ﷺ-: «أَنْ تَجْعَلَ للَّهِ نِدًّا، وَهُوَ خَلقَكَ».قُلْتُ: ثُمَّ أَيُّ؟قَالَ -ﷺ-: «أَنْ تَقْتُلَ وَلَدَكَ مِنْ أَجْلِ أَنْ يَطْعَمَ مَعَكَ».قُلْتُ: ثُمَّ أيُّ؟قَالَ -ﷺ-: «أَنْ تزانِيَ حَلِيلةَ جَارِكَ»</p>\n<p>شايف الترتيب المهول ده؟ الذنب الأول هو الشرك بالله، والذنب التاني - اللي جه فورًا بعد الشرك مباشرة - هو قتل الولد خوفًا من إنه ياكل معاك! يعني قتل الولد بيجي في المرتبة التانية في عظم الذنوب عند الله، قبل حتى الزنا بحليلة الجار.</p>\n<p>وفيه صورة أخيرة من صور الجهل دي، مش قتل مباشر، لكنها إهانة واستهزاء بالبنات من ناحية تانية. كان في ناس بيقولوا إن الملائكة - تعالى الله عما يقولون علوًا كبيرًا - هما بنات الله! فألحقوا البنات بربنا سبحانه وتعالى، وهما في نفس الوقت شايفين البنت عار عليهم وبيقتلوها!</p>\n<p>يقول الله تعالى فاضحًا تناقضهم ده:</p>\n<p>﴿وَيَجْعَلُونَ لِلَّهِ الْبَنَاتِ سُبْحَانَهُ وَلَهُمْ مَا يَشْتَهُونَ﴾</p>\n<p>وقال تعالى في آية تانية بتفضح المنطق الأعوج ده:</p>\n<p>﴿فَاسْتَفْتِهِمْ أَلِرَبِّكَ الْبَنَاتُ وَلَهُمُ الْبَنُونَ أَمْ خَلَقْنَا الْمَلَائِكَةَ إِنَاثًا وَهُمْ شَاهِدُونَ﴾</p>\n<p>يعني ربنا بيسألهم سؤال منطقي بيكشف تناقضهم: إزاي أنتم بتنسبوا لربنا البنات، وأنتم نفسكم شايفين البنت أقل من الولد؟! وإزاي بتحكموا إن الملائكة إناث من غير ما يكون عندكم أي دليل أو شهادة على كده؟!</p>"}, {"id": "ep_1789332862838", "era": "الجزيرة العربية فى العصر الجاهلي", "title": "ظلام مطبق ويأس قاتل", "subtitle": "الحلقة 008", "html": "<p>بعد ما شفنا صور الظلم دي واحدة ورا التانية - من القمار اللي بيفتت الأسر، للخمر اللي بتغيّب العقول، للربا اللي بيفترس الضعفاء ماديًا، للزنا اللي بيهدر كرامة المرأة، لوأد البنات ودفنهن أحياء، لقتل الأولاد خشية الفقر - نوصل دلوقتي لخلاصة الصورة كلها، ولحظة نقف فيها ونتأمل حجم الظلام اللي كانت غارقة فيه البشرية وقتها.</p>\n<p>وخلاصة القول: إن القرن السادس الميلادي، اللي فيه كانت البعثة المحمدية، وما قبله وما بعده من فترة زمنية، كان من أحط أدوار التاريخ الإنساني على الإطلاق، ومن أشد العصور ظلامًا، ومن أعمقها يأسًا من مستقبل الإنسانية نفسها، وقدرتها على البقاء والازدهار.</p>\n<p>تخيل معايا الصورة دي كلها مجتمعة: مجتمع بيعتبر القمار فخر ومروءة، وشرب الخمر جزء من هويته وأدبه، والربا وسيلة مشروعة للكسب حتى لو أكل حقوق الناس، والزنا أمر عادي يُمارس علانية، والمرأة تُورث زي الأثاث وتُحرم من أبسط حقوقها، والبنت تُدفن حية وهي بريئة ماعملتش ذنب، والولد يُقتل خوفًا من إنه ياكل مع أبوه! أي ظلام أعمق من ده ممكن يعيشه إنسان؟</p>\n<p>وده بالظبط اللي بيخلينا نفهم عظمة اللحظة اللي جه فيها الإسلام. ماكانتش مجرد رسالة دينية جت في وقت عادي، لأ، كانت نور نزل وسط ظلام دامس، ورحمة نزلت في زمن قسوته مالهاش حدود. وده اللي خلى المؤرخين أنفسهم - مش بس المسلمين - يعترفوا إن الإنسانية في اللحظة دي كانت في أمس الحاجة لإنقاذ، وإن مجيء الإسلام كان نقطة تحول فاصلة في تاريخ البشرية كلها، غيّر المفاهيم دي كلها من جذورها، ورفع الظلم عن كل فئة كانت مظلومة - المرأة، والطفلة، والفقير، والضعيف - وأعاد للإنسان كرامته اللي كان فقدها</p>"}];
+
+    // State Variables
+    let episodes = [];
+    let currentIndex = 0;
+    let activeEra = 'all';
+    let searchQuery = '';
+    let bookmarks = new Set(JSON.parse(localStorage.getItem('seerah_bookmarks') || '[]'));
+    let readEpisodes = new Set(JSON.parse(localStorage.getItem('seerah_read') || '[]'));
+    let globalAudioData = null;
+    let isSpeechReading = false;
+    let currentSpeechUtterance = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recStream = null;
+    let recTimerInterval = null;
+    let recSeconds = 0;
+
+    // Toast Function
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      
+      let icon = 'fa-info-circle';
+      if (type === 'success') icon = 'fa-circle-check';
+      if (type === 'error') icon = 'fa-circle-exclamation';
+
+      toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // Theme Management
+    const themes = ['midnight', 'obsidian', 'sepia', 'light'];
+    let currentTheme = localStorage.getItem('seerah_theme') || 'midnight';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+
+    document.getElementById('themeToggleBtn').addEventListener('click', cycleTheme);
+    document.getElementById('mobileThemeBtn').addEventListener('click', cycleTheme);
+
+    function cycleTheme() {
+      const nextIdx = (themes.indexOf(currentTheme) + 1) % themes.length;
+      currentTheme = themes[nextIdx];
+      document.documentElement.setAttribute('data-theme', currentTheme);
+      localStorage.setItem('seerah_theme', currentTheme);
+      showToast(`تم التبديل إلى ثيم: ${getThemeName(currentTheme)}`, 'info');
+    }
+
+    function getThemeName(t) {
+      switch(t) {
+        case 'midnight': return 'كحل ملكي';
+        case 'obsidian': return 'الذهب والظلال';
+        case 'sepia': return 'رملي دافئ';
+        case 'light': return 'نهاري نقي';
+        default: return t;
+      }
+    }
+
+    // Font Family Management
+    const fonts = ['amiri', 'naskh', 'ruqaa', 'cairo'];
+    let currentFont = localStorage.getItem('seerah_font') || 'amiri';
+    document.documentElement.setAttribute('data-font', currentFont);
+
+    document.getElementById('fontToggleBtn').addEventListener('click', () => {
+      const nextIdx = (fonts.indexOf(currentFont) + 1) % fonts.length;
+      currentFont = fonts[nextIdx];
+      document.documentElement.setAttribute('data-font', currentFont);
+      localStorage.setItem('seerah_font', currentFont);
+      showToast(`نوع الخط: ${getFontName(currentFont)}`, 'info');
+    });
+
+    function getFontName(f) {
+      switch(f) {
+        case 'amiri': return 'الأميري القرآني';
+        case 'naskh': return 'النسخ العربي';
+        case 'ruqaa': return 'الرقعة الشريف';
+        case 'cairo': return 'خط كايرو العصري';
+        default: return f;
+      }
+    }
+
+    // Font Size Zoom
+    let currentFontSize = parseInt(localStorage.getItem('seerah_fontsize') || '18', 10);
+    applyFontSize();
+
+    document.getElementById('zoomInBtn').addEventListener('click', () => {
+      if (currentFontSize < 28) {
+        currentFontSize += 2;
+        applyFontSize();
+      }
+    });
+
+    document.getElementById('zoomOutBtn').addEventListener('click', () => {
+      if (currentFontSize > 14) {
+        currentFontSize -= 2;
+        applyFontSize();
+      }
+    });
+
+    function applyFontSize() {
+      document.documentElement.style.setProperty('--font-size-base', currentFontSize + 'px');
+      localStorage.setItem('seerah_fontsize', String(currentFontSize));
+    }
+
+    // Text Formatter for Quranic Verses, Hadiths & Poetry
+    function formatReadingHtml(rawHtml) {
+      if (!rawHtml) return '';
+      
+      let formatted = rawHtml;
+
+      // Format Quranic Verses: ﴿ ... ﴾
+      formatted = formatted.replace(/﴿(.*?)﴾/g, '<span class="quran-verse"><span class="quran-bracket">﴿</span>$1<span class="quran-bracket">﴾</span></span>');
+
+      // Highlight Prophet's name & blessing
+      formatted = formatted.replace(/(صلى الله عليه وسلم|ﷺ|-ﷺ-)/g, '<span class="prophet-blessing">ﷺ</span>');
+
+      // Detect poetry lines (contains "..." or "···" in verses)
+      formatted = formatted.replace(/<p>([^<]*?(?:(?:\.\.\.|···)[^<]*?)+)<\/p>/g, function(match, inner) {
+        if (inner.includes('...') || inner.includes('···')) {
+          return `<div class="poetry-block">${inner.replace(/\.\.\./g, ' &nbsp;···&nbsp; ')}</div>`;
+        }
+        return match;
+      });
+
+      return formatted;
+    }
+
+    // Plain text converter for Gemini and Speech
+    function htmlToPlainText(html) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      return tmp.textContent || tmp.innerText || '';
+    }
+
+    // Realtime Firestore Listener for Episodes
+    function setupEpisodesListener() {
+      const episodesQuery = query(collection(db, 'episodes'), orderBy('order', 'asc'));
+      
+      onSnapshot(episodesQuery, async (snapshot) => {
+        if (snapshot.empty) {
+          // Collection is empty, auto-seed initial 8 episodes!
+          await seedInitialEpisodes();
+          return;
+        }
+
+        episodes = snapshot.docs.map(doc => ({
+          docId: doc.id,
+          ...doc.data()
+        }));
+
+        // Sort by order ascending
+        episodes.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        // Restore last active episode or default to 0
+        const savedIndex = parseInt(localStorage.getItem('seerah_last_index') || '0', 10);
+        currentIndex = Math.min(Math.max(0, savedIndex), episodes.length - 1);
+
+        renderSidebar();
+        renderCurrentEpisode();
+      }, (error) => {
+        console.error('Firestore snapshot error:', error);
+        showToast('تعذّر جلب البيانات من السحابة: ' + error.message, 'error');
+      });
+    }
+
+    // Auto-seed initial 8 episodes to Firestore
+    async function seedInitialEpisodes() {
+      showToast('جارٍ تهيئة حلقات السيرة النبوية لأول مرة في Firebase...', 'info');
+      try {
+        const batch = writeBatch(db);
+        INITIAL_SEED_EPISODES.forEach((ep, idx) => {
+          const docRef = doc(collection(db, 'episodes'));
+          batch.set(docRef, {
+            order: idx + 1,
+            era: ep.era,
+            title: ep.title,
+            subtitle: ep.subtitle || `الحلقة ${String(idx + 1).padStart(3, '0')}`,
+            html: ep.html,
+            audioUrl: null,
+            createdAt: serverTimestamp()
+          });
+        });
+        await batch.commit();
+        showToast('تمت تهيئة الحلقات في Firebase بنجاح!', 'success');
+      } catch(err) {
+        console.error('Seeding error:', err);
+        showToast('خطأ في التهيئة الأولية: ' + err.message, 'error');
+      }
+    }
+
+    // Realtime Listener for Global Audio Setting
+    function setupGlobalAudioListener() {
+      const globalDocRef = doc(db, 'settings', 'global_audio');
+      onSnapshot(globalDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          globalAudioData = docSnap.data();
+        } else {
+          globalAudioData = null;
+        }
+        renderGlobalAudio();
+      }, (err) => console.warn('Global audio listener error:', err));
+    }
+
+    // Render Global Audio Card
+    function renderGlobalAudio() {
+      const playerWrap = document.getElementById('globalAudioPlayerWrap');
+      const removeBtn = document.getElementById('removeGlobalAudioBtn');
+
+      if (globalAudioData && globalAudioData.audioUrl) {
+        playerWrap.innerHTML = `<audio controls src="${globalAudioData.audioUrl}"></audio>`;
+        if (removeBtn) removeBtn.style.display = 'inline-flex';
+      } else {
+        playerWrap.innerHTML = `<span style="font-size:0.8rem; color:var(--text-muted);">لا يوجد مقطع صوتي عام مضاف</span>`;
+        if (removeBtn) removeBtn.style.display = 'none';
+      }
+    }
+
+    // Render Sidebar & Filter Chips
+    function renderSidebar() {
+      const container = document.getElementById('episodeListContainer');
+      const chipsList = document.getElementById('eraChipsList');
+      const statTotal = document.getElementById('statTotalEps');
+      const statProgress = document.getElementById('statReadProgress');
+
+      statTotal.textContent = episodes.length;
+      const readPercent = episodes.length ? Math.round((readEpisodes.size / episodes.length) * 100) : 0;
+      statProgress.innerHTML = `المقروء: <b>${readPercent}%</b>`;
+
+      // Render Era Chips
+      const distinctEras = Array.from(new Set(episodes.map(e => e.era).filter(Boolean)));
+      chipsList.innerHTML = `<div class="era-chip ${activeEra === 'all' ? 'active' : ''}" data-era="all">الكل (${episodes.length})</div>`;
+      distinctEras.forEach(era => {
+        const count = episodes.filter(e => e.era === era).length;
+        const chip = document.createElement('div');
+        chip.className = `era-chip ${activeEra === era ? 'active' : ''}`;
+        chip.dataset.era = era;
+        chip.textContent = `${era} (${count})`;
+        chipsList.appendChild(chip);
+      });
+
+      // Add click listeners to chips
+      chipsList.querySelectorAll('.era-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          chipsList.querySelectorAll('.era-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          activeEra = chip.dataset.era;
+          filterAndRenderEpisodeList();
+        });
+      });
+
+      filterAndRenderEpisodeList();
+    }
+
+    // Filter and render list items
+    function filterAndRenderEpisodeList() {
+      const container = document.getElementById('episodeListContainer');
+      container.innerHTML = '';
+
+      let filtered = episodes.map((ep, originalIndex) => ({ ep, originalIndex }));
+
+      if (activeEra !== 'all') {
+        filtered = filtered.filter(item => item.ep.era === activeEra);
+      }
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        filtered = filtered.filter(item => {
+          const titleMatch = (item.ep.title || '').toLowerCase().includes(q);
+          const subMatch = (item.ep.subtitle || '').toLowerCase().includes(q);
+          const eraMatch = (item.ep.era || '').toLowerCase().includes(q);
+          const textMatch = htmlToPlainText(item.ep.html || '').toLowerCase().includes(q);
+          return titleMatch || subMatch || eraMatch || textMatch;
+        });
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:30px 10px; color:var(--text-muted); font-size:0.88rem;">
+            <i class="fa-solid fa-magnifying-glass" style="font-size:24px; margin-bottom:8px; opacity:0.5;"></i>
+            <p>لا توجد نتائج تطابق بحثك</p>
+          </div>`;
+        return;
+      }
+
+      filtered.forEach(({ ep, originalIndex }) => {
+        const isCurrent = originalIndex === currentIndex;
+        const isBookmarked = bookmarks.has(ep.docId);
+        const isRead = readEpisodes.has(ep.docId);
+
+        const card = document.createElement('div');
+        card.className = `episode-card-item ${isCurrent ? 'active' : ''}`;
+        card.innerHTML = `
+          <div class="ep-item-left">
+            <div class="ep-badge-num">${originalIndex + 1}</div>
+            <div class="ep-item-meta">
+              <div class="ep-item-title">${ep.title}</div>
+              <div class="ep-item-sub">${ep.subtitle || ep.era}</div>
+            </div>
+          </div>
+          <div class="ep-item-badges">
+            ${ep.audioUrl ? '<i class="fa-solid fa-microphone-lines icon-badge" title="يوجد تسجيل صوتي"></i>' : ''}
+            ${isBookmarked ? '<i class="fa-solid fa-bookmark icon-badge" style="color:var(--gold)"></i>' : ''}
+            ${isRead ? '<i class="fa-solid fa-check icon-badge" style="color:#10b981" title="تمت قراءتها"></i>' : ''}
+          </div>
+        `;
+
+        card.addEventListener('click', () => {
+          goToEpisode(originalIndex);
+          closeDrawer();
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    // Switch Episode
+    function goToEpisode(index) {
+      if (index < 0 || index >= episodes.length) return;
+      stopSpeechReader();
+      stopRecordingAudio(true);
+      currentIndex = index;
+      localStorage.setItem('seerah_last_index', String(currentIndex));
+
+      // Mark as read
+      if (episodes[currentIndex]) {
+        readEpisodes.add(episodes[currentIndex].docId);
+        localStorage.setItem('seerah_read', JSON.stringify(Array.from(readEpisodes)));
+      }
+
+      renderSidebar();
+      renderCurrentEpisode();
+
+      // Scroll top smoothly
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Render Current Active Episode
+    function renderCurrentEpisode() {
+      if (episodes.length === 0) return;
+      const ep = episodes[currentIndex];
+
+      // Update progress bar
+      const progressPercent = Math.round(((currentIndex + 1) / episodes.length) * 100);
+      document.getElementById('progressBarFill').style.width = progressPercent + '%';
+
+      // Header Meta
+      document.getElementById('readingStageTag').innerHTML = `<i class="fa-solid fa-feather"></i> <span>${ep.era}</span>`;
+      document.getElementById('readingTitle').textContent = ep.title;
+      document.getElementById('readingSubtitle').textContent = ep.subtitle || `الحلقة ${String(currentIndex + 1).padStart(3, '0')}`;
+      document.getElementById('readingEpNumberBadge').textContent = `الحلقة ${currentIndex + 1} من ${episodes.length}`;
+
+      // Estimated Reading Time
+      const wordCount = htmlToPlainText(ep.html).trim().split(/\s+/).length;
+      const readMinutes = Math.max(1, Math.round(wordCount / 140));
+      document.getElementById('readingTimeEst').textContent = `وقت القراءة: ${readMinutes} ${readMinutes === 1 ? 'دقيقة' : 'دقائق'}`;
+
+      // Render Formatted Text
+      document.getElementById('readingTextContent').innerHTML = formatReadingHtml(ep.html);
+
+      // Bookmark Button State
+      const bookmarkBtn = document.getElementById('bookmarkBtn');
+      if (bookmarks.has(ep.docId)) {
+        bookmarkBtn.innerHTML = '<i class="fa-solid fa-bookmark" style="color:var(--gold)"></i> <span>محفوظ</span>';
+      } else {
+        bookmarkBtn.innerHTML = '<i class="fa-regular fa-bookmark"></i> <span>حفظ</span>';
+      }
+
+      // Navigation Buttons
+      const prevBtn = document.getElementById('prevEpBtn');
+      const nextBtn = document.getElementById('nextEpBtn');
+      const mobilePrevBtn = document.getElementById('mobilePrevBtn');
+      const mobileNextBtn = document.getElementById('mobileNextBtn');
+
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.disabled = currentIndex === episodes.length - 1;
+      mobilePrevBtn.disabled = currentIndex === 0;
+      mobileNextBtn.disabled = currentIndex === episodes.length - 1;
+
+      if (currentIndex === episodes.length - 1) {
+        nextBtn.innerHTML = '<span>أحدث حلقة ✓</span>';
+      } else {
+        nextBtn.innerHTML = '<span>الحلقة التالية</span> <i class="fa-solid fa-arrow-left"></i>';
+      }
+
+      // Render Audio Widget for this episode
+      renderEpisodeAudioWidget(ep);
+
+      // Render Reflections
+      setupReflectionsListener(ep.docId);
+    }
+
+    // Episode Audio Widget (Play / Record / Upload)
+    function renderEpisodeAudioWidget(ep) {
+      const widget = document.getElementById('episodeAudioWidget');
+      
+      if (ep.audioUrl) {
+        widget.innerHTML = `
+          <div class="audio-widget-header">
+            <div class="audio-title-tag">
+              <i class="fa-solid fa-microphone-lines"></i>
+              <span>تسجيل صوتي لهذه الحلقة</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <select class="speed-select" id="audioSpeedSelect" title="سرعة التشغيل">
+                <option value="0.75">0.75x</option>
+                <option value="1" selected>1.0x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2.0x</option>
+              </select>
+              <button class="tool-btn" id="changeEpAudioBtn" title="تغيير التسجيل"><i class="fa-solid fa-pen"></i></button>
+              <button class="tool-btn danger-action" id="deleteEpAudioBtn" title="إزالة التسجيل"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
+          <div class="audio-controls-row">
+            <audio id="currentEpAudioEl" controls src="${ep.audioUrl}"></audio>
+          </div>
+        `;
+
+        const audioEl = document.getElementById('currentEpAudioEl');
+        const speedSelect = document.getElementById('audioSpeedSelect');
+        speedSelect.addEventListener('change', () => {
+          audioEl.playbackRate = parseFloat(speedSelect.value);
+        });
+
+        document.getElementById('changeEpAudioBtn').addEventListener('click', () => openAudioRecorderForm(ep));
+        document.getElementById('deleteEpAudioBtn').addEventListener('click', () => deleteEpisodeAudio(ep));
+      } else {
+        widget.innerHTML = `
+          <div class="audio-widget-header">
+            <div class="audio-title-tag" style="color:var(--text-muted)">
+              <i class="fa-solid fa-microphone-slash"></i>
+              <span>لا يوجد تسجيل صوتي لهذه الحلقة</span>
+            </div>
+            <button class="btn-gold" id="addEpAudioBtn" style="padding:6px 14px; font-size:0.8rem;">
+              <i class="fa-solid fa-plus"></i>
+              <span>تسجيل أو رفع صوت</span>
+            </button>
+          </div>
+        `;
+        document.getElementById('addEpAudioBtn').addEventListener('click', () => openAudioRecorderForm(ep));
+      }
+    }
+
+    // Audio Recorder / Uploader Form
+    function openAudioRecorderForm(ep) {
+      stopRecordingAudio(true);
+      const widget = document.getElementById('episodeAudioWidget');
+      
+      widget.innerHTML = `
+        <div class="audio-widget-header">
+          <div class="audio-title-tag">
+            <i class="fa-solid fa-microphone"></i>
+            <span>تسجيل مباشر بالميكروفون أو رفع ملف صوتي</span>
+          </div>
+          <button class="tool-btn" id="cancelAudioFormBtn">إلغاء</button>
+        </div>
+
+        <div class="rec-box" id="recLiveBox" style="display:none;">
+          <div class="rec-pulse-dot"></div>
+          <div class="rec-timer" id="recTimerDisplay">00:00</div>
+          <span style="font-size:0.8rem; color:var(--text-muted); margin-right:auto;">جارٍ تسجيل الصوت...</span>
+          <button class="btn-gold" id="stopAndUploadRecBtn" style="background:#ef4444; color:#fff;">
+            <i class="fa-solid fa-stop"></i> إنهاء ورفع
+          </button>
+        </div>
+
+        <div id="audioActionButtons" style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn-gold" id="startMicrophoneRecBtn">
+            <i class="fa-solid fa-microphone"></i> ابدأ التسجيل المباشر
+          </button>
+          <label class="tool-btn" style="cursor:pointer;">
+            <i class="fa-solid fa-file-audio"></i> اختيار ملف صوتي
+            <input type="file" accept="audio/*" id="epAudioFileInput" style="display:none;">
+          </label>
+        </div>
+
+        <div class="upload-progress-bar" id="epUploadProgressBar">
+          <div class="upload-progress-fill" id="epUploadProgressFill"></div>
+        </div>
+      `;
+
+      document.getElementById('cancelAudioFormBtn').addEventListener('click', () => {
+        stopRecordingAudio(true);
+        renderEpisodeAudioWidget(ep);
+      });
+
+      document.getElementById('startMicrophoneRecBtn').addEventListener('click', () => startMicrophoneRecording(ep));
+
+      document.getElementById('epAudioFileInput').addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) uploadAudioFileToFirebase(ep, file);
+      });
+    }
+
+    // Microphone Recording Logic
+    async function startMicrophoneRecording(ep) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showToast('متصفحك لا يدعم التسجيل المباشر — يمكنك اختيار ملف صوتي جاهز.', 'error');
+        return;
+      }
+
+      try {
+        recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch(err) {
+        showToast('تعذّر الوصول إلى الميكروفون. يرجى إعطاء الصلاحية للمتصفح.', 'error');
+        return;
+      }
+
+      recordedChunks = [];
+      mediaRecorder = new MediaRecorder(recStream);
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        if (recStream) {
+          recStream.getTracks().forEach(t => t.stop());
+          recStream = null;
+        }
+        if (recordedChunks.length === 0) return;
+
+        const mime = mediaRecorder && mediaRecorder.mimeType ? mediaRecorder.mimeType : 'audio/webm';
+        const blob = new Blob(recordedChunks, { type: mime });
+        uploadAudioFileToFirebase(ep, blob, 'mic_recording.webm');
+      };
+
+      mediaRecorder.start();
+
+      // UI state
+      document.getElementById('recLiveBox').style.display = 'flex';
+      document.getElementById('audioActionButtons').style.display = 'none';
+
+      recSeconds = 0;
+      const timerEl = document.getElementById('recTimerDisplay');
+      recTimerInterval = setInterval(() => {
+        recSeconds++;
+        const m = String(Math.floor(recSeconds / 60)).padStart(2, '0');
+        const s = String(recSeconds % 60).padStart(2, '0');
+        timerEl.textContent = `${m}:${s}`;
+      }, 1000);
+
+      document.getElementById('stopAndUploadRecBtn').addEventListener('click', () => {
+        stopRecordingAudio(false);
+      });
+    }
+
+    function stopRecordingAudio(discard = false) {
+      if (recTimerInterval) {
+        clearInterval(recTimerInterval);
+        recTimerInterval = null;
+      }
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        if (discard) recordedChunks = [];
+        mediaRecorder.stop();
+      } else if (recStream) {
+        recStream.getTracks().forEach(t => t.stop());
+        recStream = null;
+      }
+      mediaRecorder = null;
+    }
+
+    // Upload audio blob/file directly to Firebase Storage
+    function uploadAudioFileToFirebase(ep, fileOrBlob, fallbackName = 'audio.mp3') {
+      const progressContainer = document.getElementById('epUploadProgressBar');
+      const progressFill = document.getElementById('epUploadProgressFill');
+      if (progressContainer) progressContainer.style.display = 'block';
+
+      const filename = `episodes_audio/${ep.docId}_${Date.now()}_${fallbackName}`;
+      const fileRef = sRef(storage, filename);
+      const uploadTask = uploadBytesResumable(fileRef, fileOrBlob);
+
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const percent = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          if (progressFill) progressFill.style.width = percent + '%';
+        },
+        (error) => {
+          console.error('Storage upload error:', error);
+          showToast('فشل رفع الملف الصوتي: ' + error.message, 'error');
+        },
+        async () => {
+          try {
+            const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+            await updateDoc(doc(db, 'episodes', ep.docId), {
+              audioUrl: downloadUrl,
+              updatedAt: serverTimestamp()
+            });
+            showToast('تم رفع وحفظ المقطع الصوتي في السحابة بنجاح!', 'success');
+          } catch(e) {
+            showToast('تعذّر تحديث رابط الصوت في قاعدة البيانات: ' + e.message, 'error');
+          }
+        }
+      );
+    }
+
+    // Delete Episode Audio
+    async function deleteEpisodeAudio(ep) {
+      if (!confirm('هل أنت متأكد من حذف التسجيل الصوتي لهذه الحلقة؟')) return;
+      try {
+        await updateDoc(doc(db, 'episodes', ep.docId), {
+          audioUrl: null,
+          updatedAt: serverTimestamp()
+        });
+        showToast('تم حذف التسجيل الصوتي.', 'info');
+      } catch(err) {
+        showToast('تعذّر الحذف: ' + err.message, 'error');
+      }
+    }
+
+    // Built-in Web Speech Synthesis Reader
+    const speechBtn = document.getElementById('speechReadBtn');
+    const speechBanner = document.getElementById('speechActiveBanner');
+    const stopSpeechBtn = document.getElementById('stopSpeechBtn');
+
+    speechBtn.addEventListener('click', toggleSpeechReader);
+    stopSpeechBtn.addEventListener('click', stopSpeechReader);
+
+    function toggleSpeechReader() {
+      if (!('speechSynthesis' in window)) {
+        showToast('المتصفح الحالي لا يدعم القارئ الصوتي الآلي.', 'error');
+        return;
+      }
+
+      if (isSpeechReading) {
+        stopSpeechReader();
+      } else {
+        startSpeechReader();
+      }
+    }
+
+    function startSpeechReader() {
+      if (episodes.length === 0) return;
+      const plain = htmlToPlainText(episodes[currentIndex].html);
+      if (!plain) return;
+
+      window.speechSynthesis.cancel();
+      currentSpeechUtterance = new SpeechSynthesisUtterance(plain);
+      currentSpeechUtterance.lang = 'ar-SA';
+      currentSpeechUtterance.rate = 0.95;
+
+      // Select Arabic voice if available
+      const voices = window.speechSynthesis.getVoices();
+      const arVoice = voices.find(v => v.lang.startsWith('ar'));
+      if (arVoice) currentSpeechUtterance.voice = arVoice;
+
+      currentSpeechUtterance.onstart = () => {
+        isSpeechReading = true;
+        speechBanner.classList.add('active');
+        speechBtn.classList.add('active');
+        speechBtn.innerHTML = '<i class="fa-solid fa-pause"></i> <span>إيقاف القراءة</span>';
+      };
+
+      currentSpeechUtterance.onend = () => stopSpeechReader();
+      currentSpeechUtterance.onerror = () => stopSpeechReader();
+
+      window.speechSynthesis.speak(currentSpeechUtterance);
+    }
+
+    function stopSpeechReader() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      isSpeechReading = false;
+      speechBanner.classList.remove('active');
+      speechBtn.classList.remove('active');
+      speechBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i> <span>استماع آلي</span>';
+    }
+
+    // Gemini Prompt Modal
+    const geminiModal = document.getElementById('geminiModalOverlay');
+    document.getElementById('geminiPromptBtn').addEventListener('click', () => {
+      if (episodes.length === 0) return;
+      const plain = htmlToPlainText(episodes[currentIndex].html);
+      const promptText = `اقرأ لي النص التالي من السيرة النبوية الشريفة بصوت هادئ ومؤثر وواضح:
+
+${plain}`;
+      document.getElementById('geminiPromptTextarea').value = promptText;
+      geminiModal.classList.add('active');
+    });
+
+    document.getElementById('closeGeminiModalBtn').addEventListener('click', () => geminiModal.classList.remove('active'));
+    document.getElementById('cancelGeminiModalBtn').addEventListener('click', () => geminiModal.classList.remove('active'));
+    document.getElementById('openGeminiAppBtn').addEventListener('click', () => {
+      window.open('https://gemini.google.com/app', '_blank');
+    });
+
+    document.getElementById('copyGeminiTextBtn').addEventListener('click', () => {
+      const textarea = document.getElementById('geminiPromptTextarea');
+      textarea.select();
+      navigator.clipboard.writeText(textarea.value).then(() => {
+        showToast('تم نسخ نص الحلقة للحافظة!', 'success');
+      }).catch(() => {
+        showToast('تم تحديد النص، انسخه بـ Ctrl+C', 'info');
+      });
+    });
+
+    // Bookmarks Toggle
+    document.getElementById('bookmarkBtn').addEventListener('click', () => {
+      if (episodes.length === 0) return;
+      const id = episodes[currentIndex].docId;
+      if (bookmarks.has(id)) {
+        bookmarks.delete(id);
+        showToast('تمت إزالة الحلقة من المفضلة', 'info');
+      } else {
+        bookmarks.add(id);
+        showToast('تم حفظ الحلقة في المفضلة ⭐', 'success');
+      }
+      localStorage.setItem('seerah_bookmarks', JSON.stringify(Array.from(bookmarks)));
+      renderCurrentEpisode();
+      renderSidebar();
+    });
+
+    // Reflections Realtime Listener
+    let reflectionsUnsubscribe = null;
+    function setupReflectionsListener(epDocId) {
+      if (reflectionsUnsubscribe) reflectionsUnsubscribe();
+
+      const reflectionsRef = collection(db, 'reflections');
+      const q = query(reflectionsRef, where('episodeId', '==', epDocId));
+
+      reflectionsUnsubscribe = onSnapshot(q, (snapshot) => {
+        const notes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderReflectionsList(notes);
+      }, (err) => console.warn('Reflections listener error:', err));
+    }
+
+    function renderReflectionsList(notes) {
+      const listContainer = document.getElementById('reflectionsList');
+      if (notes.length === 0) {
+        listContainer.innerHTML = `<p style="font-size:0.85rem; color:var(--text-muted);">لا توجد تأملات مسجلة لهذه الحلقة بعد. اضغط على "إضافة تأمل" لتسجيل خواطرك.</p>`;
+        return;
+      }
+
+      listContainer.innerHTML = '';
+      notes.forEach(n => {
+        const item = document.createElement('div');
+        item.className = 'reflection-item';
+        item.innerHTML = `
+          <p>${escapeHtml(n.text).replace(/\n/g, '<br>')}</p>
+          <div class="reflection-meta">
+            <span>${n.createdAt ? new Date(n.createdAt.toDate ? n.createdAt.toDate() : n.createdAt).toLocaleDateString('ar-EG') : 'الآن'}</span>
+            <button class="reflection-del-btn" data-id="${n.id}" title="حذف التأمل"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        `;
+
+        item.querySelector('.reflection-del-btn').addEventListener('click', async () => {
+          if (confirm('حذف هذا التأمل؟')) {
+            try {
+              await deleteDoc(doc(db, 'reflections', n.id));
+              showToast('تم حذف التأمل', 'info');
+            } catch(err) {
+              showToast('تعذّر الحذف: ' + err.message, 'error');
+            }
+          }
+        });
+
+        listContainer.appendChild(item);
+      });
+    }
+
+    // Reflection Add Form
+    const toggleNoteBtn = document.getElementById('toggleAddNoteBtn');
+    const noteInputBox = document.getElementById('reflectionInputBox');
+    const noteTextarea = document.getElementById('reflectionTextInput');
+
+    toggleNoteBtn.addEventListener('click', () => {
+      noteInputBox.style.display = noteInputBox.style.display === 'none' ? 'flex' : 'none';
+      if (noteInputBox.style.display === 'flex') noteTextarea.focus();
+    });
+
+    document.getElementById('cancelReflectionBtn').addEventListener('click', () => {
+      noteInputBox.style.display = 'none';
+      noteTextarea.value = '';
+    });
+
+    document.getElementById('saveReflectionBtn').addEventListener('click', async () => {
+      const text = noteTextarea.value.trim();
+      if (!text) return;
+      if (episodes.length === 0) return;
+
+      try {
+        await addDoc(collection(db, 'reflections'), {
+          episodeId: episodes[currentIndex].docId,
+          text: text,
+          createdAt: serverTimestamp()
+        });
+        noteTextarea.value = '';
+        noteInputBox.style.display = 'none';
+        showToast('تم حفظ التأمل بنجاح!', 'success');
+      } catch(err) {
+        showToast('تعذّر حفظ التأمل: ' + err.message, 'error');
+      }
+    });
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Add / Edit Episode Modal
+    const epModal = document.getElementById('episodeModalOverlay');
+    const epForm = document.getElementById('episodeForm');
+
+    document.getElementById('addEpModalBtn').addEventListener('click', () => openEpisodeForm(null));
+    document.getElementById('editCurrentEpBtn').addEventListener('click', () => {
+      if (episodes.length > 0) openEpisodeForm(episodes[currentIndex]);
+    });
+    document.getElementById('closeEpModalBtn').addEventListener('click', () => epModal.classList.remove('active'));
+    document.getElementById('cancelEpModalBtn').addEventListener('click', () => epModal.classList.remove('active'));
+
+    function openEpisodeForm(ep) {
+      const isEdit = !!ep;
+      document.getElementById('epModalTitle').textContent = isEdit ? 'تعديل الحلقة' : 'إضافة حلقة جديدة';
+      document.getElementById('formEpDocId').value = isEdit ? ep.docId : '';
+      document.getElementById('formEpEra').value = isEdit ? ep.era : (episodes[currentIndex]?.era || '');
+      document.getElementById('formEpTitle').value = isEdit ? ep.title : '';
+      document.getElementById('formEpSubtitle').value = isEdit ? ep.subtitle : `الحلقة ${String(episodes.length + 1).padStart(3, '0')}`;
+      
+      // Clean HTML to paragraphs
+      const plainContent = isEdit ? htmlToPlainText(ep.html) : '';
+      document.getElementById('formEpContent').value = plainContent;
+
+      epModal.classList.add('active');
+    }
+
+    epForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const docId = document.getElementById('formEpDocId').value;
+      const era = document.getElementById('formEpEra').value.trim();
+      const title = document.getElementById('formEpTitle').value.trim();
+      const subtitle = document.getElementById('formEpSubtitle').value.trim();
+      const content = document.getElementById('formEpContent').value.trim();
+
+      if (!era || !title || !content) {
+        showToast('يرجى ملء جميع الحقول المطلوبة', 'error');
+        return;
+      }
+
+      // Convert paragraphs to <p> tags
+      const htmlFormatted = content.split(/\n\s*\n/).map(p => `<p>${escapeHtml(p.trim()).replace(/\n/g, '<br>')}</p>`).join('\n');
+
+      const submitBtn = document.getElementById('saveEpSubmitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'جارٍ الحفظ في السحابة...';
+
+      try {
+        if (docId) {
+          // Update existing
+          await updateDoc(doc(db, 'episodes', docId), {
+            era, title, subtitle, html: htmlFormatted, updatedAt: serverTimestamp()
+          });
+          showToast('تم تحديث الحلقة بنجاح!', 'success');
+        } else {
+          // Add new
+          const newDoc = await addDoc(collection(db, 'episodes'), {
+            order: episodes.length + 1,
+            era, title, subtitle, html: htmlFormatted, audioUrl: null, createdAt: serverTimestamp()
+          });
+          currentIndex = episodes.length; // Jump to new
+          showToast('تمت إضافة الحلقة بنجاح!', 'success');
+        }
+        epModal.classList.remove('active');
+      } catch(err) {
+        console.error('Save episode error:', err);
+        showToast('حدث خطأ أثناء الحفظ: ' + err.message, 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'حفظ الحلقة في السحابة';
+      }
+    });
+
+    // Delete Current Episode
+    document.getElementById('deleteCurrentEpBtn').addEventListener('click', async () => {
+      if (episodes.length === 0) return;
+      const ep = episodes[currentIndex];
+      if (!confirm(`هل أنت متأكد من حذف حلقة: "${ep.title}"
+لن يمكن التراجع عن هذا الإجراء.`)) return;
+
+      try {
+        await deleteDoc(doc(db, 'episodes', ep.docId));
+        showToast('تم حذف الحلقة بنجاح', 'info');
+        currentIndex = Math.max(0, currentIndex - 1);
+      } catch(err) {
+        showToast('فشل حذف الحلقة: ' + err.message, 'error');
+      }
+    });
+
+    // Navigation Controls
+    document.getElementById('prevEpBtn').addEventListener('click', () => goToEpisode(currentIndex - 1));
+    document.getElementById('nextEpBtn').addEventListener('click', () => goToEpisode(currentIndex + 1));
+    document.getElementById('mobilePrevBtn').addEventListener('click', () => goToEpisode(currentIndex - 1));
+    document.getElementById('mobileNextBtn').addEventListener('click', () => goToEpisode(currentIndex + 1));
+    document.getElementById('jumpLatestBtn').addEventListener('click', () => goToEpisode(episodes.length - 1));
+
+    // Global Audio Upload Modal
+    const globalAudioModal = document.getElementById('globalAudioModalOverlay');
+    document.getElementById('editGlobalAudioBtn').addEventListener('click', () => {
+      globalAudioModal.classList.add('active');
+    });
+    document.getElementById('closeGlobalAudioModalBtn').addEventListener('click', () => globalAudioModal.classList.remove('active'));
+    document.getElementById('cancelGlobalAudioModalBtn').addEventListener('click', () => globalAudioModal.classList.remove('active'));
+
+    document.getElementById('saveGlobalAudioFileBtn').addEventListener('click', () => {
+      const fileInput = document.getElementById('globalAudioFileInput');
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        showToast('يرجى اختيار ملف صوتي أولاً', 'error');
+        return;
+      }
+
+      const progressBar = document.getElementById('globalUploadProgressBar');
+      const progressFill = document.getElementById('globalUploadProgressFill');
+      progressBar.style.display = 'block';
+
+      const fileRef = sRef(storage, `global_audio/main_${Date.now()}_${file.name}`);
+      const uploadTask = uploadBytesResumable(fileRef, file);
+
+      uploadTask.on('state_changed',
+        (snap) => {
+          const p = (snap.bytesTransferred / snap.totalBytes) * 100;
+          progressFill.style.width = p + '%';
+        },
+        (err) => showToast('فشل رفع المقطع: ' + err.message, 'error'),
+        async () => {
+          try {
+            const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+            const globalDocRef = doc(db, 'settings', 'global_audio');
+            await writeBatch(db).set(globalDocRef, {
+              audioUrl: downloadUrl,
+              updatedAt: serverTimestamp()
+            }).commit();
+            showToast('تم رفع وحفظ المقطع العام بنجاح!', 'success');
+            globalAudioModal.classList.remove('active');
+          } catch(e) {
+            showToast('خطأ في حفظ الرابط: ' + e.message, 'error');
+          }
+        }
+      );
+    });
+
+    document.getElementById('removeGlobalAudioBtn').addEventListener('click', async () => {
+      if (!confirm('إزالة المقطع الصوتي العام؟')) return;
+      try {
+        await deleteDoc(doc(db, 'settings', 'global_audio'));
+        showToast('تمت إزالة المقطع العام', 'info');
+        globalAudioModal.classList.remove('active');
+      } catch(err) {
+        showToast('تعذّر الحذف: ' + err.message, 'error');
+      }
+    });
+
+    // Search Input Logic
+    const searchInput = document.getElementById('searchInput');
+    const searchClear = document.getElementById('searchClearBtn');
+
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      searchClear.style.display = searchQuery ? 'block' : 'none';
+      filterAndRenderEpisodeList();
+    });
+
+    searchClear.addEventListener('click', () => {
+      searchInput.value = '';
+      searchQuery = '';
+      searchClear.style.display = 'none';
+      filterAndRenderEpisodeList();
+    });
+
+    // Social Sharing
+    function getShareText() {
+      if (episodes.length === 0) return '';
+      const ep = episodes[currentIndex];
+      return `«${ep.title}» - ${ep.subtitle || ep.era}\nمن السيرة النبوية الشريفة ﷺ\n${window.location.href}`;
+    }
+
+    document.getElementById('shareWhatsappBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(getShareText())}`, '_blank');
+    });
+
+    document.getElementById('shareTelegramBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.open(`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(getShareText())}`, '_blank');
+    });
+
+    document.getElementById('shareTwitterBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(getShareText())}`, '_blank');
+    });
+
+    document.getElementById('copyLinkBtn').addEventListener('click', () => {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        showToast('تم نسخ رابط الموقع بنجاح!', 'success');
+      });
+    });
+
+    document.getElementById('shareEpisodeBtn').addEventListener('click', async () => {
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: episodes[currentIndex].title,
+            text: getShareText(),
+            url: window.location.href
+          });
+        } catch(e) {}
+      } else {
+        navigator.clipboard.writeText(getShareText()).then(() => {
+          showToast('تم نسخ مقتطف الحلقة ورابطها للمشاركة!', 'success');
+        });
+      }
+    });
+
+    // Mobile Drawer Open/Close
+    const sidebar = document.getElementById('episodesSidebar');
+    const backdrop = document.getElementById('drawerBackdrop');
+    const drawerToggleBtn = document.getElementById('drawerToggleBtn');
+    const mobileDrawerBtn = document.getElementById('mobileDrawerBtn');
+
+    if (window.innerWidth < 1024) {
+      drawerToggleBtn.style.display = 'inline-flex';
+    }
+    window.addEventListener('resize', () => {
+      drawerToggleBtn.style.display = window.innerWidth < 1024 ? 'inline-flex' : 'none';
+      if (window.innerWidth >= 1024) closeDrawer();
+    });
+
+    function openDrawer() {
+      sidebar.classList.add('drawer-open');
+      backdrop.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeDrawer() {
+      sidebar.classList.remove('drawer-open');
+      backdrop.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    drawerToggleBtn.addEventListener('click', openDrawer);
+    mobileDrawerBtn.addEventListener('click', openDrawer);
+    backdrop.addEventListener('click', closeDrawer);
+
+    // Mobile Audio Button Quick Jump
+    document.getElementById('mobileAudioBtn').addEventListener('click', () => {
+      const widget = document.getElementById('episodeAudioWidget');
+      widget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      widget.style.boxShadow = '0 0 20px var(--gold)';
+      setTimeout(() => widget.style.boxShadow = '', 1500);
+    });
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      // Ignore if inside textarea or input
+      if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+      if (e.key === 'ArrowRight') {
+        // Right arrow = previous episode in RTL
+        goToEpisode(currentIndex - 1);
+      } else if (e.key === 'ArrowLeft') {
+        // Left arrow = next episode in RTL
+        goToEpisode(currentIndex + 1);
+      } else if (e.key === '/') {
+        e.preventDefault();
+        searchInput.focus();
+      }
+    });
+
+    // Touch Swipe Gestures for Mobile
+    let touchStartX = 0;
+    let touchStartY = 0;
+    document.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    document.addEventListener('touchend', (e) => {
+      const deltaX = e.changedTouches[0].screenX - touchStartX;
+      const deltaY = e.changedTouches[0].screenY - touchStartY;
+
+      // Ensure horizontal swipe
+      if (Math.abs(deltaX) > 65 && Math.abs(deltaY) < 50) {
+        if (deltaX > 0) {
+          // Swiped right in RTL -> Previous episode
+          goToEpisode(currentIndex - 1);
+        } else {
+          // Swiped left in RTL -> Next episode
+          goToEpisode(currentIndex + 1);
+        }
+      }
+    }, { passive: true });
+
+    // Start Realtime Listeners
+    setupEpisodesListener();
+    setupGlobalAudioListener();
+
+  </script>
+</body>
+</html>
