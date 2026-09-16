@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import Link from 'next/link';
 import {
   Feather,
   Clock,
@@ -9,13 +10,10 @@ import {
   Bot,
   Bookmark,
   Share2,
-  Edit,
-  Trash2,
   ArrowRight,
   ArrowLeft,
   Forward,
   Headphones,
-  Upload,
   Link2,
   StopCircle,
   X,
@@ -23,6 +21,8 @@ import {
   ExternalLink,
   List,
   Palette,
+  ShieldCheck,
+  Check,
 } from 'lucide-react';
 
 import { Episode, ThemeType, FontType, GlobalAudio } from '@/types';
@@ -35,7 +35,6 @@ import {
   onSnapshot,
   writeBatch,
   doc,
-  deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore';
 
@@ -43,7 +42,6 @@ import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { AudioWidget } from '@/components/AudioWidget';
 import { Reflections } from '@/components/Reflections';
-import { EpisodeModal } from '@/components/EpisodeModal';
 import { Toast, ToastMessage } from '@/components/Toast';
 
 export default function HomePage() {
@@ -64,12 +62,7 @@ export default function HomePage() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   // Modals State
-  const [isEpModalOpen, setIsEpModalOpen] = useState<boolean>(false);
-  const [editingEp, setEditingEp] = useState<Episode | null>(null);
   const [isGeminiModalOpen, setIsGeminiModalOpen] = useState<boolean>(false);
-  const [isGlobalAudioModalOpen, setIsGlobalAudioModalOpen] = useState<boolean>(false);
-  const [globalAudioInputUrl, setGlobalAudioInputUrl] = useState<string>('');
-  const [isGlobalAudioSaving, setIsGlobalAudioSaving] = useState<boolean>(false);
 
   // Speech Reader State
   const [isSpeechActive, setIsSpeechActive] = useState<boolean>(false);
@@ -121,8 +114,7 @@ export default function HomePage() {
       q,
       async (snapshot) => {
         if (snapshot.empty) {
-          // Auto-seed initial 8 episodes
-          triggerToast('جارٍ تهيئة ونقل حلقات السيرة النبوية تلقائياً إلى السحابة...', 'info');
+          // Auto-seed initial 8 episodes if database is empty
           try {
             const batch = writeBatch(db);
             INITIAL_SEED_EPISODES.forEach((ep: any, idx: number) => {
@@ -138,10 +130,8 @@ export default function HomePage() {
               });
             });
             await batch.commit();
-            triggerToast('تمت تهيئة الحلقات في Firebase بنجاح!', 'success');
           } catch (e: any) {
             console.error('Seeding error:', e);
-            triggerToast('خطأ في التهيئة الأولية: ' + e.message, 'error');
           }
           return;
         }
@@ -269,20 +259,6 @@ export default function HomePage() {
     }
     setBookmarks(updated);
     localStorage.setItem('seerah_bookmarks', JSON.stringify(Array.from(updated)));
-  };
-
-  // Delete Current Episode
-  const handleDeleteCurrentEpisode = async () => {
-    if (!currentEpisode) return;
-    if (!confirm(`هل أنت متأكد من حذف حلقة: "${currentEpisode.title}" نهائياً من السحابة؟`)) return;
-
-    try {
-      await deleteDoc(doc(db, 'episodes', currentEpisode.docId));
-      triggerToast('تم حذف الحلقة من السحابة بنجاح', 'info');
-      setCurrentIndex((prev) => Math.max(0, prev - 1));
-    } catch (err: any) {
-      triggerToast('فشل الحذف: ' + err.message, 'error');
-    }
   };
 
   // Native Web Speech Reader
@@ -423,43 +399,6 @@ export default function HomePage() {
     }
   };
 
-  // Global Audio Save Handler (Saved directly to Firestore without Storage)
-  const handleSaveGlobalAudio = async () => {
-    const url = globalAudioInputUrl.trim();
-    if (!url) {
-      triggerToast('يرجى كتابة رابط المقطع الصوتي أولاً', 'error');
-      return;
-    }
-
-    setIsGlobalAudioSaving(true);
-    try {
-      const globalDocRef = doc(db, 'settings', 'global_audio');
-      await writeBatch(db)
-        .set(globalDocRef, {
-          audioUrl: url,
-          updatedAt: serverTimestamp(),
-        })
-        .commit();
-      triggerToast('تم حفظ المقطع الصوتي العام في Firestore بنجاح! 🎧', 'success');
-      setIsGlobalAudioModalOpen(false);
-    } catch (e: any) {
-      triggerToast('خطأ في حفظ الرابط: ' + e.message, 'error');
-    } finally {
-      setIsGlobalAudioSaving(false);
-    }
-  };
-
-  const handleRemoveGlobalAudio = async () => {
-    if (!confirm('هل تريد إزالة المقطع الصوتي العام؟')) return;
-    try {
-      await deleteDoc(doc(db, 'settings', 'global_audio'));
-      triggerToast('تمت إزالة المقطع العام', 'info');
-      setIsGlobalAudioModalOpen(false);
-    } catch (err: any) {
-      triggerToast('تعذّر الحذف: ' + err.message, 'error');
-    }
-  };
-
   const progressPercent = episodes.length
     ? Math.round(((currentIndex + 1) / episodes.length) * 100)
     : 0;
@@ -477,10 +416,6 @@ export default function HomePage() {
         onFontCycle={cycleFont}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
-        onOpenAddModal={() => {
-          setEditingEp(null);
-          setIsEpModalOpen(true);
-        }}
         onToggleDrawer={() => setIsDrawerOpen(true)}
       />
 
@@ -554,10 +489,10 @@ export default function HomePage() {
                   <button
                     className="tool-btn"
                     onClick={() => setIsGeminiModalOpen(true)}
-                    title="نسخ النص لـ Gemini"
+                    title="استخراج الدروس والعبر بالذكاء الاصطناعي"
                   >
                     <Bot size={16} />
-                    <span>Gemini</span>
+                    <span>استخراج العبر (Gemini)</span>
                   </button>
 
                   {/* Bookmark Button */}
@@ -584,28 +519,6 @@ export default function HomePage() {
                     <Share2 size={16} />
                     <span>مشاركة</span>
                   </button>
-
-                  {/* Edit Episode */}
-                  <button
-                    className="tool-btn"
-                    onClick={() => {
-                      setEditingEp(currentEpisode);
-                      setIsEpModalOpen(true);
-                    }}
-                    title="تعديل الحلقة"
-                  >
-                    <Edit size={16} />
-                    <span>تعديل</span>
-                  </button>
-
-                  {/* Delete Episode */}
-                  <button
-                    className="tool-btn danger-action"
-                    onClick={handleDeleteCurrentEpisode}
-                    title="حذف الحلقة"
-                  >
-                    <Trash2 size={16} />
-                  </button>
                 </div>
               </div>
 
@@ -626,11 +539,8 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* Episode Audio Widget (Record / Play / Upload) */}
-              <AudioWidget
-                episode={currentEpisode}
-                onToast={triggerToast}
-              />
+              {/* Episode Audio Player (Rendered purely if audioUrl is present) */}
+              <AudioWidget episode={currentEpisode} />
 
               {/* Reading Content Body */}
               <div className="reading-content-body">
@@ -682,38 +592,26 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* Global Audio Card */}
-          <section className="global-audio-card">
-            <div className="global-audio-info">
-              <div className="global-audio-icon">
-                <Headphones size={20} />
+          {/* Global Audio Card (Display only if active) */}
+          {globalAudio && globalAudio.audioUrl && (
+            <section className="global-audio-card">
+              <div className="global-audio-info">
+                <div className="global-audio-icon">
+                  <Headphones size={20} />
+                </div>
+                <div className="global-audio-text">
+                  <h4>مقطع صوتي عام للسيرة النبوية</h4>
+                  <p>تسجيل صوتي مبارك وشامل</p>
+                </div>
               </div>
-              <div className="global-audio-text">
-                <h4>مقطع صوتي عام للسيرة</h4>
-                <p>تسجيل صوتي أو مقدمة شاملة</p>
+
+              <div className="global-audio-player-wrap">
+                <audio controls src={globalAudio.audioUrl} preload="metadata" />
               </div>
-            </div>
+            </section>
+          )}
 
-            <div className="global-audio-player-wrap">
-              {globalAudio && globalAudio.audioUrl ? (
-                <audio controls src={globalAudio.audioUrl} />
-              ) : (
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  لا يوجد مقطع صوتي عام مضاف بعد
-                </span>
-              )}
-            </div>
-
-            <button
-              className="tool-btn"
-              onClick={() => setIsGlobalAudioModalOpen(true)}
-            >
-              <Upload size={14} />
-              <span>{globalAudio?.audioUrl ? 'تغيير' : 'رفع مقطع'}</span>
-            </button>
-          </section>
-
-          {/* Dedication Banner */}
+          {/* Dedication Banner & Footer */}
           <footer className="dedication-card">
             <div className="dedication-badge">صَدَقَةٌ جَارِيَةٌ عَنّي</div>
             <div className="dedication-name">محمد هاشم ضيف الله</div>
@@ -727,7 +625,7 @@ export default function HomePage() {
                 className="share-btn"
                 title="مشاركة عبر واتساب"
               >
-                <span style={{ fontWeight: 'bold' }}>W</span>
+                <span style={{ fontWeight: 'bold' }}>واتساب</span>
               </a>
               <a
                 href={`https://t.me/share/url?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}&text=${encodeURIComponent(shareText)}`}
@@ -736,7 +634,7 @@ export default function HomePage() {
                 className="share-btn"
                 title="مشاركة عبر تيليجرام"
               >
-                <span style={{ fontWeight: 'bold' }}>T</span>
+                <span style={{ fontWeight: 'bold' }}>تيليجرام</span>
               </a>
               <button
                 className="share-btn"
@@ -748,7 +646,16 @@ export default function HomePage() {
                 title="نسخ الرابط"
               >
                 <Link2 size={16} />
+                <span>نسخ الرابط</span>
               </button>
+            </div>
+
+            {/* Discrete Admin Link */}
+            <div className="admin-discrete-footer-wrap">
+              <Link href="/admin" className="admin-discrete-link" title="الدخول للوحة التحكم">
+                <ShieldCheck size={14} />
+                <span>لوحة تحكم المشرف</span>
+              </Link>
             </div>
           </footer>
         </main>
@@ -788,46 +695,37 @@ export default function HomePage() {
         </button>
       </nav>
 
-      {/* Episode Add / Edit Modal */}
-      <EpisodeModal
-        isOpen={isEpModalOpen}
-        onClose={() => setIsEpModalOpen(false)}
-        episode={editingEp}
-        totalEpisodes={episodes.length}
-        onToast={triggerToast}
-      />
-
       {/* Gemini Voice Prompt Modal */}
       {isGeminiModalOpen && currentEpisode && (
         <div className="modal-overlay" onClick={() => setIsGeminiModalOpen(false)}>
           <div className="modal-card" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>قراءة النص عبر Gemini</h3>
+              <h3>استخراج الدروس والعبر عبر Gemini</h3>
               <button className="modal-close-btn" onClick={() => setIsGeminiModalOpen(false)}>
                 <X size={20} />
               </button>
             </div>
             <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: '1.7' }}>
-              تم تجهيز نص الحلقة أدناه. اضغط على «نسخ النص» ثم «فتح تطبيق Gemini» والصق النص هناك واطلب منه أن يقرأه لك بصوت عربي واضح ومؤثر.
+              تم تجهيز الأمر الذكي لنص هذه الحلقة. اضغط على «نسخ الأمر والنص» ثم «فتح Gemini» والصق النص هناك ليقوم الذكاء الاصطناعي باستخراج الفوائد الإيمانية والدروس والعبر التربوية.
             </p>
             <textarea
               className="form-textarea"
               style={{ minHeight: '120px', fontSize: '0.85rem' }}
               readOnly
-              value={`اقرأ لي النص التالي من السيرة النبوية الشريفة بصوت هادئ ومؤثر وواضح:\n\n${currentEpisode.html.replace(/<[^>]+>/g, '').trim()}`}
+              value={`أنا أقرأ هذه الحلقة من السيرة النبوية الشريفة: «${currentEpisode.title}»:\n\n${currentEpisode.html.replace(/<[^>]+>/g, '').trim()}\n\nالمطلوب:\n1. استخرج أهم 3 دروس وعبر تربوية وعملية لحياتنا المعاصرة من هذا الموقف.\n2. بين أهم الفوائد الإيمانية.\n3. صغ ذلك بأسلوب مؤثر وجميل ومختصر.`}
             />
             <div className="modal-actions">
               <button
                 className="btn-gold"
                 onClick={() => {
-                  const text = `اقرأ لي النص التالي من السيرة النبوية الشريفة بصوت هادئ ومؤثر وواضح:\n\n${currentEpisode.html.replace(/<[^>]+>/g, '').trim()}`;
+                  const text = `أنا أقرأ هذه الحلقة من السيرة النبوية الشريفة: «${currentEpisode.title}»:\n\n${currentEpisode.html.replace(/<[^>]+>/g, '').trim()}\n\nالمطلوب:\n1. استخرج أهم 3 دروس وعبر تربوية وعملية لحياتنا المعاصرة من هذا الموقف.\n2. بين أهم الفوائد الإيمانية.\n3. صغ ذلك بأسلوب مؤثر وجميل ومختصر.`;
                   navigator.clipboard.writeText(text).then(() => {
-                    triggerToast('تم نسخ النص للحافظة بنجاح!', 'success');
+                    triggerToast('تم نسخ الأمر والنص للحافظة بنجاح!', 'success');
                   });
                 }}
               >
                 <Copy size={16} />
-                <span>نسخ النص</span>
+                <span>نسخ الأمر والنص</span>
               </button>
               <button
                 className="tool-btn"
@@ -841,57 +739,6 @@ export default function HomePage() {
                 onClick={() => setIsGeminiModalOpen(false)}
               >
                 إغلاق
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Global Audio Modal */}
-      {isGlobalAudioModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsGlobalAudioModalOpen(false)}>
-          <div className="modal-card" style={{ maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>إضافة مقطع صوتي عام للسيرة</h3>
-              <button className="modal-close-btn" onClick={() => setIsGlobalAudioModalOpen(false)}>
-                <X size={20} />
-              </button>
-            </div>
-            <div className="form-group">
-              <label className="form-label">رابط المقطع الصوتي (MP3 مباشر)</label>
-              <input
-                type="url"
-                className="form-input"
-                placeholder="https://example.com/audio.mp3"
-                value={globalAudioInputUrl}
-                onChange={(e) => setGlobalAudioInputUrl(e.target.value)}
-              />
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                يمكنك استخدام أي رابط MP3 مباشر (مثل روابط Archive.org المجانية أو روابط التخزين المباشرة).
-              </p>
-            </div>
-            <div className="modal-actions">
-              {globalAudio?.audioUrl && (
-                <button
-                  className="tool-btn danger-action"
-                  style={{ marginLeft: 'auto' }}
-                  onClick={handleRemoveGlobalAudio}
-                >
-                  إزالة المقطع
-                </button>
-              )}
-              <button
-                className="tool-btn"
-                onClick={() => setIsGlobalAudioModalOpen(false)}
-              >
-                إلغاء
-              </button>
-              <button
-                className="btn-gold"
-                onClick={handleSaveGlobalAudio}
-                disabled={!globalAudioInputUrl.trim() || isGlobalAudioSaving}
-              >
-                {isGlobalAudioSaving ? 'جارٍ الحفظ...' : 'حفظ في Firestore'}
               </button>
             </div>
           </div>

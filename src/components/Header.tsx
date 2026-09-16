@@ -11,7 +11,6 @@ interface HeaderProps {
   onFontCycle: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
-  onOpenAddModal: () => void;
   onToggleDrawer: () => void;
 }
 
@@ -20,7 +19,6 @@ export const Header: React.FC<HeaderProps> = ({
   onFontCycle,
   onZoomIn,
   onZoomOut,
-  onOpenAddModal,
   onToggleDrawer,
 }) => {
   return (
@@ -71,16 +69,6 @@ export const Header: React.FC<HeaderProps> = ({
             <ZoomOut size={18} />
           </button>
 
-          {/* Add Episode Button */}
-          <button
-            className="btn-gold"
-            onClick={onOpenAddModal}
-            title="إضافة حلقة جديدة"
-          >
-            <Plus size={18} />
-            <span>حلقة جديدة</span>
-          </button>
-
           {/* Mobile Drawer Trigger */}
           <button
             className="btn-icon"
@@ -96,3 +84,4 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+
