@@ -6,6 +6,8 @@ export interface Episode {
   subtitle?: string;
   html: string;
   audioUrl?: string | null;
+  audioType?: 'direct' | 'chunked' | null;
+  audioChunksCount?: number;
   createdAt?: any;
   updatedAt?: any;
 }

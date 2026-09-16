@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Volume2, Music, Gauge } from 'lucide-react';
+import { Volume2, Gauge, RefreshCw } from 'lucide-react';
 import { Episode } from '@/types';
+import { resolveAudioUrl } from '@/lib/audioStorage';
 
 interface AudioWidgetProps {
   episode: Episode;
@@ -10,14 +11,47 @@ interface AudioWidgetProps {
 
 export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode }) => {
   const [playbackSpeed, setPlaybackSpeed] = useState('1');
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+  const [isLoadingAudio, setIsLoadingAudio] = useState<boolean>(false);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
+
+  // Resolve direct URL or chunked base64 from Firestore
+  useEffect(() => {
+    let isMounted = true;
+    if (!episode.audioUrl) {
+      setResolvedUrl(null);
+      return;
+    }
+
+    if (episode.audioUrl !== '__CHUNKS__') {
+      setResolvedUrl(episode.audioUrl);
+      return;
+    }
+
+    setIsLoadingAudio(true);
+    resolveAudioUrl(episode)
+      .then((url) => {
+        if (isMounted) {
+          setResolvedUrl(url);
+          setIsLoadingAudio(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Error resolving chunked audio:', err);
+        if (isMounted) setIsLoadingAudio(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [episode.docId, episode.audioUrl]);
 
   // Apply playback speed
   useEffect(() => {
     if (audioElRef.current) {
       audioElRef.current.playbackRate = parseFloat(playbackSpeed);
     }
-  }, [playbackSpeed, episode.audioUrl]);
+  }, [playbackSpeed, resolvedUrl]);
 
   if (!episode.audioUrl) {
     return null;
@@ -51,9 +85,15 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode }) => {
       </div>
 
       <div className="audio-controls-row">
-        <audio ref={audioElRef} controls src={episode.audioUrl} preload="metadata" />
+        {isLoadingAudio ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 0', color: 'var(--gold)', fontSize: '0.85rem' }}>
+            <RefreshCw className="animate-spin" size={16} />
+            <span>جارٍ تجهيز التسجيل الصوتي من السحابة...</span>
+          </div>
+        ) : (
+          resolvedUrl && <audio ref={audioElRef} controls src={resolvedUrl} preload="metadata" />
+        )}
       </div>
     </div>
   );
 };
-

@@ -21,10 +21,12 @@ import {
   ArrowUp,
   ArrowDown,
   Key,
-  ExternalLink,
   Play,
   Pause,
-  AlertTriangle,
+  UploadCloud,
+  FileAudio,
+  Sparkles,
+  Link2,
 } from 'lucide-react';
 
 import { Episode, GlobalAudio, ThemeType } from '@/types';
@@ -44,6 +46,8 @@ import {
 } from 'firebase/firestore';
 
 import { Toast, ToastMessage } from '@/components/Toast';
+import { compressAudio, formatBytes, CompressionResult } from '@/lib/audioCompressor';
+import { saveAudioToEpisode, removeAudioFromEpisode, resolveAudioUrl } from '@/lib/audioStorage';
 
 export default function AdminPage() {
   // Authentication State
@@ -78,14 +82,23 @@ export default function AdminPage() {
   const [formAudioUrl, setFormAudioUrl] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  // Audio Modal State
+  // Audio Manager State
+  const [audioTab, setAudioTab] = useState<'upload' | 'record' | 'url'>('upload');
+  const [isCompressing, setIsCompressing] = useState<boolean>(false);
+  const [compressionProgress, setCompressionProgress] = useState<number>(0);
+  const [compressionMessage, setCompressionMessage] = useState<string>('');
+  const [compressionResult, setCompressionResult] = useState<CompressionResult | null>(null);
+  const [isSavingAudio, setIsSavingAudio] = useState<boolean>(false);
   const [audioUrlInput, setAudioUrlInput] = useState<string>('');
+
+  // Recording State
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recSeconds, setRecSeconds] = useState<number>(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Global Audio Form
   const [globalAudioInput, setGlobalAudioInput] = useState<string>('');
@@ -310,6 +323,7 @@ export default function AdminPage() {
       return;
     }
     try {
+      await removeAudioFromEpisode(ep.docId);
       await deleteDoc(doc(db, 'episodes', ep.docId));
       triggerToast('تم حذف الحلقة من السحابة بنجاح', 'info');
     } catch (err: any) {
@@ -340,7 +354,7 @@ export default function AdminPage() {
   const handleResetSeed = async () => {
     if (
       !confirm(
-        'هل تريد استعادة وتحديث الحلقات الـ 8 الأساسية للسيرة النبوية من النسخة المعتمدة؟ (لن يتم حذف الحلقات الإضافية إلا إذا وافقت)'
+        'هل تريد استعادة وتحديث الحلقات الـ 8 الأساسية للسيرة النبوية من النسخة المعتمدة؟ (لن يتم حذف الحلقات الإضافية)'
       )
     ) {
       return;
@@ -367,36 +381,88 @@ export default function AdminPage() {
     }
   };
 
-  // Audio Manager Handlers
+  // ==================== AUDIO MANAGER (UPLOAD / COMPRESS / BASE64) ====================
   const handleOpenAudioModal = (ep: Episode) => {
     setAudioTargetEpisode(ep);
-    setAudioUrlInput(ep.audioUrl || '');
+    setAudioUrlInput(ep.audioUrl && ep.audioUrl !== '__CHUNKS__' && !ep.audioUrl.startsWith('data:') ? ep.audioUrl : '');
+    setCompressionResult(null);
+    setIsCompressing(false);
+    setCompressionProgress(0);
+    setCompressionMessage('');
     setIsRecording(false);
+    setAudioTab('upload');
     setIsAudioModalOpen(true);
   };
 
-  const handleSaveEpisodeAudio = async () => {
-    if (!audioTargetEpisode) return;
+  // Handle File Selection and Compression
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsCompressing(true);
+    setCompressionProgress(10);
+    setCompressionMessage('بدء معالجة الملف الصوتي...');
+    setCompressionResult(null);
+
     try {
-      await updateDoc(doc(db, 'episodes', audioTargetEpisode.docId), {
-        audioUrl: audioUrlInput.trim() || null,
-        updatedAt: serverTimestamp(),
+      const result = await compressAudio(file, 32, (percent, msg) => {
+        setCompressionProgress(percent);
+        setCompressionMessage(msg);
       });
-      triggerToast('تم تحديث الرابط الصوتي للحلقة بنجاح! 🎵', 'success');
-      setIsAudioModalOpen(false);
+      setCompressionResult(result);
+      triggerToast(
+        `تم ضغط الصوت بنجاح! الحجم تقلص بنسبة ${result.compressionRatio}% (${formatBytes(result.originalSize)} ⬅ ${formatBytes(result.compressedSize)})`,
+        'success'
+      );
     } catch (err: any) {
-      triggerToast('خطأ في حفظ الرابط: ' + err.message, 'error');
+      console.error('Audio compression failed:', err);
+      triggerToast('خطأ أثناء ضغط الملف: ' + err.message, 'error');
+    } finally {
+      setIsCompressing(false);
     }
   };
 
-  const handleRemoveEpisodeAudio = async () => {
-    if (!audioTargetEpisode) return;
-    if (!confirm('هل تريد حذف المقطع الصوتي لهذه الحلقة؟')) return;
+  // Save Compressed Base64 Audio to Episode
+  const handleSaveCompressedAudio = async () => {
+    if (!audioTargetEpisode || !compressionResult) return;
+    setIsSavingAudio(true);
     try {
-      await updateDoc(doc(db, 'episodes', audioTargetEpisode.docId), {
-        audioUrl: null,
-        updatedAt: serverTimestamp(),
-      });
+      await saveAudioToEpisode(audioTargetEpisode.docId, compressionResult.base64DataUrl);
+      triggerToast('تم حفظ التسجيل الصوتي المضغوط في قاعدة البيانات بنجاح! 🎵', 'success');
+      setIsAudioModalOpen(false);
+    } catch (err: any) {
+      triggerToast('فشل حفظ الصوت في السحابة: ' + err.message, 'error');
+    } finally {
+      setIsSavingAudio(false);
+    }
+  };
+
+  // Save URL fallback
+  const handleSaveUrlAudio = async () => {
+    if (!audioTargetEpisode) return;
+    const url = audioUrlInput.trim();
+    if (!url) {
+      triggerToast('يرجى كتابة الرابط الصوتي أولاً', 'error');
+      return;
+    }
+    setIsSavingAudio(true);
+    try {
+      await saveAudioToEpisode(audioTargetEpisode.docId, url);
+      triggerToast('تم حفظ الرابط الصوتي للحلقة بنجاح! 🎵', 'success');
+      setIsAudioModalOpen(false);
+    } catch (err: any) {
+      triggerToast('خطأ في حفظ الرابط: ' + err.message, 'error');
+    } finally {
+      setIsSavingAudio(false);
+    }
+  };
+
+  // Remove Audio
+  const handleRemoveAudio = async () => {
+    if (!audioTargetEpisode) return;
+    if (!confirm('هل تريد حذف المقطع الصوتي لهذه الحلقة نهائياً؟')) return;
+    try {
+      await removeAudioFromEpisode(audioTargetEpisode.docId);
       triggerToast('تم حذف المقطع الصوتي للحلقة', 'info');
       setIsAudioModalOpen(false);
     } catch (err: any) {
@@ -419,42 +485,37 @@ export default function AdminPage() {
     }
 
     chunksRef.current = [];
-    const recorder = new MediaRecorder(streamRef.current, { audioBitsPerSecond: 32000 });
+    const recorder = new MediaRecorder(streamRef.current);
     mediaRecorderRef.current = recorder;
 
     recorder.ondataavailable = (e) => {
       if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
     };
 
-    recorder.onstop = () => {
+    recorder.onstop = async () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
       }
       if (chunksRef.current.length === 0) return;
 
-      const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const dataUrl = reader.result as string;
-        if (dataUrl.length > 900000) {
-          triggerToast('التسجيل طويل جداً على السعة المباشرة، يُفضل وضع رابط MP3 خارجي (Archive.org)', 'error');
-          return;
-        }
-        if (audioTargetEpisode) {
-          try {
-            await updateDoc(doc(db, 'episodes', audioTargetEpisode.docId), {
-              audioUrl: dataUrl,
-              updatedAt: serverTimestamp(),
-            });
-            triggerToast('تم حفظ التسجيل الصوتي في السحابة بنجاح! 🎙️', 'success');
-            setIsAudioModalOpen(false);
-          } catch (e: any) {
-            triggerToast('خطأ أثناء الحفظ: ' + e.message, 'error');
-          }
-        }
-      };
-      reader.readAsDataURL(blob);
+      const rawBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+      setIsCompressing(true);
+      setCompressionProgress(20);
+      setCompressionMessage('جارٍ ضغط التسجيل الصوتي...');
+
+      try {
+        const result = await compressAudio(rawBlob, 32, (p, msg) => {
+          setCompressionProgress(p);
+          setCompressionMessage(msg);
+        });
+        setCompressionResult(result);
+        triggerToast('تم ضغط تسجيل الميكروفون بنجاح!', 'success');
+      } catch (err: any) {
+        triggerToast('خطأ أثناء ضغط التسجيل: ' + err.message, 'error');
+      } finally {
+        setIsCompressing(false);
+      }
     };
 
     recorder.start();
@@ -504,9 +565,9 @@ export default function AdminPage() {
     }
   };
 
-  // Audio Preview Toggle
-  const togglePlayPreview = (epId: string, url: string) => {
-    if (playingAudioId === epId) {
+  // Audio Preview Toggle (resolving chunked audio if needed)
+  const togglePlayPreview = async (ep: Episode) => {
+    if (playingAudioId === ep.docId) {
       if (previewAudioRef.current) {
         previewAudioRef.current.pause();
       }
@@ -515,11 +576,20 @@ export default function AdminPage() {
       if (previewAudioRef.current) {
         previewAudioRef.current.pause();
       }
-      const audio = new Audio(url);
-      previewAudioRef.current = audio;
-      audio.play().catch(() => triggerToast('تعذّر تشغيل الرابط الصوتي', 'error'));
-      audio.onended = () => setPlayingAudioId(null);
-      setPlayingAudioId(epId);
+      try {
+        const playableUrl = await resolveAudioUrl(ep);
+        if (!playableUrl) {
+          triggerToast('تعذّر العثور على المقطع الصوتي', 'error');
+          return;
+        }
+        const audio = new Audio(playableUrl);
+        previewAudioRef.current = audio;
+        audio.play().catch(() => triggerToast('تعذّر تشغيل الرابط الصوتي', 'error'));
+        audio.onended = () => setPlayingAudioId(null);
+        setPlayingAudioId(ep.docId);
+      } catch (e: any) {
+        triggerToast('خطأ في تشغيل المقطع: ' + e.message, 'error');
+      }
     }
   };
 
@@ -533,7 +603,7 @@ export default function AdminPage() {
             <Lock size={32} />
           </div>
           <h2>لوحة إدارة السيرة النبوية</h2>
-          <p>أدخل رمز المرور المخصص للإدارة لتعديل الحلقات وإضافة المقاطع الصوتية</p>
+          <p>أدخل رمز المرور المخصص للإدارة لتعديل الحلقات وإضافة وضغط المقاطع الصوتية</p>
 
           <form onSubmit={handleLogin} style={{ marginTop: '20px' }}>
             <div className="form-group">
@@ -729,7 +799,7 @@ export default function AdminPage() {
           <div className="table-header-info">
             <h3>قائمة حلقات السيرة النبوية ({filteredEpisodes.length})</h3>
             <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-              جميع التعديلات والحذف تُحفظ مباشرة في قاعدة بيانات Firestore السحابية
+              يتم حفظ النصوص والتسجيلات الصوتية المضغوطة مباشرة في قاعدة بيانات Firestore
             </span>
           </div>
 
@@ -750,7 +820,7 @@ export default function AdminPage() {
                     <th style={{ width: '60px' }}>#</th>
                     <th style={{ width: '180px' }}>المرحلة</th>
                     <th>عنوان الحلقة</th>
-                    <th style={{ width: '150px' }}>المقطع الصوتي</th>
+                    <th style={{ width: '180px' }}>المقطع الصوتي (Base64)</th>
                     <th style={{ width: '90px' }}>الكلمات</th>
                     <th style={{ width: '110px' }}>الترتيب</th>
                     <th style={{ width: '140px', textAlign: 'center' }}>الإجراءات</th>
@@ -760,6 +830,8 @@ export default function AdminPage() {
                   {filteredEpisodes.map((ep, idx) => {
                     const wordsCount = ep.html.replace(/<[^>]+>/g, '').trim().split(/\s+/).length;
                     const isAudioPlaying = playingAudioId === ep.docId;
+                    const hasAudio = !!ep.audioUrl;
+                    const isBase64 = ep.audioUrl?.startsWith('data:') || ep.audioUrl === '__CHUNKS__';
 
                     return (
                       <tr key={ep.docId} className="admin-table-row">
@@ -776,21 +848,21 @@ export default function AdminPage() {
                           </div>
                         </td>
                         <td>
-                          {ep.audioUrl ? (
+                          {hasAudio ? (
                             <div className="audio-cell-active">
                               <button
                                 className={`audio-play-mini-btn ${isAudioPlaying ? 'playing' : ''}`}
-                                onClick={() => togglePlayPreview(ep.docId, ep.audioUrl!)}
-                                title={isAudioPlaying ? 'إيقاف المعاينة' : 'معاينة الصوت'}
+                                onClick={() => togglePlayPreview(ep)}
+                                title={isAudioPlaying ? 'إيقاف المعاينة' : 'معاينة واستماع'}
                               >
                                 {isAudioPlaying ? <Pause size={13} /> : <Play size={13} />}
                               </button>
                               <button
                                 className="audio-link-tag"
                                 onClick={() => handleOpenAudioModal(ep)}
-                                title="تعديل الرابط الصوتي"
+                                title="تعديل أو استبدال الصوت"
                               >
-                                <span>مضاف ✓</span>
+                                <span>{isBase64 ? 'مضغوط Base64 ✓' : 'رابط خارجي ✓'}</span>
                               </button>
                             </div>
                           ) : (
@@ -798,8 +870,8 @@ export default function AdminPage() {
                               className="audio-add-prompt-btn"
                               onClick={() => handleOpenAudioModal(ep)}
                             >
-                              <Plus size={13} />
-                              <span>إضافة صوت</span>
+                              <UploadCloud size={13} />
+                              <span>رفع وضغط صوت</span>
                             </button>
                           )}
                         </td>
@@ -925,19 +997,6 @@ export default function AdminPage() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">
-                  رابط المقطع الصوتي للحلقة (اختياري - MP3 مباشر مثل روابط Archive.org)
-                </label>
-                <input
-                  type="url"
-                  className="form-input"
-                  value={formAudioUrl}
-                  onChange={(e) => setFormAudioUrl(e.target.value)}
-                  placeholder="https://ia800.../episode1.mp3"
-                />
-              </div>
-
-              <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                   <label className="form-label">نص الحلقة الشريفة (افصل بين الفقرات بسطر فارغ)</label>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -972,12 +1031,19 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ==================== MODAL: AUDIO MANAGER FOR EPISODE ==================== */}
+      {/* ==================== MODAL: AUDIO COMPRESSOR & BASE64 UPLOAD ==================== */}
       {isAudioModalOpen && audioTargetEpisode && (
         <div className="modal-overlay" onClick={() => setIsAudioModalOpen(false)}>
-          <div className="modal-card" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal-card"
+            style={{ maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
-              <h3>إدارة المقطع الصوتي للحلقة: {audioTargetEpisode.title}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={20} style={{ color: 'var(--gold)' }} />
+                <h3>رفع وضغط صوت الحلقة: {audioTargetEpisode.title}</h3>
+              </div>
               <button
                 className="modal-close-btn"
                 onClick={() => {
@@ -989,61 +1055,235 @@ export default function AdminPage() {
               </button>
             </div>
 
-            <div style={{ marginBottom: '16px' }}>
-              <label className="form-label">رابط المقطع الصوتي (رابط MP3 مجاني مباشر)</label>
-              <input
-                type="url"
-                className="form-input"
-                placeholder="https://archive.org/download/.../track.mp3"
-                value={audioUrlInput}
-                onChange={(e) => setAudioUrlInput(e.target.value)}
-              />
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '6px', lineHeight: '1.6' }}>
-                💡 نصيحة: يمكنك رفع ملفات MP3 مجاناً بدون حدود على موقع <strong>Archive.org</strong> ووضع الرابط المباشر هنا، ليعمل الموقع مجاناً 100% دون الحاجة لاشتراكات مدفوعة.
-              </p>
+            {/* Audio Mode Tabs */}
+            <div className="audio-tabs-bar">
+              <button
+                className={`audio-tab-btn ${audioTab === 'upload' ? 'active' : ''}`}
+                onClick={() => setAudioTab('upload')}
+              >
+                <UploadCloud size={16} />
+                <span>رفع ملف وضغطه (Base64)</span>
+              </button>
+              <button
+                className={`audio-tab-btn ${audioTab === 'record' ? 'active' : ''}`}
+                onClick={() => setAudioTab('record')}
+              >
+                <Mic size={16} />
+                <span>تسجيل بالميكروفون</span>
+              </button>
+              <button
+                className={`audio-tab-btn ${audioTab === 'url' ? 'active' : ''}`}
+                onClick={() => setAudioTab('url')}
+              >
+                <Link2 size={16} />
+                <span>رابط خارجي</span>
+              </button>
             </div>
 
-            {/* Microphone Recording Option */}
-            <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '14px', marginBottom: '16px' }}>
-              <span style={{ display: 'block', fontSize: '0.82rem', color: 'var(--gold)', marginBottom: '8px' }}>
-                أو تسجيل صوتك مباشرة بالميكروفون (يُحفظ في السحابة مجاناً):
-              </span>
+            {/* TAB 1: Upload & Compress */}
+            {audioTab === 'upload' && (
+              <div style={{ marginTop: '16px' }}>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac,.webm,.flac"
+                  style={{ display: 'none' }}
+                  onChange={handleFileSelect}
+                />
 
-              {isRecording ? (
-                <div className="rec-box">
-                  <div className="rec-pulse-dot" />
-                  <div className="rec-timer">
-                    {String(Math.floor(recSeconds / 60)).padStart(2, '0')}:
-                    {String(recSeconds % 60).padStart(2, '0')}
+                <div
+                  className="audio-upload-dropzone"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className="dropzone-icon">
+                    <FileAudio size={36} />
                   </div>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginRight: 'auto' }}>
-                    جارٍ التسجيل...
+                  <h4>اختر ملفاً صوتياً من جهازك للضغط والرفع</h4>
+                  <p>يدعم جميع الصيغ: MP3, M4A, WAV, OGG, AAC, WebM</p>
+                  <span className="dropzone-badge">
+                    يتم ضغط الصوت تلقائياً وحفظه Base64 في Firestore مجاناً 100%
                   </span>
-                  <button
-                    className="btn-gold"
-                    onClick={() => stopRecording(false)}
-                    style={{ background: '#ef4444', color: '#fff' }}
-                  >
-                    إنهاء وحفظ
-                  </button>
                 </div>
-              ) : (
-                <button className="tool-btn accent" onClick={startRecording}>
-                  <Mic size={16} />
-                  <span>بدء التسجيل بالميكروفون</span>
-                </button>
-              )}
-            </div>
 
-            <div className="modal-actions">
+                {/* Compression In Progress Indicator */}
+                {isCompressing && (
+                  <div className="compression-progress-box">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--gold)' }}>
+                        {compressionMessage}
+                      </span>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-title)' }}>
+                        {compressionProgress}%
+                      </span>
+                    </div>
+                    <div className="progress-track">
+                      <div className="progress-fill" style={{ width: `${compressionProgress}%` }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Compression Result Preview */}
+                {compressionResult && !isCompressing && (
+                  <div className="compression-result-card">
+                    <div className="result-stats-row">
+                      <div className="result-stat-item">
+                        <span className="res-label">الحجم الأصلي:</span>
+                        <span className="res-val original">{formatBytes(compressionResult.originalSize)}</span>
+                      </div>
+                      <div className="result-stat-item">
+                        <span className="res-label">الحجم بعد الضغط:</span>
+                        <span className="res-val compressed">{formatBytes(compressionResult.compressedSize)}</span>
+                      </div>
+                      <div className="result-stat-item">
+                        <span className="res-label">نسبة التخفيض:</span>
+                        <span className="res-badge-ratio">-{compressionResult.compressionRatio}%</span>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '14px' }}>
+                      <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                        معاينة الصوت المضغوط قبل الحفظ:
+                      </label>
+                      <audio controls src={compressionResult.base64DataUrl} style={{ width: '100%' }} />
+                    </div>
+
+                    <button
+                      className="btn-gold"
+                      style={{ width: '100%', marginTop: '14px', padding: '12px' }}
+                      onClick={handleSaveCompressedAudio}
+                      disabled={isSavingAudio}
+                    >
+                      <Check size={18} />
+                      <span>
+                        {isSavingAudio ? 'جارٍ الحفظ في قاعدة البيانات...' : 'اعتماد وحفظ الصوت في قاعدة البيانات (Base64)'}
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 2: Microphone Recording */}
+            {audioTab === 'record' && (
+              <div style={{ marginTop: '16px', textAlign: 'center', padding: '10px 0' }}>
+                <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.6' }}>
+                  سجّل قراءتك أو تعليقك الصوتي مباشرة من الميكروفون، وسيقوم النظام بضغطه وحفظه كـ Base64 في السحابة.
+                </p>
+
+                {isRecording ? (
+                  <div className="rec-box" style={{ maxWidth: '320px', margin: '0 auto 16px' }}>
+                    <div className="rec-pulse-dot" />
+                    <div className="rec-timer">
+                      {String(Math.floor(recSeconds / 60)).padStart(2, '0')}:
+                      {String(recSeconds % 60).padStart(2, '0')}
+                    </div>
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginRight: 'auto' }}>
+                      جارٍ التسجيل...
+                    </span>
+                    <button
+                      className="btn-gold"
+                      onClick={() => stopRecording(false)}
+                      style={{ background: '#ef4444', color: '#fff' }}
+                    >
+                      إنهاء
+                    </button>
+                  </div>
+                ) : (
+                  <button className="tool-btn accent" style={{ margin: '0 auto' }} onClick={startRecording}>
+                    <Mic size={18} />
+                    <span>ابدأ التسجيل الآن</span>
+                  </button>
+                )}
+
+                {/* Compression In Progress Indicator */}
+                {isCompressing && (
+                  <div className="compression-progress-box" style={{ marginTop: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--gold)' }}>
+                        {compressionMessage}
+                      </span>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-title)' }}>
+                        {compressionProgress}%
+                      </span>
+                    </div>
+                    <div className="progress-track">
+                      <div className="progress-fill" style={{ width: `${compressionProgress}%` }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Recorded Result */}
+                {compressionResult && !isCompressing && (
+                  <div className="compression-result-card" style={{ marginTop: '16px', textAlign: 'right' }}>
+                    <div className="result-stats-row">
+                      <div className="result-stat-item">
+                        <span className="res-label">حجم التسجيل:</span>
+                        <span className="res-val compressed">{formatBytes(compressionResult.compressedSize)}</span>
+                      </div>
+                      <div className="result-stat-item">
+                        <span className="res-label">المدة:</span>
+                        <span className="res-val">
+                          {Math.round(compressionResult.duration)} ثانية
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '12px' }}>
+                      <audio controls src={compressionResult.base64DataUrl} style={{ width: '100%' }} />
+                    </div>
+
+                    <button
+                      className="btn-gold"
+                      style={{ width: '100%', marginTop: '14px' }}
+                      onClick={handleSaveCompressedAudio}
+                      disabled={isSavingAudio}
+                    >
+                      <Check size={18} />
+                      <span>{isSavingAudio ? 'جارٍ الحفظ...' : 'حفظ التسجيل في السحابة (Base64)'}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 3: External URL */}
+            {audioTab === 'url' && (
+              <div style={{ marginTop: '16px' }}>
+                <label className="form-label">رابط المقطع الصوتي المباشر (MP3 خارجي)</label>
+                <input
+                  type="url"
+                  className="form-input"
+                  placeholder="https://archive.org/download/.../audio.mp3"
+                  value={audioUrlInput}
+                  onChange={(e) => setAudioUrlInput(e.target.value)}
+                />
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '6px', lineHeight: '1.6' }}>
+                  يمكنك وضع رابط MP3 مباشر إذا كنت تفضل استضافة الملف في موقع خارجي مثل Archive.org.
+                </p>
+                <button
+                  className="btn-gold"
+                  style={{ width: '100%', marginTop: '14px' }}
+                  onClick={handleSaveUrlAudio}
+                  disabled={isSavingAudio}
+                >
+                  <Check size={18} />
+                  <span>{isSavingAudio ? 'جارٍ الحفظ...' : 'حفظ الرابط الخارجي'}</span>
+                </button>
+              </div>
+            )}
+
+            {/* Modal Actions Footer */}
+            <div className="modal-actions" style={{ marginTop: '24px', borderTop: '1px solid var(--border-light)', paddingTop: '14px' }}>
               {audioTargetEpisode.audioUrl && (
                 <button
                   type="button"
                   className="tool-btn danger-action"
                   style={{ marginLeft: 'auto' }}
-                  onClick={handleRemoveEpisodeAudio}
+                  onClick={handleRemoveAudio}
+                  disabled={isSavingAudio}
                 >
-                  إزالة المقطع الصوتي
+                  <Trash2 size={15} />
+                  <span>حذف الصوت الحالي</span>
                 </button>
               )}
               <button
@@ -1054,14 +1294,7 @@ export default function AdminPage() {
                   setIsAudioModalOpen(false);
                 }}
               >
-                إلغاء
-              </button>
-              <button
-                type="button"
-                className="btn-gold"
-                onClick={handleSaveEpisodeAudio}
-              >
-                حفظ الرابط الصوتي
+                إغلاق
               </button>
             </div>
           </div>
@@ -1087,7 +1320,7 @@ export default function AdminPage() {
             </p>
 
             <div className="form-group">
-              <label className="form-label">رابط المقطع الصوتي (MP3 مباشر)</label>
+              <label className="form-label">رابط المقطع الصوتي (MP3 مباشر أو Data URL)</label>
               <input
                 type="url"
                 className="form-input"
