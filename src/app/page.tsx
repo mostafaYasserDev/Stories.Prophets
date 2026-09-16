@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 import { Episode, ThemeType, FontType, GlobalAudio } from '@/types';
-import { db, storage, initAnalytics } from '@/lib/firebase';
+import { db, initAnalytics } from '@/lib/firebase';
 import { INITIAL_SEED_EPISODES } from '@/lib/seedData';
 import {
   collection,
@@ -38,7 +38,6 @@ import {
   deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { ref as sRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
@@ -69,8 +68,8 @@ export default function HomePage() {
   const [editingEp, setEditingEp] = useState<Episode | null>(null);
   const [isGeminiModalOpen, setIsGeminiModalOpen] = useState<boolean>(false);
   const [isGlobalAudioModalOpen, setIsGlobalAudioModalOpen] = useState<boolean>(false);
-  const [globalAudioFile, setGlobalAudioFile] = useState<File | null>(null);
-  const [globalUploadProgress, setGlobalUploadProgress] = useState<number | null>(null);
+  const [globalAudioInputUrl, setGlobalAudioInputUrl] = useState<string>('');
+  const [isGlobalAudioSaving, setIsGlobalAudioSaving] = useState<boolean>(false);
 
   // Speech Reader State
   const [isSpeechActive, setIsSpeechActive] = useState<boolean>(false);
@@ -424,47 +423,30 @@ export default function HomePage() {
     }
   };
 
-  // Global Audio Upload Handler
-  const handleSaveGlobalAudio = () => {
-    if (!globalAudioFile) {
-      triggerToast('يرجى اختيار ملف صوتي أولاً', 'error');
+  // Global Audio Save Handler (Saved directly to Firestore without Storage)
+  const handleSaveGlobalAudio = async () => {
+    const url = globalAudioInputUrl.trim();
+    if (!url) {
+      triggerToast('يرجى كتابة رابط المقطع الصوتي أولاً', 'error');
       return;
     }
 
-    setGlobalUploadProgress(0);
-    const fileRef = sRef(storage, `global_audio/main_${Date.now()}_${globalAudioFile.name}`);
-    const uploadTask = uploadBytesResumable(fileRef, globalAudioFile);
-
-    uploadTask.on(
-      'state_changed',
-      (snap) => {
-        const p = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-        setGlobalUploadProgress(p);
-      },
-      (err) => {
-        triggerToast('فشل رفع المقطع: ' + err.message, 'error');
-        setGlobalUploadProgress(null);
-      },
-      async () => {
-        try {
-          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-          const globalDocRef = doc(db, 'settings', 'global_audio');
-          await writeBatch(db)
-            .set(globalDocRef, {
-              audioUrl: downloadUrl,
-              updatedAt: serverTimestamp(),
-            })
-            .commit();
-          triggerToast('تم رفع وحفظ المقطع العام بنجاح!', 'success');
-          setIsGlobalAudioModalOpen(false);
-          setGlobalAudioFile(null);
-        } catch (e: any) {
-          triggerToast('خطأ في حفظ الرابط: ' + e.message, 'error');
-        } finally {
-          setGlobalUploadProgress(null);
-        }
-      }
-    );
+    setIsGlobalAudioSaving(true);
+    try {
+      const globalDocRef = doc(db, 'settings', 'global_audio');
+      await writeBatch(db)
+        .set(globalDocRef, {
+          audioUrl: url,
+          updatedAt: serverTimestamp(),
+        })
+        .commit();
+      triggerToast('تم حفظ المقطع الصوتي العام في Firestore بنجاح! 🎧', 'success');
+      setIsGlobalAudioModalOpen(false);
+    } catch (e: any) {
+      triggerToast('خطأ في حفظ الرابط: ' + e.message, 'error');
+    } finally {
+      setIsGlobalAudioSaving(false);
+    }
   };
 
   const handleRemoveGlobalAudio = async () => {
@@ -870,30 +852,23 @@ export default function HomePage() {
         <div className="modal-overlay" onClick={() => setIsGlobalAudioModalOpen(false)}>
           <div className="modal-card" style={{ maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>رفع مقطع صوتي عام للسيرة</h3>
+              <h3>إضافة مقطع صوتي عام للسيرة</h3>
               <button className="modal-close-btn" onClick={() => setIsGlobalAudioModalOpen(false)}>
                 <X size={20} />
               </button>
             </div>
             <div className="form-group">
-              <label className="form-label">اختر ملف صوتي (MP3 / M4A / WAV)</label>
+              <label className="form-label">رابط المقطع الصوتي (MP3 مباشر)</label>
               <input
-                type="file"
-                accept="audio/*"
+                type="url"
                 className="form-input"
-                onChange={(e) => {
-                  const f = e.target.files && e.target.files[0];
-                  if (f) setGlobalAudioFile(f);
-                }}
+                placeholder="https://example.com/audio.mp3"
+                value={globalAudioInputUrl}
+                onChange={(e) => setGlobalAudioInputUrl(e.target.value)}
               />
-              {globalUploadProgress !== null && (
-                <div className="upload-progress-bar" style={{ marginTop: '10px' }}>
-                  <div
-                    className="upload-progress-fill"
-                    style={{ width: `${globalUploadProgress}%` }}
-                  />
-                </div>
-              )}
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+                يمكنك استخدام أي رابط MP3 مباشر (مثل روابط Archive.org المجانية أو روابط التخزين المباشرة).
+              </p>
             </div>
             <div className="modal-actions">
               {globalAudio?.audioUrl && (
@@ -914,9 +889,9 @@ export default function HomePage() {
               <button
                 className="btn-gold"
                 onClick={handleSaveGlobalAudio}
-                disabled={!globalAudioFile || globalUploadProgress !== null}
+                disabled={!globalAudioInputUrl.trim() || isGlobalAudioSaving}
               >
-                {globalUploadProgress !== null ? 'جارٍ الرفع...' : 'رفع وحفظ'}
+                {isGlobalAudioSaving ? 'جارٍ الحفظ...' : 'حفظ في Firestore'}
               </button>
             </div>
           </div>
