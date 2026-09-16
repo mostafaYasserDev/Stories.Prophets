@@ -168,46 +168,56 @@ export const Sidebar: React.FC<SidebarProps> = ({
               type="button"
               className={`sidebar-tab-chip ${filterType === 'bookmarks' ? 'active' : ''}`}
               onClick={() => setFilterType('bookmarks')}
+              title="الحلقات المحفوظة بالمفضلة"
             >
-              <Star size={12} />
-              <span>المفضلة ({bookmarks.size})</span>
+              <Star size={13} />
+              <span>المفضلة</span>
+              {bookmarks.size > 0 && <span className="tab-count-badge">{bookmarks.size}</span>}
             </button>
             <button
               type="button"
               className={`sidebar-tab-chip ${filterType === 'audio' ? 'active' : ''}`}
               onClick={() => setFilterType('audio')}
+              title="الحلقات ذات التسجيل الصوتي"
             >
-              <Volume2 size={12} />
-              <span>صوتية ({episodesWithAudioCount})</span>
+              <Volume2 size={13} />
+              <span>صوتية</span>
+              {episodesWithAudioCount > 0 && <span className="tab-count-badge">{episodesWithAudioCount}</span>}
             </button>
             <button
               type="button"
               className={`sidebar-tab-chip ${filterType === 'unread' ? 'active' : ''}`}
               onClick={() => setFilterType('unread')}
+              title="الحلقات غير المقروءة"
             >
-              <BookOpen size={12} />
-              <span>غير مقروءة ({unreadCount})</span>
+              <BookOpen size={13} />
+              <span>لم تقرأ</span>
+              {unreadCount > 0 && <span className="tab-count-badge">{unreadCount}</span>}
             </button>
           </div>
 
           {/* Era / Series Filter Chips */}
           <div className="era-chips">
-            <div
+            <button
+              type="button"
               className={`era-chip ${activeEra === 'all' ? 'active' : ''}`}
               onClick={() => onSelectEra('all')}
             >
-              جميع السلاسل ({episodes.length})
-            </div>
+              <span>كل السلاسل</span>
+              <span className="era-chip-count">{episodes.length}</span>
+            </button>
             {distinctEras.map((era) => {
               const count = episodes.filter((e) => e.era === era).length;
               return (
-                <div
+                <button
                   key={era}
+                  type="button"
                   className={`era-chip ${activeEra === era ? 'active' : ''}`}
                   onClick={() => onSelectEra(era)}
                 >
-                  {era} ({count})
-                </div>
+                  <span>{era}</span>
+                  <span className="era-chip-count">{count}</span>
+                </button>
               );
             })}
           </div>

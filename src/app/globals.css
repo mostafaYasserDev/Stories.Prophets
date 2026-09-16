@@ -345,14 +345,21 @@ body {
   display: flex;
   gap: 6px;
   overflow-x: auto;
-  padding: 4px 2px 8px;
+  padding: 6px 2px 8px;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 .era-chips::-webkit-scrollbar { display: none; }
 
 .era-chip {
-  padding: 5px 12px;
-  font-size: 0.75rem;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 0.76rem;
+  font-family: var(--font-ui);
   border-radius: var(--radius-full);
   background: var(--bg-base);
   border: 1px solid var(--border-light);
@@ -361,6 +368,14 @@ body {
   white-space: nowrap;
   transition: all var(--transition-fast);
   font-weight: 500;
+}
+
+.era-chip-count {
+  font-size: 0.68rem;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: 700;
 }
 
 .era-chip:hover {
@@ -373,6 +388,11 @@ body {
   color: #090c12;
   border-color: var(--gold);
   font-weight: 700;
+}
+
+.era-chip.active .era-chip-count {
+  background: rgba(0, 0, 0, 0.2);
+  color: #090c12;
 }
 
 .sidebar-stats {
@@ -1370,8 +1390,8 @@ body {
     top: 0;
     bottom: 0;
     right: 0;
-    width: 320px;
-    max-width: 85vw;
+    width: 380px;
+    max-width: 90vw;
     height: 100vh;
     border-radius: 0;
     z-index: 90;
@@ -1379,10 +1399,31 @@ body {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: none;
     border-left: 1px solid var(--border-color);
+    padding: 0;
+    box-shadow: -10px 0 35px rgba(0, 0, 0, 0.6);
   }
 
   .episodes-sidebar.drawer-open {
     transform: translateX(0);
+  }
+
+  .sidebar-mobile-title-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-light);
+    background: var(--bg-surface);
+  }
+
+  .sidebar-header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .episode-list {
+    padding: 10px 14px 24px;
+    scrollbar-width: thin;
   }
 
   .drawer-backdrop {
@@ -1413,6 +1454,10 @@ body {
 }
 
 @media (max-width: 480px) {
+  .episodes-sidebar {
+    width: 92vw;
+    max-width: 390px;
+  }
   .brand-info h1 { font-size: 1.25rem; }
   .brand-info p { display: none; }
   .btn-gold span { display: none; }
@@ -2977,25 +3022,31 @@ body.focus-mode .reading-card {
 /* ==================== SMART SIDEBAR FILTERS ==================== */
 .sidebar-smart-tabs {
   display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: var(--bg-surface);
+  gap: 5px;
+  padding: 5px;
+  background: var(--bg-base);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
   margin-top: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
+.sidebar-smart-tabs::-webkit-scrollbar { display: none; }
 
 .sidebar-tab-chip {
-  flex: 1;
-  display: flex;
+  flex: 1 0 auto;
+  min-width: fit-content;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 6px 4px;
+  gap: 5px;
+  padding: 6px 10px;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: var(--text-muted);
   font-size: 0.74rem;
+  font-family: var(--font-ui);
   border-radius: var(--radius-xs);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -3004,13 +3055,30 @@ body.focus-mode .reading-card {
 
 .sidebar-tab-chip:hover {
   color: var(--text-title);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .sidebar-tab-chip.active {
   background: var(--bg-card);
   color: var(--gold);
+  border-color: rgba(212, 175, 55, 0.3);
   font-weight: 700;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.tab-count-badge {
+  font-size: 0.68rem;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.sidebar-tab-chip.active .tab-count-badge {
+  background: rgba(212, 175, 55, 0.2);
+  color: var(--gold);
 }
 
 /* ==================== RESUME READING CARD ==================== */
@@ -3221,21 +3289,7 @@ body.focus-mode .reading-card {
 .skeleton-line.short { width: 65%; }
 .skeleton-line.medium { width: 85%; }
 
-/* ==================== SIDEBAR MOBILE TITLE BAR ==================== */
-.sidebar-mobile-title-bar {
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border-light);
-  background: var(--bg-surface);
-}
-
-@media (max-width: 1023px) {
-  .sidebar-mobile-title-bar {
-    display: flex;
-  }
-}
+/* ==================== SIDEBAR MOBILE CLOSE BUTTON ==================== */
 
 .sidebar-mobile-close-btn {
   background: transparent;
