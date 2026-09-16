@@ -32,6 +32,8 @@ import {
   Settings as SettingsIcon,
   HelpCircle,
   AlertTriangle,
+  AlertCircle,
+  GitMerge,
   Sliders,
   BookmarkCheck,
   CheckCircle2,
@@ -57,6 +59,7 @@ import {
 import { Toast, ToastMessage } from '@/components/Toast';
 import { compressAudio, formatBytes, CompressionResult } from '@/lib/audioCompressor';
 import { saveAudioToEpisode, removeAudioFromEpisode, resolveAudioUrl } from '@/lib/audioStorage';
+import { normalizeArabicText, formatFriendlyError } from '@/lib/errorHandler';
 
 export default function AdminPage() {
   // Authentication State
@@ -94,6 +97,12 @@ export default function AdminPage() {
   const [isSeriesModalOpen, setIsSeriesModalOpen] = useState<boolean>(false);
   const [editingSeries, setEditingSeries] = useState<Series | null>(null);
 
+  // Category Merging State
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState<boolean>(false);
+  const [mergeSourceSeriesId, setMergeSourceSeriesId] = useState<string>('');
+  const [mergeTargetSeriesId, setMergeTargetSeriesId] = useState<string>('');
+  const [isMerging, setIsMerging] = useState<boolean>(false);
+
   const [isAudioModalOpen, setIsAudioModalOpen] = useState<boolean>(false);
   const [audioTargetEpisode, setAudioTargetEpisode] = useState<Episode | null>(null);
 
@@ -114,7 +123,7 @@ export default function AdminPage() {
     onConfirm: () => {},
   });
 
-  // Episode Form State
+  // Episode Form State & Validation
   const [formOrder, setFormOrder] = useState<number>(1);
   const [formEra, setFormEra] = useState<string>('');
   const [formTitle, setFormTitle] = useState<string>('');
@@ -122,6 +131,11 @@ export default function AdminPage() {
   const [formContent, setFormContent] = useState<string>('');
   const [formIsPinned, setFormIsPinned] = useState<boolean>(false);
   const [isSavingEpisode, setIsSavingEpisode] = useState<boolean>(false);
+  const [episodeFormErrors, setEpisodeFormErrors] = useState<{
+    title?: string;
+    era?: string;
+    content?: string;
+  }>({});
 
   // Series Form State
   const [seriesTitleInput, setSeriesTitleInput] = useState<string>('');
@@ -154,13 +168,24 @@ export default function AdminPage() {
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Trigger Toast
-  const triggerToast = (text: string, type: 'success' | 'error' | 'info' = 'info') => {
-    const id = Date.now().toString() + Math.random();
-    setToasts((prev) => [...prev, { id, text, type }]);
+  // Trigger Toast (Rich notifications with title, warning, and dismissibility)
+  const triggerToast = (
+    text: string,
+    type: 'success' | 'error' | 'info' | 'warning' = 'info',
+    title?: string,
+    durationMs?: number
+  ) => {
+    const id = Date.now().toString() + Math.random().toString(36).substring(2, 7);
+    setToasts((prev) => [...prev, { id, text, type, title }]);
+    const timeout =
+      durationMs || (type === 'error' ? 7000 : type === 'warning' ? 5000 : 3500);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3500);
+    }, timeout);
+  };
+
+  const handleCloseToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
   // Auth Initialization
@@ -201,18 +226,18 @@ export default function AdminPage() {
   const handleChangePin = (e: React.FormEvent) => {
     e.preventDefault();
     if (newPin.length < 4) {
-      triggerToast('يجب أن يتكون رمز المرور من 4 أرقام على الأقل', 'error');
+      triggerToast('يجب أن يتكون رمز المرور من 4 أرقام أو رموز على الأقل لضمان الأمان', 'error', 'رمز مرور ضعيف');
       return;
     }
     if (newPin !== confirmPin) {
-      triggerToast('رمزا المرور غير متطابقين', 'error');
+      triggerToast('تأكيد رمز المرور غير متطابق مع الرمز الجديد، يرجى كتابتهما بدقة', 'error', 'عدم تطابق الرمز');
       return;
     }
     localStorage.setItem('seerah_admin_pin', newPin);
     setIsPinModalOpen(false);
     setNewPin('');
     setConfirmPin('');
-    triggerToast('تم تحديث رمز المرور بنجاح!', 'success');
+    triggerToast('تم تحديث رمز المرور بنجاح! 🔒', 'success', 'تغيير الرمز');
   };
 
   // 1. Fetch Episodes Realtime
@@ -232,7 +257,8 @@ export default function AdminPage() {
       },
       (err) => {
         console.error('Admin episodes error:', err);
-        triggerToast('خطأ في جلب الحلقات: ' + err.message, 'error');
+        const friendly = formatFriendlyError(err, 'تعذّر جلب قائمة الحلقات من السحابة');
+        triggerToast(friendly.message, 'error', friendly.title);
         setLoading(false);
       }
     );
@@ -247,8 +273,17 @@ export default function AdminPage() {
       q,
       async (snapshot) => {
         if (snapshot.empty && episodes.length > 0) {
-          // Extract unique eras from existing episodes and create initial series
-          const distinct = Array.from(new Set(episodes.map((e) => e.era).filter(Boolean)));
+          // Extract unique normalized eras from existing episodes to prevent duplicates
+          const distinctMap = new Map<string, string>();
+          episodes.forEach((e) => {
+            if (e.era && e.era.trim()) {
+              const norm = normalizeArabicText(e.era);
+              if (!distinctMap.has(norm)) {
+                distinctMap.set(norm, e.era.trim());
+              }
+            }
+          });
+          const distinct = Array.from(distinctMap.values());
           const batch = writeBatch(db);
           distinct.forEach((eraName, idx) => {
             const docRef = doc(collection(db, 'series'));
@@ -277,6 +312,8 @@ export default function AdminPage() {
       },
       (err) => {
         console.error('Admin series error:', err);
+        const friendly = formatFriendlyError(err, 'تعذّر جلب السلاسل والتصنيفات من السحابة');
+        triggerToast(friendly.message, 'error', friendly.title);
       }
     );
     return () => unsubscribe();
@@ -352,11 +389,136 @@ export default function AdminPage() {
     return { total, withAudio, pinnedCount, totalWords, totalSeries: seriesList.length };
   }, [episodes, seriesList]);
 
+  // Find duplicate groups in seriesList based on normalized Arabic text
+  const duplicateSeriesGroups = useMemo(() => {
+    const groups: { [norm: string]: Series[] } = {};
+    seriesList.forEach((s) => {
+      const key = normalizeArabicText(s.title);
+      if (!key) return;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(s);
+    });
+    return Object.values(groups).filter((g) => g.length > 1);
+  }, [seriesList]);
+
+  // Duplicate warning for series form while typing
+  const duplicateSeriesWarning = useMemo(() => {
+    const norm = normalizeArabicText(seriesTitleInput);
+    if (!norm) return null;
+    return seriesList.find((s) => {
+      if (editingSeries && s.id === editingSeries.id) return false;
+      return normalizeArabicText(s.title) === norm;
+    });
+  }, [seriesTitleInput, seriesList, editingSeries]);
+
+  // ==================== MERGE ENGINE ====================
+  // 1. Auto-Merge all detected duplicate series groups
+  const handleMergeAllDuplicates = async () => {
+    if (duplicateSeriesGroups.length === 0) return;
+    setIsSavingSeries(true);
+    let mergedCount = 0;
+    let episodesUpdated = 0;
+
+    try {
+      for (const group of duplicateSeriesGroups) {
+        // Pick canonical: the one with the highest episode count or earliest order
+        const sorted = [...group].sort((a, b) => {
+          const countA = seriesCounts.get(a.title) || 0;
+          const countB = seriesCounts.get(b.title) || 0;
+          if (countB !== countA) return countB - countA;
+          return (a.order || 0) - (b.order || 0);
+        });
+
+        const canonical = sorted[0];
+        const duplicates = sorted.slice(1);
+
+        const batch = writeBatch(db);
+
+        for (const dup of duplicates) {
+          const matchedEps = episodes.filter(
+            (ep) =>
+              ep.seriesId === dup.id ||
+              normalizeArabicText(ep.era) === normalizeArabicText(dup.title)
+          );
+          for (const ep of matchedEps) {
+            batch.update(doc(db, 'episodes', ep.docId), {
+              era: canonical.title,
+              seriesId: canonical.id,
+            });
+            episodesUpdated++;
+          }
+          batch.delete(doc(db, 'series', dup.id));
+          mergedCount++;
+        }
+
+        await batch.commit();
+      }
+
+      triggerToast(
+        `تم بنجاح دمج (${mergedCount}) تصنيفات مكررة وتحديث (${episodesUpdated}) حلقة ونقلها للتصنيف الأساسي! ✨`,
+        'success',
+        'تم دمج التصنيفات بنجاح'
+      );
+    } catch (err: any) {
+      const friendly = formatFriendlyError(err, 'تعذّر إتمام دمج التصنيفات المكررة');
+      triggerToast(friendly.message, 'error', friendly.title);
+    } finally {
+      setIsSavingSeries(false);
+    }
+  };
+
+  // 2. Manual Merge of Two Categories
+  const handleExecuteMergeSeries = async () => {
+    if (!mergeSourceSeriesId || !mergeTargetSeriesId || mergeSourceSeriesId === mergeTargetSeriesId) {
+      triggerToast('يرجى اختيار تصنيفين مختلفين لإتمام عملية الدمج', 'error', 'اختيار غير صالح');
+      return;
+    }
+
+    const source = seriesList.find((s) => s.id === mergeSourceSeriesId);
+    const target = seriesList.find((s) => s.id === mergeTargetSeriesId);
+    if (!source || !target) {
+      triggerToast('أحد التصنيفين غير متوفر في النظام', 'error', 'خطأ في البيانات');
+      return;
+    }
+
+    setIsMerging(true);
+    try {
+      const matchedEpisodes = episodes.filter(
+        (ep) =>
+          ep.seriesId === source.id ||
+          normalizeArabicText(ep.era) === normalizeArabicText(source.title)
+      );
+
+      const batch = writeBatch(db);
+      matchedEpisodes.forEach((ep) => {
+        batch.update(doc(db, 'episodes', ep.docId), {
+          era: target.title,
+          seriesId: target.id,
+        });
+      });
+
+      batch.delete(doc(db, 'series', source.id));
+      await batch.commit();
+
+      triggerToast(
+        `تم بنجاح نقل (${matchedEpisodes.length}) حلقة من «${source.title}» إلى «${target.title}» وحذف التصنيف المدمج! ✨`,
+        'success',
+        'اكتمل الدمج بنجاح'
+      );
+      setIsMergeModalOpen(false);
+    } catch (err: any) {
+      const friendly = formatFriendlyError(err, 'تعذّر إتمام دمج التصنيفين');
+      triggerToast(friendly.message, 'error', friendly.title);
+    } finally {
+      setIsMerging(false);
+    }
+  };
+
   // ==================== EPISODE ACTIONS ====================
   const handleOpenAddEpisode = () => {
     setEditingEpisode(null);
+    setEpisodeFormErrors({});
     setFormOrder(episodes.length + 1);
-    // Default to first series or selected filter
     const defaultEra =
       selectedSeriesFilter !== 'all'
         ? selectedSeriesFilter
@@ -373,6 +535,7 @@ export default function AdminPage() {
 
   const handleOpenEditEpisode = (ep: Episode) => {
     setEditingEpisode(ep);
+    setEpisodeFormErrors({});
     setFormOrder(ep.order || 1);
     setFormEra(ep.era || (seriesList[0]?.title ?? ''));
     setFormTitle(ep.title || '');
@@ -385,10 +548,18 @@ export default function AdminPage() {
 
   const handleSaveEpisode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formEra.trim() || !formTitle.trim() || !formContent.trim()) {
-      triggerToast('يرجى ملء كافة الحقول الأساسية: السلسلة، عنوان الحلقة، والنص', 'error');
+    const errors: { title?: string; era?: string; content?: string } = {};
+    if (!formTitle.trim()) errors.title = 'يرجى إدخال عنوان الحلقة';
+    if (!formEra.trim()) errors.era = 'يرجى اختيار تصنيف أو سلسلة للحلقة';
+    if (!formContent.trim()) errors.content = 'يرجى كتابة نص أو محتوى الحلقة';
+
+    if (Object.keys(errors).length > 0) {
+      setEpisodeFormErrors(errors);
+      const firstErr = Object.values(errors)[0];
+      triggerToast(firstErr, 'error', 'بيانات ناقصة');
       return;
     }
+    setEpisodeFormErrors({});
 
     setIsSavingEpisode(true);
     const formattedHtml = formContent
@@ -396,22 +567,29 @@ export default function AdminPage() {
       .map((p) => `<p>${p.trim().replace(/\n/g, '<br>')}</p>`)
       .join('\n');
 
+    // Find matching series id if exists
+    const matchingSeries = seriesList.find(
+      (s) => normalizeArabicText(s.title) === normalizeArabicText(formEra.trim())
+    );
+
     try {
       if (editingEpisode) {
         await updateDoc(doc(db, 'episodes', editingEpisode.docId), {
           order: Number(formOrder),
           era: formEra.trim(),
+          seriesId: matchingSeries?.id || null,
           title: formTitle.trim(),
           subtitle: formSubtitle.trim(),
           html: formattedHtml,
           isPinned: formIsPinned,
           updatedAt: serverTimestamp(),
         });
-        triggerToast('تم تحديث بيانات الحلقة بنجاح! ✓', 'success');
+        triggerToast('تم تحديث بيانات الحلقة بنجاح! ✓', 'success', 'تم التحديث');
       } else {
         await addDoc(collection(db, 'episodes'), {
           order: Number(formOrder),
           era: formEra.trim(),
+          seriesId: matchingSeries?.id || null,
           title: formTitle.trim(),
           subtitle: formSubtitle.trim(),
           html: formattedHtml,
@@ -419,20 +597,40 @@ export default function AdminPage() {
           isPinned: formIsPinned,
           createdAt: serverTimestamp(),
         });
-        triggerToast('تمت إضافة الحلقة الجديدة بنجاح! 🌟', 'success');
+        triggerToast('تمت إضافة الحلقة الجديدة بنجاح! 🌟', 'success', 'إضافة حلقة');
       }
       setIsEpisodeModalOpen(false);
     } catch (err: any) {
-      triggerToast('فشل الحفظ: ' + err.message, 'error');
+      const friendly = formatFriendlyError(err, 'فشل حفظ الحلقة في السحابة');
+      triggerToast(friendly.message, 'error', friendly.title);
     } finally {
       setIsSavingEpisode(false);
     }
   };
 
-  // Quick Inline Series Creator inside Episode Modal
+  // Quick Inline Series Creator inside Episode Modal (with duplicate prevention)
   const handleQuickAddSeries = async () => {
     const title = quickSeriesTitle.trim();
-    if (!title) return;
+    if (!title) {
+      triggerToast('يرجى كتابة اسم التصنيف أولاً', 'warning', 'حقل فارغ');
+      return;
+    }
+
+    const normalized = normalizeArabicText(title);
+    const existing = seriesList.find((s) => normalizeArabicText(s.title) === normalized);
+
+    if (existing) {
+      setFormEra(existing.title);
+      setQuickSeriesTitle('');
+      setIsQuickSeriesOpen(false);
+      triggerToast(
+        `تم اختيار التصنيف الموجود مسبقاً: «${existing.title}» تلقائياً لتفادي التكرار ✓`,
+        'info',
+        'تم تحديد التصنيف'
+      );
+      return;
+    }
+
     try {
       await addDoc(collection(db, 'series'), {
         title,
@@ -444,9 +642,10 @@ export default function AdminPage() {
       setFormEra(title);
       setQuickSeriesTitle('');
       setIsQuickSeriesOpen(false);
-      triggerToast(`تمت إضافة سلسلة «${title}» واختيارها بنجاح!`, 'success');
+      triggerToast(`تمت إضافة سلسلة «${title}» واختيارها بنجاح!`, 'success', 'إضافة سلسلة');
     } catch (e: any) {
-      triggerToast('تعذّر إضافة السلسلة: ' + e.message, 'error');
+      const friendly = formatFriendlyError(e, 'تعذّر إضافة السلسلة الجديدة');
+      triggerToast(friendly.message, 'error', friendly.title);
     }
   };
 
@@ -458,9 +657,14 @@ export default function AdminPage() {
         isPinned: nextPinned,
         updatedAt: serverTimestamp(),
       });
-      triggerToast(nextPinned ? 'تم تثبيت الحلقة في الصدارة 📌' : 'تم إلغاء تثبيت الحلقة', 'info');
+      triggerToast(
+        nextPinned ? 'تم تثبيت الحلقة في الصدارة 📌' : 'تم إلغاء تثبيت الحلقة',
+        'info',
+        'تثبيت الحلقة'
+      );
     } catch (err: any) {
-      triggerToast('خطأ في التثبيت: ' + err.message, 'error');
+      const friendly = formatFriendlyError(err, 'تعذّر تحديث حالة تثبيت الحلقة');
+      triggerToast(friendly.message, 'error', friendly.title);
     }
   };
 
@@ -474,9 +678,10 @@ export default function AdminPage() {
         try {
           await removeAudioFromEpisode(ep.docId);
           await deleteDoc(doc(db, 'episodes', ep.docId));
-          triggerToast('تم حذف الحلقة من السحابة بنجاح', 'info');
+          triggerToast('تم حذف الحلقة من السحابة بنجاح', 'info', 'حذف الحلقة');
         } catch (err: any) {
-          triggerToast('تعذّر الحذف: ' + err.message, 'error');
+          const friendly = formatFriendlyError(err, 'تعذّر حذف الحلقة من السحابة');
+          triggerToast(friendly.message, 'error', friendly.title);
         } finally {
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
         }
@@ -497,9 +702,10 @@ export default function AdminPage() {
       batch.update(doc(db, 'episodes', currentEp.docId), { order: targetEp.order });
       batch.update(doc(db, 'episodes', targetEp.docId), { order: currentEp.order });
       await batch.commit();
-      triggerToast('تم تحديث ترتيب الحلقات', 'success');
+      triggerToast('تم تحديث ترتيب الحلقات', 'success', 'الترتيب');
     } catch (err: any) {
-      triggerToast('خطأ في الترتيب: ' + err.message, 'error');
+      const friendly = formatFriendlyError(err, 'تعذّر تحديث ترتيب الحلقات');
+      triggerToast(friendly.message, 'error', friendly.title);
     }
   };
 
@@ -524,13 +730,29 @@ export default function AdminPage() {
 
   const handleSaveSeries = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!seriesTitleInput.trim()) {
-      triggerToast('يرجى إدخال اسم السلسلة', 'error');
+    const title = seriesTitleInput.trim();
+    if (!title) {
+      triggerToast('يرجى إدخال اسم السلسلة أو التصنيف', 'error', 'حقل مطلوب');
+      return;
+    }
+
+    // Strict duplicate check
+    const normTitle = normalizeArabicText(title);
+    const existingDup = seriesList.find((s) => {
+      if (editingSeries && s.id === editingSeries.id) return false;
+      return normalizeArabicText(s.title) === normTitle;
+    });
+
+    if (existingDup) {
+      triggerToast(
+        `يوجد تصنيف مسجل بالفعل بهذا الاسم: «${existingDup.title}». لا يمكن إنشاء تصنيفين بنفس الاسم لمنع التضارب. يمكنك دمج السلسلتين إذا رغبت.`,
+        'error',
+        'اسم التصنيف مكرر'
+      );
       return;
     }
 
     setIsSavingSeries(true);
-    const title = seriesTitleInput.trim();
     const description = seriesDescInput.trim();
     const order = Number(seriesOrderInput);
     const isPinned = seriesPinnedInput;
@@ -550,14 +772,17 @@ export default function AdminPage() {
         if (oldTitle !== title) {
           const epBatch = writeBatch(db);
           episodes
-            .filter((ep) => ep.era === oldTitle)
+            .filter((ep) => ep.era === oldTitle || ep.seriesId === editingSeries.id)
             .forEach((ep) => {
-              epBatch.update(doc(db, 'episodes', ep.docId), { era: title });
+              epBatch.update(doc(db, 'episodes', ep.docId), {
+                era: title,
+                seriesId: editingSeries.id,
+              });
             });
           await epBatch.commit();
         }
 
-        triggerToast('تم تحديث بيانات السلسلة بنجاح! ✓', 'success');
+        triggerToast('تم تحديث بيانات السلسلة بنجاح! ✓', 'success', 'تحديث السلسلة');
       } else {
         await addDoc(collection(db, 'series'), {
           title,
@@ -566,11 +791,12 @@ export default function AdminPage() {
           isPinned,
           createdAt: serverTimestamp(),
         });
-        triggerToast('تمت إضافة السلسلة الجديدة بنجاح! 📚', 'success');
+        triggerToast('تمت إضافة السلسلة الجديدة بنجاح! 📚', 'success', 'إضافة سلسلة');
       }
       setIsSeriesModalOpen(false);
     } catch (err: any) {
-      triggerToast('خطأ أثناء حفظ السلسلة: ' + err.message, 'error');
+      const friendly = formatFriendlyError(err, 'تعذّر حفظ بيانات السلسلة');
+      triggerToast(friendly.message, 'error', friendly.title);
     } finally {
       setIsSavingSeries(false);
     }
@@ -583,9 +809,14 @@ export default function AdminPage() {
         isPinned: next,
         updatedAt: serverTimestamp(),
       });
-      triggerToast(next ? 'تم تثبيت السلسلة في الصدارة 📌' : 'تم إلغاء تثبيت السلسلة', 'info');
+      triggerToast(
+        next ? 'تم تثبيت السلسلة في الصدارة 📌' : 'تم إلغاء تثبيت السلسلة',
+        'info',
+        'تثبيت السلسلة'
+      );
     } catch (e: any) {
-      triggerToast('خطأ: ' + e.message, 'error');
+      const friendly = formatFriendlyError(e, 'تعذّر تحديث تثبيت السلسلة');
+      triggerToast(friendly.message, 'error', friendly.title);
     }
   };
 
@@ -596,14 +827,15 @@ export default function AdminPage() {
       title: 'تأكيد حذف السلسلة',
       message:
         count > 0
-          ? `تنبيه: هذه السلسلة تحتوي على (${count}) حلقة. حذف السلسلة لن يحذف الحلقات ولكن ستحتاج لإعادة تصنيفها. هل تريد المتابعة؟`
+          ? `تنبيه: هذه السلسلة تحتوي على (${count}) حلقة. حذف السلسلة لن يحذف الحلقات ولكن ستحتاج لإعادة تصنيفها أو دمجها مع تصنيف آخر. هل تريد المتابعة؟`
           : `هل تريد بالتأكيد حذف سلسلة: «${s.title}»؟`,
       onConfirm: async () => {
         try {
           await deleteDoc(doc(db, 'series', s.id));
-          triggerToast('تم حذف السلسلة بنجاح', 'info');
+          triggerToast('تم حذف السلسلة بنجاح', 'info', 'حذف السلسلة');
         } catch (e: any) {
-          triggerToast('تعذّر الحذف: ' + e.message, 'error');
+          const friendly = formatFriendlyError(e, 'تعذّر حذف السلسلة');
+          triggerToast(friendly.message, 'error', friendly.title);
         } finally {
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
         }
@@ -624,9 +856,10 @@ export default function AdminPage() {
       batch.update(doc(db, 'series', currentS.id), { order: targetS.order });
       batch.update(doc(db, 'series', targetS.id), { order: currentS.order });
       await batch.commit();
-      triggerToast('تم تحديث ترتيب السلاسل', 'success');
+      triggerToast('تم تحديث ترتيب السلاسل', 'success', 'الترتيب');
     } catch (err: any) {
-      triggerToast('خطأ في الترتيب: ' + err.message, 'error');
+      const friendly = formatFriendlyError(err, 'تعذّر تحديث ترتيب السلسلة');
+      triggerToast(friendly.message, 'error', friendly.title);
     }
   };
 
@@ -650,6 +883,19 @@ export default function AdminPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate file type
+    if (
+      !file.type.startsWith('audio/') &&
+      !file.name.match(/\.(mp3|m4a|wav|ogg|aac|webm|flac)$/i)
+    ) {
+      triggerToast(
+        'يرجى اختيار ملف صوتي صالح بصيغة (MP3, WAV, M4A, OGG)',
+        'error',
+        'صيغة غير مدعومة'
+      );
+      return;
+    }
+
     setIsCompressing(true);
     setCompressionProgress(10);
     setCompressionMessage('بدء معالجة الملف الصوتي...');
@@ -663,11 +909,13 @@ export default function AdminPage() {
       setCompressionResult(result);
       triggerToast(
         `تم ضغط الصوت بنجاح! الحجم تقلص بنسبة ${result.compressionRatio}% (${formatBytes(result.originalSize)} ⬅ ${formatBytes(result.compressedSize)})`,
-        'success'
+        'success',
+        'تم الضغط بنجاح'
       );
     } catch (err: any) {
       console.error('Audio compression failed:', err);
-      triggerToast('خطأ أثناء ضغط الملف: ' + err.message, 'error');
+      const friendly = formatFriendlyError(err, 'تعذّر ضغط ومعالجة الملف الصوتي');
+      triggerToast(friendly.message, 'error', friendly.title);
     } finally {
       setIsCompressing(false);
     }
@@ -678,10 +926,11 @@ export default function AdminPage() {
     setIsSavingAudio(true);
     try {
       await saveAudioToEpisode(audioTargetEpisode.docId, compressionResult.base64DataUrl);
-      triggerToast('تم حفظ التسجيل الصوتي المضغوط في السحابة بنجاح! 🎵', 'success');
+      triggerToast('تم حفظ التسجيل الصوتي المضغوط في السحابة بنجاح! 🎵', 'success', 'تم حفظ الصوت');
       setIsAudioModalOpen(false);
     } catch (err: any) {
-      triggerToast('فشل حفظ الصوت: ' + err.message, 'error');
+      const friendly = formatFriendlyError(err, 'فشل حفظ المقطع الصوتي في السحابة');
+      triggerToast(friendly.message, 'error', friendly.title);
     } finally {
       setIsSavingAudio(false);
     }
@@ -691,16 +940,17 @@ export default function AdminPage() {
     if (!audioTargetEpisode) return;
     const url = audioUrlInput.trim();
     if (!url) {
-      triggerToast('يرجى كتابة الرابط الصوتي أولاً', 'error');
+      triggerToast('يرجى إدخال الرابط الصوتي أولاً', 'warning', 'حقل فارغ');
       return;
     }
     setIsSavingAudio(true);
     try {
       await saveAudioToEpisode(audioTargetEpisode.docId, url);
-      triggerToast('تم حفظ الرابط الصوتي بنجاح! 🎵', 'success');
+      triggerToast('تم حفظ الرابط الصوتي بنجاح! 🎵', 'success', 'تم الحفظ');
       setIsAudioModalOpen(false);
     } catch (err: any) {
-      triggerToast('خطأ في حفظ الرابط: ' + err.message, 'error');
+      const friendly = formatFriendlyError(err, 'تعذّر حفظ الرابط الصوتي');
+      triggerToast(friendly.message, 'error', friendly.title);
     } finally {
       setIsSavingAudio(false);
     }
@@ -715,10 +965,11 @@ export default function AdminPage() {
       onConfirm: async () => {
         try {
           await removeAudioFromEpisode(audioTargetEpisode.docId);
-          triggerToast('تمت إزالة المقطع الصوتي للحلقة', 'info');
+          triggerToast('تمت إزالة المقطع الصوتي للحلقة', 'info', 'إزالة الصوت');
           setIsAudioModalOpen(false);
         } catch (err: any) {
-          triggerToast('تعذّر الحذف: ' + err.message, 'error');
+          const friendly = formatFriendlyError(err, 'تعذّر إزالة المقطع الصوتي');
+          triggerToast(friendly.message, 'error', friendly.title);
         } finally {
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
         }
@@ -740,16 +991,23 @@ export default function AdminPage() {
       try {
         const playableUrl = await resolveAudioUrl(ep);
         if (!playableUrl) {
-          triggerToast('تعذّر العثور على المقطع الصوتي', 'error');
+          triggerToast('تعذّر العثور على المقطع الصوتي أو لم يعد متوفراً', 'error', 'ملف غير متاح');
           return;
         }
         const audio = new Audio(playableUrl);
         previewAudioRef.current = audio;
-        audio.play().catch(() => triggerToast('تعذّر تشغيل الرابط الصوتي', 'error'));
+        audio.play().catch(() =>
+          triggerToast(
+            'منع المتصفح التشغيل التلقائي أو الرابط غير صالح',
+            'warning',
+            'تشغيل الصوت'
+          )
+        );
         audio.onended = () => setPlayingAudioId(null);
         setPlayingAudioId(ep.docId);
       } catch (e: any) {
-        triggerToast('خطأ في تشغيل المقطع: ' + e.message, 'error');
+        const friendly = formatFriendlyError(e, 'تعذّر تشغيل المقطع الصوتي');
+        triggerToast(friendly.message, 'error', friendly.title);
       }
     }
   };
@@ -757,6 +1015,11 @@ export default function AdminPage() {
   // ==================== SITE SETTINGS ACTIONS ====================
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!settingsForm.siteTitle?.trim()) {
+      triggerToast('يرجى كتابة عنوان للموقع', 'error', 'حقل مطلوب');
+      return;
+    }
+
     setIsSavingSettings(true);
     try {
       const docRef = doc(db, 'settings', 'site_info');
@@ -767,9 +1030,10 @@ export default function AdminPage() {
         })
         .commit();
       setSiteSettings(settingsForm);
-      triggerToast('تم حفظ إعدادات الموقع وتحديثها في السحابة بنجاح! ⚙️', 'success');
+      triggerToast('تم حفظ إعدادات الموقع وتحديثها في السحابة بنجاح! ⚙️', 'success', 'إعدادات الموقع');
     } catch (e: any) {
-      triggerToast('خطأ أثناء الحفظ: ' + e.message, 'error');
+      const friendly = formatFriendlyError(e, 'تعذّر حفظ وتحديث إعدادات الموقع');
+      triggerToast(friendly.message, 'error', friendly.title);
     } finally {
       setIsSavingSettings(false);
     }
@@ -784,13 +1048,14 @@ export default function AdminPage() {
         await writeBatch(db)
           .set(docRef, { audioUrl: url, updatedAt: serverTimestamp() })
           .commit();
-        triggerToast('تم حفظ المقطع الصوتي العام في السحابة! 🎧', 'success');
+        triggerToast('تم حفظ المقطع الصوتي العام في السحابة! 🎧', 'success', 'المقطع العام');
       } else {
         await deleteDoc(docRef);
-        triggerToast('تمت إزالة المقطع العام', 'info');
+        triggerToast('تمت إزالة المقطع العام', 'info', 'المقطع العام');
       }
     } catch (err: any) {
-      triggerToast('خطأ: ' + err.message, 'error');
+      const friendly = formatFriendlyError(err, 'تعذّر تحديث المقطع الصوتي العام');
+      triggerToast(friendly.message, 'error', friendly.title);
     } finally {
       setIsSavingGlobalAudio(false);
     }
@@ -800,7 +1065,7 @@ export default function AdminPage() {
   if (!isAuthenticated) {
     return (
       <div className="admin-login-wrapper">
-        <Toast toasts={toasts} />
+        <Toast toasts={toasts} onClose={handleCloseToast} />
         <div className="admin-login-card">
           <div className="admin-lock-icon">
             <Lock size={32} />
@@ -849,7 +1114,7 @@ export default function AdminPage() {
   // ==================== RENDER ADMIN DASHBOARD ====================
   return (
     <div className="admin-page-container">
-      <Toast toasts={toasts} />
+      <Toast toasts={toasts} onClose={handleCloseToast} />
 
       {/* Admin Top Navigation */}
       <header className="admin-top-nav">
@@ -1180,12 +1445,65 @@ export default function AdminPage() {
         {/* ==================== TAB 2: SERIES MANAGEMENT ==================== */}
         {adminTab === 'series' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Duplicate Categories Detected Warning Banner */}
+            {duplicateSeriesGroups.length > 0 && (
+              <div className="admin-duplicate-banner">
+                <div className="duplicate-banner-content">
+                  <div className="duplicate-banner-icon">
+                    <AlertTriangle size={24} />
+                  </div>
+                  <div>
+                    <h4 className="duplicate-banner-title">
+                      تنبيه: تم رصد ({duplicateSeriesGroups.length}) مجموعة تصنيفات مكررة بنفس الاسم!
+                    </h4>
+                    <p className="duplicate-banner-desc">
+                      توجد تصنيفات مكررة في قاعدة البيانات:{' '}
+                      <strong>
+                        {duplicateSeriesGroups
+                          .map((g) => `«${g[0].title}» (${g.length} تكرار)`)
+                          .join('، ')}
+                      </strong>
+                      . يمكنك دمجها تلقائياً الآن لتوحيد جميع الحلقات تحت التصنيف الأساسي وحذف السجلات المكررة.
+                    </p>
+                  </div>
+                </div>
+                <div className="duplicate-banner-actions">
+                  <button
+                    type="button"
+                    className="btn-merge-auto"
+                    onClick={handleMergeAllDuplicates}
+                    disabled={isSavingSeries}
+                  >
+                    <GitMerge size={16} />
+                    <span>دمج التصنيفات المكررة الآن ⚡</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             <section className="admin-toolbar-card">
               <div className="admin-actions-bar">
                 <div className="actions-primary">
                   <button className="btn-gold" onClick={handleOpenAddSeries}>
                     <FolderPlus size={18} />
                     <span>إضافة سلسلة جديدة</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="tool-btn"
+                    onClick={() => {
+                      if (seriesList.length < 2) {
+                        triggerToast('يلزم وجود تصنيفين على الأقل لإجراء عملية الدمج', 'warning', 'تنبيه');
+                        return;
+                      }
+                      setMergeSourceSeriesId(seriesList[1]?.id || '');
+                      setMergeTargetSeriesId(seriesList[0]?.id || '');
+                      setIsMergeModalOpen(true);
+                    }}
+                    title="دمج سلسلتين ونقل الحلقات بينهما"
+                  >
+                    <GitMerge size={16} />
+                    <span>دمج تصنيفين</span>
                   </button>
                 </div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -1414,7 +1732,7 @@ export default function AdminPage() {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className={`form-group ${episodeFormErrors.era ? 'has-error' : ''}`}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                     <label className="form-label" style={{ margin: 0 }}>السلسلة / العصر</label>
                     <button
@@ -1450,7 +1768,12 @@ export default function AdminPage() {
                     <select
                       className="form-input"
                       value={formEra}
-                      onChange={(e) => setFormEra(e.target.value)}
+                      onChange={(e) => {
+                        setFormEra(e.target.value);
+                        if (episodeFormErrors.era) {
+                          setEpisodeFormErrors((prev) => ({ ...prev, era: undefined }));
+                        }
+                      }}
                       required
                     >
                       {seriesList.map((s) => (
@@ -1464,21 +1787,38 @@ export default function AdminPage() {
                       )}
                     </select>
                   )}
+                  {episodeFormErrors.era && (
+                    <div className="form-field-error">
+                      <AlertCircle size={14} />
+                      <span>{episodeFormErrors.era}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Title & Subtitle */}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '14px' }}>
-                <div className="form-group">
+                <div className={`form-group ${episodeFormErrors.title ? 'has-error' : ''}`}>
                   <label className="form-label">عنوان الحلقة</label>
                   <input
                     type="text"
                     className="form-input"
                     value={formTitle}
-                    onChange={(e) => setFormTitle(e.target.value)}
+                    onChange={(e) => {
+                      setFormTitle(e.target.value);
+                      if (episodeFormErrors.title) {
+                        setEpisodeFormErrors((prev) => ({ ...prev, title: undefined }));
+                      }
+                    }}
                     placeholder="مثال: ظلام مطبق ويأس قاتل"
                     required
                   />
+                  {episodeFormErrors.title && (
+                    <div className="form-field-error">
+                      <AlertCircle size={14} />
+                      <span>{episodeFormErrors.title}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -1507,7 +1847,7 @@ export default function AdminPage() {
               </div>
 
               {/* Text Body */}
-              <div className="form-group">
+              <div className={`form-group ${episodeFormErrors.content ? 'has-error' : ''}`}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                   <label className="form-label">نص الحلقة الشريفة (افصل بين الفقرات بسطر فارغ)</label>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -1518,10 +1858,21 @@ export default function AdminPage() {
                   className="form-textarea"
                   style={{ minHeight: '260px', fontSize: '0.95rem', lineHeight: '1.9' }}
                   value={formContent}
-                  onChange={(e) => setFormContent(e.target.value)}
+                  onChange={(e) => {
+                    setFormContent(e.target.value);
+                    if (episodeFormErrors.content) {
+                      setEpisodeFormErrors((prev) => ({ ...prev, content: undefined }));
+                    }
+                  }}
                   placeholder="اكتب أو الصق نص الحلقة الشريفة هنا..."
                   required
                 />
+                {episodeFormErrors.content && (
+                  <div className="form-field-error">
+                    <AlertCircle size={14} />
+                    <span>{episodeFormErrors.content}</span>
+                  </div>
+                )}
               </div>
 
               <div className="modal-actions">
@@ -1554,7 +1905,7 @@ export default function AdminPage() {
             </div>
 
             <form onSubmit={handleSaveSeries}>
-              <div className="form-group">
+              <div className={`form-group ${duplicateSeriesWarning ? 'has-error' : ''}`}>
                 <label className="form-label">اسم السلسلة / المرحلة</label>
                 <input
                   type="text"
@@ -1564,6 +1915,14 @@ export default function AdminPage() {
                   placeholder="مثال: العهد المكي أو الغزوات والسرايا"
                   required
                 />
+                {duplicateSeriesWarning && (
+                  <div className="form-field-error">
+                    <AlertCircle size={14} />
+                    <span>
+                      يوجد تصنيف مسجل بهذا الاسم مسبقاً («{duplicateSeriesWarning.title}»). يرجى اختيار اسم فريد لمنع التكرار.
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
@@ -1610,11 +1969,89 @@ export default function AdminPage() {
                 >
                   إلغاء
                 </button>
-                <button type="submit" className="btn-gold" disabled={isSavingSeries}>
+                <button
+                  type="submit"
+                  className="btn-gold"
+                  disabled={isSavingSeries || !!duplicateSeriesWarning}
+                >
                   {isSavingSeries ? 'جارٍ الحفظ...' : 'حفظ السلسلة'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== MODAL: MERGE TWO CATEGORIES ==================== */}
+      {isMergeModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsMergeModalOpen(false)}>
+          <div className="modal-card merge-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <GitMerge size={20} style={{ color: 'var(--gold)' }} />
+                <h3>دمج تصنيفين ونقل الحلقات</h3>
+              </div>
+              <button className="modal-close-btn" onClick={() => setIsMergeModalOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="merge-categories-flow">
+              <div className="merge-box">
+                <label>التصنيف المُراد نقله وحذفه (المصدر):</label>
+                <select
+                  value={mergeSourceSeriesId}
+                  onChange={(e) => setMergeSourceSeriesId(e.target.value)}
+                >
+                  {seriesList.map((s) => (
+                    <option key={s.id} value={s.id} disabled={s.id === mergeTargetSeriesId}>
+                      {s.title} ({seriesCounts.get(s.title) || 0} حلقة)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="merge-flow-arrow">
+                <ArrowDown size={22} />
+              </div>
+
+              <div className="merge-box">
+                <label>التصنيف المستقر الذي ستُنقل إليه الحلقات (الهدف):</label>
+                <select
+                  value={mergeTargetSeriesId}
+                  onChange={(e) => setMergeTargetSeriesId(e.target.value)}
+                >
+                  {seriesList.map((s) => (
+                    <option key={s.id} value={s.id} disabled={s.id === mergeSourceSeriesId}>
+                      {s.title} ({seriesCounts.get(s.title) || 0} حلقة)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="merge-impact-notice">
+                💡 تنبيه: سيتم نقل كافة الحلقات المرتبطة بالتصنيف المصدري إلى التصنيف المستهدف في قاعدة البيانات، ثم حذف التصنيف المصدري لمنع وجود أي تكرار.
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="tool-btn"
+                onClick={() => setIsMergeModalOpen(false)}
+                disabled={isMerging}
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                className="btn-gold"
+                onClick={handleExecuteMergeSeries}
+                disabled={isMerging || !mergeSourceSeriesId || !mergeTargetSeriesId || mergeSourceSeriesId === mergeTargetSeriesId}
+              >
+                {isMerging ? 'جارٍ الدمج ونقل الحلقات...' : 'تأكيد دمج التصنيفين ⚡'}
+              </button>
+            </div>
           </div>
         </div>
       )}
