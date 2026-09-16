@@ -35,6 +35,13 @@ export const metadata: Metadata = {
   description: 'تطبيق سحابي تفاعلي للسيرة النبوية الشريفة من المولد النبوي الشريف إلى الرفيق الأعلى ﷺ، بحلقات يومية وتأملات وتسجيلات صوتية مباشرة.',
   keywords: ['السيرة النبوية', 'النبي محمد', 'قصص الأنبياء', 'سيرة خير الأنام', 'العصر الجاهلي'],
   authors: [{ name: 'محمد هاشم ضيف الله' }],
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
   openGraph: {
     title: 'السيرة النبوية الشريفة ﷺ',
     description: 'رحلة تفاعلية مباركة في سيرة خير الأنام ﷺ',
@@ -50,6 +57,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl" className={`${amiri.variable} ${arefRuqaa.variable} ${cairo.variable} ${notoNaskh.variable}`} data-theme="midnight" data-font="amiri">
+      <head>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
+      </head>
       <body className={cairo.className}>
         {children}
       </body>

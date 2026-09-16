@@ -124,6 +124,34 @@ export default function HomePage() {
     document.documentElement.style.setProperty('--font-size-base', `${savedFontSize}px`);
   }, []);
 
+  // Instant Cache-First Initialization (0ms initial load)
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('seerah_cached_episodes');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setEpisodes(parsed);
+          return;
+        }
+      }
+      // First visit fallback: load initial seed immediately to eliminate wait
+      const seedMapped: Episode[] = INITIAL_SEED_EPISODES.map((ep: any, idx: number) => ({
+        docId: `seed-${idx + 1}`,
+        order: idx + 1,
+        era: ep.era,
+        title: ep.title,
+        subtitle: ep.subtitle || `الحلقة ${String(idx + 1).padStart(3, '0')}`,
+        html: ep.html,
+        audioUrl: null,
+        createdAt: null,
+      }));
+      setEpisodes(seedMapped);
+    } catch (e) {
+      console.warn('Cache initialization error:', e);
+    }
+  }, []);
+
   // Real-time Firestore Episodes Listener & Auto-seed
   useEffect(() => {
     const q = query(collection(db, 'episodes'), orderBy('order', 'asc'));
@@ -161,6 +189,24 @@ export default function HomePage() {
 
         items.sort((a, b) => (a.order || 0) - (b.order || 0));
         setEpisodes(items);
+
+        // Update local cache safely (preventing localStorage quota issues)
+        try {
+          const cacheSafe = items.map((ep) => ({
+            docId: ep.docId,
+            order: ep.order,
+            era: ep.era,
+            title: ep.title,
+            subtitle: ep.subtitle,
+            html: ep.html,
+            audioUrl: ep.audioUrl && ep.audioUrl.startsWith('data:') ? '__CACHED_BASE64__' : ep.audioUrl,
+            audioType: ep.audioType,
+            isPinned: ep.isPinned,
+          }));
+          localStorage.setItem('seerah_cached_episodes', JSON.stringify(cacheSafe));
+        } catch (e) {
+          console.warn('LocalStorage cache write error:', e);
+        }
       },
       (error) => {
         console.error('Firestore listener error:', error);
@@ -789,8 +835,35 @@ export default function HomePage() {
               </div>
             </article>
           ) : (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
-              <p>جارٍ تحميل حلقات السيرة النبوية من السحابة...</p>
+            <div className="islamic-loading-screen" id="islamicLoadingScreen">
+              <div className="islamic-loader-card">
+                <div className="islamic-loader-emblem-wrap">
+                  <div className="islamic-loader-ring" />
+                  <div className="islamic-loader-ring-inner" />
+                  <div className="islamic-loader-core-icon">🕌</div>
+                </div>
+
+                <div className="loader-salawat-badge">
+                  اللَّهُمَّ صَلِّ وَسَلِّمْ وَبَارِكْ عَلَى سَيِّدِنَا مُحَمَّدٍ ﷺ
+                </div>
+
+                <h3 className="loader-title">جارٍ فتح صحائف السيرة النبوية الشريفة...</h3>
+                <p className="loader-sub">رحلة تفاعلية مباركة في سيرة خير الأنام ﷺ</p>
+
+                {/* Shimmer Skeleton Reader Representation */}
+                <div className="skeleton-header-row">
+                  <div className="skeleton-box skeleton-tag" />
+                </div>
+                <div className="skeleton-box skeleton-title" />
+                <div className="skeleton-box skeleton-subtitle" />
+
+                <div className="skeleton-paragraphs">
+                  <div className="skeleton-box skeleton-line" />
+                  <div className="skeleton-box skeleton-line medium" />
+                  <div className="skeleton-box skeleton-line" />
+                  <div className="skeleton-box skeleton-line short" />
+                </div>
+              </div>
             </div>
           )}
 

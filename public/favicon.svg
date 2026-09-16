@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Radial Gradient -->
+    <radialGradient id="bgGrad" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#141c2e"/>
+      <stop offset="100%" stop-color="#070a12"/>
+    </radialGradient>
+
+    <!-- Gold Metallic Gradient -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fdf4c9"/>
+      <stop offset="35%" stop-color="#d4af37"/>
+      <stop offset="70%" stop-color="#aa8214"/>
+      <stop offset="100%" stop-color="#e9c855"/>
+    </linearGradient>
+
+    <!-- Glowing Filter -->
+    <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Circular Base -->
+  <circle cx="256" cy="256" r="248" fill="url(#bgGrad)" stroke="url(#goldGrad)" stroke-width="8"/>
+  <circle cx="256" cy="256" r="236" fill="none" stroke="rgba(212, 175, 55, 0.3)" stroke-width="2" stroke-dasharray="8 6"/>
+
+  <!-- Radiant Light Burst Behind Crescent -->
+  <circle cx="256" cy="190" r="70" fill="rgba(212, 175, 55, 0.08)" filter="url(#goldGlow)"/>
+
+  <!-- Mosque Silhouette & Domes -->
+  <!-- Base Foundation / Mihrab Arch -->
+  <path d="M120 400 L392 400 L392 340 Q392 320 370 320 L142 320 Q120 320 120 340 Z" fill="url(#goldGrad)" opacity="0.9"/>
+  
+  <!-- Left Minaret -->
+  <rect x="135" y="210" width="22" height="110" rx="3" fill="url(#goldGrad)"/>
+  <path d="M130 210 L162 210 L146 170 Z" fill="url(#goldGrad)"/>
+  <circle cx="146" cy="165" r="4" fill="url(#goldGrad)"/>
+
+  <!-- Right Minaret -->
+  <rect x="355" y="210" width="22" height="110" rx="3" fill="url(#goldGrad)"/>
+  <path d="M350 210 L382 210 L366 170 Z" fill="url(#goldGrad)"/>
+  <circle cx="366" cy="165" r="4" fill="url(#goldGrad)"/>
+
+  <!-- Central Great Dome (Mihrab Shape) -->
+  <path d="M176 320 C176 220 236 180 256 160 C276 180 336 220 336 320 Z" fill="url(#goldGrad)"/>
+  
+  <!-- Dome Windows / Arch Cutouts -->
+  <path d="M242 270 Q256 250 270 270 L270 310 L242 310 Z" fill="#0b0f19" opacity="0.9"/>
+  <path d="M206 280 Q216 265 226 280 L226 310 L206 310 Z" fill="#0b0f19" opacity="0.8"/>
+  <path d="M286 280 Q296 265 306 280 L306 310 L286 310 Z" fill="#0b0f19" opacity="0.8"/>
+
+  <!-- Majestic Crescent & Star on Main Dome -->
+  <g transform="translate(256, 125) scale(0.7)">
+    <path d="M0 -35 C-24 -35 -42 -17 -42 7 C-42 31 -24 49 0 49 C15 49 28 41 35 30 C19 32 6 22 6 7 C6 -8 19 -18 35 -16 C28 -27 15 -35 0 -35 Z" fill="url(#goldGrad)"/>
+    <!-- 5-Point Star -->
+    <polygon points="18,-2 22,6 30,8 24,14 26,22 18,18 10,22 12,14 6,8 14,6" fill="#fdf4c9"/>
+  </g>
+
+  <!-- Open Quran Leaves at the Base -->
+  <g transform="translate(256, 385)">
+    <!-- Right Page -->
+    <path d="M0 0 Q45 -18 90 -5 Q85 18 0 25 Z" fill="url(#goldGrad)" opacity="0.95"/>
+    <!-- Left Page -->
+    <path d="M0 0 Q-45 -18 -90 -5 Q-85 18 0 25 Z" fill="url(#goldGrad)" opacity="0.95"/>
+    <!-- Center Fold -->
+    <line x1="0" y1="-8" x2="0" y2="26" stroke="#aa8214" stroke-width="3"/>
+  </g>
+</svg>

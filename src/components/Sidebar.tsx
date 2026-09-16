@@ -114,6 +114,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside className={`episodes-sidebar ${isOpenMobile ? 'drawer-open' : ''}`}>
+        {/* Mobile Drawer Title Bar with Close Button */}
+        <div className="sidebar-mobile-title-bar">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <BookOpen size={18} style={{ color: 'var(--gold)' }} />
+            <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>فهرس السيرة النبوية</span>
+          </div>
+          <button
+            type="button"
+            className="sidebar-mobile-close-btn"
+            onClick={onCloseMobile}
+            title="إغلاق الفهرس"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
         <div className="sidebar-header">
           {/* Search Box */}
           <div className="search-box">
