@@ -965,8 +965,8 @@ export default function HomePage() {
           currentSentenceIndex={tts.currentSentenceIndex}
           totalSentences={tts.totalSentences}
           rate={tts.rate}
-          voices={tts.voices}
-          selectedVoiceUri={tts.selectedVoiceUri}
+          voices={tts.availableVoices}
+          selectedVoiceId={tts.selectedVoiceId}
           onPlayPause={() => {
             if (tts.isPlaying && !tts.isPaused) {
               tts.pause();

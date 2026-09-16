@@ -9,11 +9,12 @@ import {
   SkipBack,
   Volume2,
   Gauge,
-  UserCheck,
+  Sparkles,
   X,
   ChevronUp,
   ChevronDown,
 } from 'lucide-react';
+import { VoiceOption } from '@/hooks/useTextToSpeech';
 
 interface TtsFloatingBarProps {
   isPlaying: boolean;
@@ -21,14 +22,14 @@ interface TtsFloatingBarProps {
   currentSentenceIndex: number;
   totalSentences: number;
   rate: number;
-  voices: SpeechSynthesisVoice[];
-  selectedVoiceUri: string;
+  voices: VoiceOption[];
+  selectedVoiceId: string;
   onPlayPause: () => void;
   onStop: () => void;
   onNext: () => void;
   onPrev: () => void;
   onSetRate: (rate: number) => void;
-  onSetVoice: (voiceUri: string) => void;
+  onSetVoice: (voiceId: string) => void;
   onClose: () => void;
 }
 
@@ -39,7 +40,7 @@ export const TtsFloatingBar: React.FC<TtsFloatingBarProps> = ({
   totalSentences,
   rate,
   voices,
-  selectedVoiceUri,
+  selectedVoiceId,
   onPlayPause,
   onStop,
   onNext,
@@ -55,7 +56,7 @@ export const TtsFloatingBar: React.FC<TtsFloatingBarProps> = ({
       ? Math.round(((currentSentenceIndex + 1) / totalSentences) * 100)
       : 0;
 
-  const currentVoice = voices.find((v) => v.voiceURI === selectedVoiceUri);
+  const currentVoice = voices.find((v) => v.id === selectedVoiceId) || voices[0];
 
   return (
     <div className="tts-floating-container" dir="rtl">
@@ -74,7 +75,9 @@ export const TtsFloatingBar: React.FC<TtsFloatingBarProps> = ({
             <Volume2 size={18} className={isPlaying && !isPaused ? 'animate-pulse' : ''} />
           </div>
           <div className="tts-labels">
-            <span className="tts-title">القارئ الآلي الذكي</span>
+            <span className="tts-title">
+              {currentVoice?.type === 'neural' ? 'القارئ الآلي العصبي 🎙️' : 'القارئ الآلي الذكي'}
+            </span>
             <span className="tts-counter">
               {currentSentenceIndex >= 0
                 ? `جملة ${currentSentenceIndex + 1} من ${totalSentences} (${progressPercent}%)`
@@ -141,43 +144,41 @@ export const TtsFloatingBar: React.FC<TtsFloatingBarProps> = ({
             ))}
           </div>
 
-          {/* Voice Selector if multiple voices exist */}
-          {voices.length > 1 && (
-            <div className="tts-voice-dropdown-wrapper">
-              <button
-                type="button"
-                className="tts-voice-trigger"
-                onClick={() => setIsVoiceMenuOpen(!isVoiceMenuOpen)}
-                title="تغيير الصوت العربي"
-              >
-                <UserCheck size={14} />
-                <span className="tts-voice-name">
-                  {currentVoice ? currentVoice.name.slice(0, 12) : 'الصوت'}
-                </span>
-                {isVoiceMenuOpen ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
-              </button>
+          {/* Voice Selector */}
+          <div className="tts-voice-dropdown-wrapper">
+            <button
+              type="button"
+              className="tts-voice-trigger"
+              onClick={() => setIsVoiceMenuOpen(!isVoiceMenuOpen)}
+              title="تغيير الصوت واللهجة"
+            >
+              <Sparkles size={14} style={{ color: 'var(--gold)' }} />
+              <span className="tts-voice-name">
+                {currentVoice ? currentVoice.name.replace(/🎙️|📱/g, '').trim().slice(0, 14) : 'الصوت'}
+              </span>
+              {isVoiceMenuOpen ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+            </button>
 
-              {isVoiceMenuOpen && (
-                <div className="tts-voice-menu">
-                  <div className="tts-voice-menu-header">الأصوات المتوفرة بجهازك:</div>
-                  {voices.map((v) => (
-                    <button
-                      key={v.voiceURI}
-                      type="button"
-                      className={`tts-voice-menu-item ${v.voiceURI === selectedVoiceUri ? 'active' : ''}`}
-                      onClick={() => {
-                        onSetVoice(v.voiceURI);
-                        setIsVoiceMenuOpen(false);
-                      }}
-                    >
-                      <span>{v.name}</span>
-                      {v.voiceURI === selectedVoiceUri && <span className="gold-check">✓</span>}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+            {isVoiceMenuOpen && (
+              <div className="tts-voice-menu">
+                <div className="tts-voice-menu-header">اختر القارئ واللهجة المفضلة:</div>
+                {voices.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    className={`tts-voice-menu-item ${v.id === selectedVoiceId ? 'active' : ''}`}
+                    onClick={() => {
+                      onSetVoice(v.id);
+                      setIsVoiceMenuOpen(false);
+                    }}
+                  >
+                    <span>{v.name}</span>
+                    {v.id === selectedVoiceId && <span className="gold-check">✓</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Close Floating Bar Button */}
           <button
