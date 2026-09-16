@@ -57,8 +57,15 @@ import {
 } from 'firebase/firestore';
 
 import { Toast, ToastMessage } from '@/components/Toast';
+import {
+  saveAudioToEpisode,
+  removeAudioFromEpisode,
+  resolveAudioUrl,
+  saveGlobalAudio,
+  removeGlobalAudio,
+  resolveGlobalAudioUrl,
+} from '@/lib/audioStorage';
 import { compressAudio, formatBytes, CompressionResult } from '@/lib/audioCompressor';
-import { saveAudioToEpisode, removeAudioFromEpisode, resolveAudioUrl } from '@/lib/audioStorage';
 import { normalizeArabicText, formatFriendlyError } from '@/lib/errorHandler';
 
 export default function AdminPage() {
@@ -163,6 +170,17 @@ export default function AdminPage() {
   const [isSavingSettings, setIsSavingSettings] = useState<boolean>(false);
   const [globalAudioInput, setGlobalAudioInput] = useState<string>('');
   const [isSavingGlobalAudio, setIsSavingGlobalAudio] = useState<boolean>(false);
+
+  // Global Audio Upload & Compression State
+  const [globalAudioUploadTab, setGlobalAudioUploadTab] = useState<'upload' | 'url'>('upload');
+  const [isCompressingGlobalAudio, setIsCompressingGlobalAudio] = useState<boolean>(false);
+  const [globalCompressionProgress, setGlobalCompressionProgress] = useState<number>(0);
+  const [globalCompressionMessage, setGlobalCompressionMessage] = useState<string>('');
+  const [globalCompressionResult, setGlobalCompressionResult] = useState<CompressionResult | null>(null);
+  const [globalAudioOriginalName, setGlobalAudioOriginalName] = useState<string>('');
+  const [resolvedAdminGlobalAudioUrl, setResolvedAdminGlobalAudioUrl] = useState<string | null>(null);
+  const [isLoadingAdminGlobalAudio, setIsLoadingAdminGlobalAudio] = useState<boolean>(false);
+  const globalFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Audio Preview State
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
@@ -348,6 +366,37 @@ export default function AdminPage() {
       unsubAudio();
     };
   }, [isAuthenticated]);
+
+  // Real-time resolution for Global Audio preview in admin
+  useEffect(() => {
+    let isMounted = true;
+    if (!globalAudio || !globalAudio.audioUrl) {
+      setResolvedAdminGlobalAudioUrl(null);
+      return;
+    }
+
+    if (globalAudio.audioUrl !== '__CHUNKS__') {
+      setResolvedAdminGlobalAudioUrl(globalAudio.audioUrl);
+      return;
+    }
+
+    setIsLoadingAdminGlobalAudio(true);
+    resolveGlobalAudioUrl(globalAudio)
+      .then((url) => {
+        if (isMounted) {
+          setResolvedAdminGlobalAudioUrl(url);
+          setIsLoadingAdminGlobalAudio(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Admin resolve global audio error:', err);
+        if (isMounted) setIsLoadingAdminGlobalAudio(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [globalAudio]);
 
   // Filtered Episodes
   const filteredEpisodes = useMemo(() => {
@@ -1039,26 +1088,115 @@ export default function AdminPage() {
     }
   };
 
-  const handleSaveGlobalAudio = async () => {
-    const url = globalAudioInput.trim();
+  // ==================== GLOBAL AUDIO ACTIONS ====================
+  const handleGlobalAudioFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (
+      !file.type.startsWith('audio/') &&
+      !file.name.match(/\.(mp3|m4a|wav|ogg|aac|webm|flac)$/i)
+    ) {
+      triggerToast(
+        'يرجى اختيار ملف صوتي صالح بصيغة (MP3, WAV, M4A, OGG)',
+        'error',
+        'صيغة غير مدعومة'
+      );
+      return;
+    }
+
+    setGlobalAudioOriginalName(file.name);
+    setIsCompressingGlobalAudio(true);
+    setGlobalCompressionProgress(10);
+    setGlobalCompressionMessage('بدء معالجة وضغط المقطع العام...');
+    setGlobalCompressionResult(null);
+
+    try {
+      const result = await compressAudio(file, 32, (percent, msg) => {
+        setGlobalCompressionProgress(percent);
+        setGlobalCompressionMessage(msg);
+      });
+      setGlobalCompressionResult(result);
+      triggerToast(
+        `تم ضغط المقطع العام بنجاح! تقلص الحجم بنسبة ${result.compressionRatio}% (${formatBytes(result.originalSize)} ⬅ ${formatBytes(result.compressedSize)})`,
+        'success',
+        'تم الضغط بنجاح'
+      );
+    } catch (err: any) {
+      console.error('Global audio compression failed:', err);
+      const friendly = formatFriendlyError(err, 'تعذّر ضغط ومعالجة المقطع الصوتي العام');
+      triggerToast(friendly.message, 'error', friendly.title);
+    } finally {
+      setIsCompressingGlobalAudio(false);
+    }
+  };
+
+  const handleSaveCompressedGlobalAudio = async () => {
+    if (!globalCompressionResult) return;
     setIsSavingGlobalAudio(true);
     try {
-      const docRef = doc(db, 'settings', 'global_audio');
-      if (url) {
-        await writeBatch(db)
-          .set(docRef, { audioUrl: url, updatedAt: serverTimestamp() })
-          .commit();
-        triggerToast('تم حفظ المقطع الصوتي العام في السحابة! 🎧', 'success', 'المقطع العام');
-      } else {
-        await deleteDoc(docRef);
-        triggerToast('تمت إزالة المقطع العام', 'info', 'المقطع العام');
-      }
+      await saveGlobalAudio(globalCompressionResult.base64DataUrl, {
+        originalFileName: globalAudioOriginalName,
+        originalSize: globalCompressionResult.originalSize,
+        compressedSize: globalCompressionResult.compressedSize,
+      });
+      setGlobalCompressionResult(null);
+      triggerToast(
+        'تم حفظ المقطع الصوتي العام المضغوط في السحابة بنجاح! 🎧',
+        'success',
+        'المقطع العام'
+      );
+    } catch (err: any) {
+      const friendly = formatFriendlyError(err, 'فشل حفظ المقطع الصوتي العام في السحابة');
+      triggerToast(friendly.message, 'error', friendly.title);
+    } finally {
+      setIsSavingGlobalAudio(false);
+    }
+  };
+
+  const handleSaveUrlGlobalAudio = async () => {
+    const url = globalAudioInput.trim();
+    if (!url) {
+      triggerToast('يرجى إدخال رابط صوتي صحيح أولاً', 'warning', 'حقل فارغ');
+      return;
+    }
+    setIsSavingGlobalAudio(true);
+    try {
+      await writeBatch(db)
+        .set(doc(db, 'settings', 'global_audio'), {
+          audioUrl: url,
+          audioType: 'direct',
+          updatedAt: serverTimestamp(),
+        })
+        .commit();
+      triggerToast('تم حفظ الرابط الصوتي العام في السحابة! 🎧', 'success', 'المقطع العام');
     } catch (err: any) {
       const friendly = formatFriendlyError(err, 'تعذّر تحديث المقطع الصوتي العام');
       triggerToast(friendly.message, 'error', friendly.title);
     } finally {
       setIsSavingGlobalAudio(false);
     }
+  };
+
+  const handleRemoveGlobalAudioPrompt = () => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'تأكيد إزالة المقطع الصوتي العام',
+      message: 'هل تريد بالتأكيد إزالة المقطع الصوتي العام للسيرة الشريفة نهائياً من السحابة؟',
+      onConfirm: async () => {
+        try {
+          await removeGlobalAudio();
+          setGlobalAudioInput('');
+          setGlobalCompressionResult(null);
+          triggerToast('تمت إزالة المقطع الصوتي العام بنجاح', 'info', 'إزالة المقطع');
+        } catch (err: any) {
+          const friendly = formatFriendlyError(err, 'تعذّر إزالة المقطع العام');
+          triggerToast(friendly.message, 'error', friendly.title);
+        } finally {
+          setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+        }
+      },
+    });
   };
 
   // ==================== RENDER PIN LOGIN ====================
@@ -1594,29 +1732,238 @@ export default function AdminPage() {
                 <Headphones size={20} className="gold-text" />
                 <div>
                   <h4>المقطع الصوتي العام للسيرة الشريفة</h4>
-                  <p>مقطع صوتي يظهر في أسفل صفحة القراءة كمقدمة شاملة</p>
+                  <p>مقطع صوتي رئيسي يظهر لجميع الزوار في أسفل صفحة القراءة كمقدمة وتلاوة عامة</p>
                 </div>
               </div>
 
-              <div style={{ marginTop: '14px' }}>
-                <label className="form-label">رابط المقطع الصوتي (MP3 مباشر أو Data URL)</label>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <input
-                    type="url"
-                    className="form-input"
-                    placeholder="https://example.com/audio.mp3"
-                    value={globalAudioInput}
-                    onChange={(e) => setGlobalAudioInput(e.target.value)}
-                  />
+              {/* Active Global Audio Player / Details */}
+              {globalAudio?.audioUrl && (
+                <div
+                  style={{
+                    marginTop: '16px',
+                    padding: '16px',
+                    background: 'var(--bg-surface)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid rgba(212, 175, 55, 0.25)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          color: '#10b981',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
+                          borderRadius: 'var(--radius-full)',
+                          fontSize: '0.76rem',
+                          fontWeight: 600,
+                          padding: '3px 10px',
+                        }}
+                      >
+                        <CheckCircle2 size={13} />
+                        مقطع صوتي عام نشط
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '0.76rem',
+                          color: 'var(--text-muted)',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          padding: '3px 8px',
+                          borderRadius: 'var(--radius-sm)',
+                        }}
+                      >
+                        {globalAudio.audioType === 'chunked'
+                          ? `مخزن سحابياً (${globalAudio.audioChunksCount || 1} أجزاء Base64)`
+                          : globalAudio.audioType === 'direct'
+                          ? 'مخزن سحابياً (Base64 مباشر)'
+                          : 'رابط خارجي مباشر'}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '0.8rem',
+                        color: '#ef4444',
+                        borderColor: 'rgba(239, 68, 68, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                      onClick={handleRemoveGlobalAudioPrompt}
+                    >
+                      <Trash2 size={14} />
+                      <span>إزالة المقطع</span>
+                    </button>
+                  </div>
+
+                  {/* Metadata if present */}
+                  {(globalAudio.originalFileName || globalAudio.compressedSize) && (
+                    <div style={{ display: 'flex', gap: '14px', fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+                      {globalAudio.originalFileName && <span>📁 الملف: {globalAudio.originalFileName}</span>}
+                      {globalAudio.compressedSize && (
+                        <span>📦 الحجم: {formatBytes(globalAudio.compressedSize)}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Audio Preview Player */}
+                  <div style={{ marginTop: '12px' }}>
+                    {isLoadingAdminGlobalAudio ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: 'var(--gold)' }}>
+                        <RefreshCw size={14} className="spin-slow" />
+                        <span>جارٍ استرجاع المقطع الصوتي العام من السحابة...</span>
+                      </div>
+                    ) : (
+                      <audio
+                        controls
+                        src={resolvedAdminGlobalAudioUrl || globalAudio.audioUrl}
+                        style={{ width: '100%' }}
+                        preload="metadata"
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Upload or Update Audio Tabs */}
+              <div style={{ marginTop: '20px' }}>
+                <h5 style={{ fontSize: '0.9rem', color: 'var(--text-title)', marginBottom: '8px' }}>
+                  {globalAudio?.audioUrl ? 'استبدال أو تحديث المقطع الصوتي العام:' : 'إضافة مقطع صوتي عام جديد:'}
+                </h5>
+
+                <div className="audio-tabs-bar">
                   <button
-                    className="btn-gold"
-                    onClick={handleSaveGlobalAudio}
-                    disabled={isSavingGlobalAudio}
-                    style={{ whiteSpace: 'nowrap' }}
+                    type="button"
+                    className={`audio-tab-btn ${globalAudioUploadTab === 'upload' ? 'active' : ''}`}
+                    onClick={() => setGlobalAudioUploadTab('upload')}
                   >
-                    {isSavingGlobalAudio ? 'جارٍ الحفظ...' : 'حفظ المقطع'}
+                    <UploadCloud size={16} />
+                    <span>رفع ملف وضغطه تلقائياً (Base64)</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`audio-tab-btn ${globalAudioUploadTab === 'url' ? 'active' : ''}`}
+                    onClick={() => setGlobalAudioUploadTab('url')}
+                  >
+                    <Link2 size={16} />
+                    <span>رابط خارجي مباشر</span>
                   </button>
                 </div>
+
+                {/* Tab 1: Upload & Compress */}
+                {globalAudioUploadTab === 'upload' && (
+                  <div style={{ marginTop: '14px' }}>
+                    <input
+                      type="file"
+                      ref={globalFileInputRef}
+                      accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac,.webm,.flac"
+                      style={{ display: 'none' }}
+                      onChange={handleGlobalAudioFileSelect}
+                    />
+
+                    <div
+                      className="audio-upload-dropzone"
+                      onClick={() => globalFileInputRef.current?.click()}
+                    >
+                      <div className="dropzone-icon">
+                        <FileAudio size={36} />
+                      </div>
+                      <h4>اختر ملفاً صوتياً للمقطع العام من جهازك</h4>
+                      <p>يدعم جميع الصيغ: MP3, M4A, WAV, OGG, AAC, WebM</p>
+                      <span className="dropzone-badge">
+                        يتم تقليص الحجم تلقائياً حتى 90% وحفظه في السحابة مجاناً بدون ستورج
+                      </span>
+                    </div>
+
+                    {/* Compression Progress */}
+                    {isCompressingGlobalAudio && (
+                      <div className="compression-progress-box">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '0.82rem', color: 'var(--gold)' }}>
+                            {globalCompressionMessage}
+                          </span>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-title)' }}>
+                            {globalCompressionProgress}%
+                          </span>
+                        </div>
+                        <div className="progress-track">
+                          <div className="progress-fill" style={{ width: `${globalCompressionProgress}%` }} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Compression Result Preview */}
+                    {globalCompressionResult && !isCompressingGlobalAudio && (
+                      <div className="compression-result-card">
+                        <div className="result-stats-row">
+                          <div className="result-stat-item">
+                            <span className="res-label">الحجم الأصلي:</span>
+                            <span className="res-val original">{formatBytes(globalCompressionResult.originalSize)}</span>
+                          </div>
+                          <div className="result-stat-item">
+                            <span className="res-label">الحجم بعد الضغط:</span>
+                            <span className="res-val compressed">{formatBytes(globalCompressionResult.compressedSize)}</span>
+                          </div>
+                          <div className="result-stat-item">
+                            <span className="res-label">نسبة التخفيض:</span>
+                            <span className="res-badge-ratio">-{globalCompressionResult.compressionRatio}%</span>
+                          </div>
+                        </div>
+
+                        <div style={{ marginTop: '14px' }}>
+                          <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                            معاينة المقطع العام المضغوط قبل اعتماده:
+                          </label>
+                          <audio controls src={globalCompressionResult.base64DataUrl} style={{ width: '100%' }} />
+                        </div>
+
+                        <button
+                          type="button"
+                          className="btn-gold"
+                          style={{ width: '100%', marginTop: '14px', padding: '12px' }}
+                          onClick={handleSaveCompressedGlobalAudio}
+                          disabled={isSavingGlobalAudio}
+                        >
+                          <Check size={18} />
+                          <span>
+                            {isSavingGlobalAudio ? 'جارٍ الحفظ في السحابة...' : 'اعتماد وحفظ المقطع العام في قاعدة البيانات (Base64)'}
+                          </span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab 2: URL */}
+                {globalAudioUploadTab === 'url' && (
+                  <div style={{ marginTop: '14px' }}>
+                    <label className="form-label">رابط المقطع الصوتي (MP3 مباشر أو Data URL)</label>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <input
+                        type="url"
+                        className="form-input"
+                        placeholder="https://example.com/audio.mp3"
+                        value={globalAudioInput}
+                        onChange={(e) => setGlobalAudioInput(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="btn-gold"
+                        onClick={handleSaveUrlGlobalAudio}
+                        disabled={isSavingGlobalAudio}
+                        style={{ whiteSpace: 'nowrap' }}
+                      >
+                        {isSavingGlobalAudio ? 'جارٍ الحفظ...' : 'حفظ الرابط'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

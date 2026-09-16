@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   Check,
   Pin,
+  RefreshCw,
 } from 'lucide-react';
 
 import { Episode, ThemeType, FontType, GlobalAudio, SiteSettings } from '@/types';
@@ -38,6 +39,7 @@ import {
   doc,
   serverTimestamp,
 } from 'firebase/firestore';
+import { resolveGlobalAudioUrl } from '@/lib/audioStorage';
 
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
@@ -54,6 +56,8 @@ export default function HomePage() {
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
   const [readEpisodes, setReadEpisodes] = useState<Set<string>>(new Set());
   const [globalAudio, setGlobalAudio] = useState<GlobalAudio | null>(null);
+  const [resolvedGlobalAudioUrl, setResolvedGlobalAudioUrl] = useState<string | null>(null);
+  const [isLoadingGlobalAudio, setIsLoadingGlobalAudio] = useState<boolean>(false);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>({
     siteTitle: 'السيرة النبوية الشريفة',
     siteSubtitle: 'رحلة تفاعلية مباركة في سيرة خير الأنام ﷺ',
@@ -173,6 +177,37 @@ export default function HomePage() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Resolve Global Audio URL (direct or reassemble chunks)
+  useEffect(() => {
+    let isMounted = true;
+    if (!globalAudio || !globalAudio.audioUrl) {
+      setResolvedGlobalAudioUrl(null);
+      return;
+    }
+
+    if (globalAudio.audioUrl !== '__CHUNKS__') {
+      setResolvedGlobalAudioUrl(globalAudio.audioUrl);
+      return;
+    }
+
+    setIsLoadingGlobalAudio(true);
+    resolveGlobalAudioUrl(globalAudio)
+      .then((url) => {
+        if (isMounted) {
+          setResolvedGlobalAudioUrl(url);
+          setIsLoadingGlobalAudio(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Error resolving global audio:', err);
+        if (isMounted) setIsLoadingGlobalAudio(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [globalAudio]);
 
   // Real-time Site Settings Listener
   useEffect(() => {
@@ -626,12 +661,25 @@ export default function HomePage() {
                 </div>
                 <div className="global-audio-text">
                   <h4>مقطع صوتي عام للسيرة النبوية</h4>
-                  <p>تسجيل صوتي مبارك وشامل</p>
+                  <p>
+                    {globalAudio.originalFileName
+                      ? globalAudio.originalFileName
+                      : 'تسجيل صوتي مبارك وشامل'}
+                  </p>
                 </div>
               </div>
 
               <div className="global-audio-player-wrap">
-                <audio controls src={globalAudio.audioUrl} preload="metadata" />
+                {isLoadingGlobalAudio ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--gold)', fontSize: '0.85rem' }}>
+                    <RefreshCw className="animate-spin" size={16} />
+                    <span>جارٍ تجهيز المقطع الصوتي من السحابة...</span>
+                  </div>
+                ) : (
+                  resolvedGlobalAudioUrl && (
+                    <audio controls src={resolvedGlobalAudioUrl} preload="metadata" />
+                  )
+                )}
               </div>
             </section>
           )}

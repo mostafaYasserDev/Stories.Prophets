@@ -33,6 +33,11 @@ export interface Reflection {
 
 export interface GlobalAudio {
   audioUrl: string;
+  audioType?: 'direct' | 'chunked' | null;
+  audioChunksCount?: number;
+  originalFileName?: string;
+  originalSize?: number;
+  compressedSize?: number;
   updatedAt?: any;
 }
 
