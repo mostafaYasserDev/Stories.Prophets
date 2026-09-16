@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Feather,
@@ -15,7 +15,6 @@ import {
   Forward,
   Headphones,
   Link2,
-  StopCircle,
   X,
   Copy,
   ExternalLink,
@@ -25,6 +24,9 @@ import {
   Check,
   Pin,
   RefreshCw,
+  Eye,
+  EyeOff,
+  BookOpen,
 } from 'lucide-react';
 
 import { Episode, ThemeType, FontType, GlobalAudio, SiteSettings } from '@/types';
@@ -40,17 +42,20 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { resolveGlobalAudioUrl } from '@/lib/audioStorage';
+import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { AudioWidget } from '@/components/AudioWidget';
 import { Reflections } from '@/components/Reflections';
+import { TtsFloatingBar } from '@/components/TtsFloatingBar';
 import { Toast, ToastMessage } from '@/components/Toast';
 
 export default function HomePage() {
-  // App State
+  // App Data State
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [lastReadIndex, setLastReadIndex] = useState<number>(0);
   const [activeEra, setActiveEra] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
@@ -71,14 +76,15 @@ export default function HomePage() {
   const [currentFont, setCurrentFont] = useState<FontType>('amiri');
   const [fontSize, setFontSize] = useState<number>(18);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+  const [isFocusMode, setIsFocusMode] = useState<boolean>(false);
+  const [articleScrollProgress, setArticleScrollProgress] = useState<number>(0);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   // Modals State
   const [isGeminiModalOpen, setIsGeminiModalOpen] = useState<boolean>(false);
 
-  // Speech Reader State
-  const [isSpeechActive, setIsSpeechActive] = useState<boolean>(false);
-  const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  // Advanced TTS State
+  const [isTtsBarVisible, setIsTtsBarVisible] = useState<boolean>(false);
 
   // Touch Swipe Gesture State
   const touchStartCoords = useRef<{ x: number; y: number } | null>(null);
@@ -97,7 +103,7 @@ export default function HomePage() {
     initAnalytics();
   }, []);
 
-  // Theme & Font Initialization
+  // Theme & Font & Storage Initialization
   useEffect(() => {
     const savedTheme = (localStorage.getItem('seerah_theme') as ThemeType) || 'midnight';
     const savedFont = (localStorage.getItem('seerah_font') as FontType) || 'amiri';
@@ -111,7 +117,7 @@ export default function HomePage() {
     setFontSize(savedFontSize);
     setBookmarks(savedBookmarks);
     setReadEpisodes(savedRead);
-    setCurrentIndex(savedIndex);
+    setLastReadIndex(savedIndex);
 
     document.documentElement.setAttribute('data-theme', savedTheme);
     document.documentElement.setAttribute('data-font', savedFont);
@@ -164,6 +170,38 @@ export default function HomePage() {
 
     return () => unsubscribe();
   }, []);
+
+  // Deep-Linking Handler: On episodes load, check URL params ?ep=X or ?id=Y
+  useEffect(() => {
+    if (episodes.length === 0) return;
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const epParam = params.get('ep');
+    const idParam = params.get('id');
+
+    if (epParam) {
+      const targetIdx = parseInt(epParam, 10) - 1;
+      if (targetIdx >= 0 && targetIdx < episodes.length) {
+        setCurrentIndex(targetIdx);
+        return;
+      }
+    }
+
+    if (idParam) {
+      const targetIdx = episodes.findIndex((e) => e.docId === idParam);
+      if (targetIdx !== -1) {
+        setCurrentIndex(targetIdx);
+        return;
+      }
+    }
+
+    // Default to last read index if within bounds
+    const savedIndex = parseInt(localStorage.getItem('seerah_last_index') || '0', 10);
+    if (savedIndex >= 0 && savedIndex < episodes.length) {
+      setCurrentIndex(savedIndex);
+    }
+  }, [episodes]);
 
   // Real-time Global Audio Listener
   useEffect(() => {
@@ -220,6 +258,146 @@ export default function HomePage() {
     return () => unsubscribe();
   }, []);
 
+  // Article Scroll Progress Listener
+  useEffect(() => {
+    const handleScroll = () => {
+      const article = document.getElementById('mainReadingCard');
+      if (!article) return;
+      const rect = article.getBoundingClientRect();
+      const totalHeight = rect.height - window.innerHeight;
+      if (totalHeight <= 0) {
+        setArticleScrollProgress(100);
+        return;
+      }
+      const currentScroll = -rect.top;
+      const pct = Math.min(100, Math.max(0, Math.round((currentScroll / totalHeight) * 100)));
+      setArticleScrollProgress(pct);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [currentIndex, episodes.length]);
+
+  // Focus Mode Document Class & Keybinding
+  useEffect(() => {
+    if (isFocusMode) {
+      document.body.classList.add('focus-mode');
+    } else {
+      document.body.classList.remove('focus-mode');
+    }
+    return () => document.body.classList.remove('focus-mode');
+  }, [isFocusMode]);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFocusMode) {
+        setIsFocusMode(false);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isFocusMode]);
+
+  // Current Episode Helper
+  const currentEpisode: Episode | undefined = useMemo(() => {
+    if (episodes.length === 0) return undefined;
+    const safeIndex = Math.min(Math.max(0, currentIndex), episodes.length - 1);
+    return episodes[safeIndex];
+  }, [episodes, currentIndex]);
+
+  // Advanced TTS Hook
+  const tts = useTextToSpeech({
+    onSentenceChange: (idx) => {
+      document.querySelectorAll('.tts-highlight').forEach((el) => el.classList.remove('tts-highlight'));
+      const targetEl = document.getElementById(`tts-sentence-${idx}`);
+      if (targetEl) {
+        targetEl.classList.add('tts-highlight');
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    },
+    onEnd: () => {
+      document.querySelectorAll('.tts-highlight').forEach((el) => el.classList.remove('tts-highlight'));
+      triggerToast('اكتملت قراءة نص الحلقة المباركة بحمد الله 🤲', 'success');
+    },
+  });
+
+  // Preload sentences when current episode changes
+  useEffect(() => {
+    if (!currentEpisode) return;
+    const plain = currentEpisode.html.replace(/<[^>]+>/g, ' ').trim();
+    tts.loadText(plain);
+    // Clear existing highlight classes
+    document.querySelectorAll('.tts-highlight').forEach((el) => el.classList.remove('tts-highlight'));
+  }, [currentEpisode]);
+
+  // Pause TTS if any HTML5 audio starts
+  const handleOtherAudioPlay = useCallback(() => {
+    if (tts.isPlaying) {
+      tts.pause();
+    }
+  }, [tts]);
+
+  // Navigate to Episode with URL sync
+  const goToEpisode = (index: number) => {
+    if (index < 0 || index >= episodes.length) return;
+    tts.stop();
+    setIsTtsBarVisible(false);
+    setCurrentIndex(index);
+    setLastReadIndex(index);
+    localStorage.setItem('seerah_last_index', String(index));
+
+    // Update browser URL query without reload (?ep=X)
+    if (typeof window !== 'undefined') {
+      const newUrl = `${window.location.pathname}?ep=${index + 1}`;
+      window.history.replaceState(null, '', newUrl);
+    }
+
+    // Mark as read
+    if (episodes[index]) {
+      const updatedRead = new Set(readEpisodes);
+      updatedRead.add(episodes[index].docId);
+      setReadEpisodes(updatedRead);
+      localStorage.setItem('seerah_read', JSON.stringify(Array.from(updatedRead)));
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Toggle TTS Playback
+  const toggleTtsReader = () => {
+    if (!tts.isSupported) {
+      triggerToast('المتصفح الحالي لا يدعم ميزة تحويل النص إلى صوت (SpeechSynthesis).', 'error');
+      return;
+    }
+
+    if (tts.isPlaying && !tts.isPaused) {
+      tts.pause();
+    } else if (tts.isPaused) {
+      tts.resume();
+      setIsTtsBarVisible(true);
+    } else {
+      const plain = currentEpisode?.html.replace(/<[^>]+>/g, ' ').trim() || '';
+      tts.play(plain);
+      setIsTtsBarVisible(true);
+      triggerToast('بدأ القارئ الآلي الذكي في تلاوة نص الحلقة 🎧', 'info');
+    }
+  };
+
+  // Bookmark Toggle
+  const toggleBookmark = () => {
+    if (!currentEpisode) return;
+    const updated = new Set(bookmarks);
+    if (updated.has(currentEpisode.docId)) {
+      updated.delete(currentEpisode.docId);
+      triggerToast('تمت إزالة الحلقة من المفضلة', 'info');
+    } else {
+      updated.add(currentEpisode.docId);
+      triggerToast('تم حفظ الحلقة في المفضلة ⭐', 'success');
+    }
+    setBookmarks(updated);
+    localStorage.setItem('seerah_bookmarks', JSON.stringify(Array.from(updated)));
+  };
+
   // Theme Cycling
   const cycleTheme = () => {
     const themesList: ThemeType[] = ['midnight', 'obsidian', 'sepia', 'light'];
@@ -275,90 +453,7 @@ export default function HomePage() {
     }
   };
 
-  // Current Episode Helper
-  const currentEpisode: Episode | undefined = useMemo(() => {
-    if (episodes.length === 0) return undefined;
-    const safeIndex = Math.min(Math.max(0, currentIndex), episodes.length - 1);
-    return episodes[safeIndex];
-  }, [episodes, currentIndex]);
-
-  // Navigate to Episode
-  const goToEpisode = (index: number) => {
-    if (index < 0 || index >= episodes.length) return;
-    stopSpeechReader();
-    setCurrentIndex(index);
-    localStorage.setItem('seerah_last_index', String(index));
-
-    // Mark as read
-    if (episodes[index]) {
-      const updatedRead = new Set(readEpisodes);
-      updatedRead.add(episodes[index].docId);
-      setReadEpisodes(updatedRead);
-      localStorage.setItem('seerah_read', JSON.stringify(Array.from(updatedRead)));
-    }
-
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Bookmark Toggle
-  const toggleBookmark = () => {
-    if (!currentEpisode) return;
-    const updated = new Set(bookmarks);
-    if (updated.has(currentEpisode.docId)) {
-      updated.delete(currentEpisode.docId);
-      triggerToast('تمت إزالة الحلقة من المفضلة', 'info');
-    } else {
-      updated.add(currentEpisode.docId);
-      triggerToast('تم حفظ الحلقة في المفضلة ⭐', 'success');
-    }
-    setBookmarks(updated);
-    localStorage.setItem('seerah_bookmarks', JSON.stringify(Array.from(updated)));
-  };
-
-  // Native Web Speech Reader
-  const toggleSpeechReader = () => {
-    if (!('speechSynthesis' in window)) {
-      triggerToast('المتصفح الحالي لا يدعم القارئ الصوتي الآلي.', 'error');
-      return;
-    }
-
-    if (isSpeechActive) {
-      stopSpeechReader();
-    } else {
-      startSpeechReader();
-    }
-  };
-
-  const startSpeechReader = () => {
-    if (!currentEpisode) return;
-    const plainText = currentEpisode.html.replace(/<[^>]+>/g, '').trim();
-    if (!plainText) return;
-
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(plainText);
-    utterance.lang = 'ar-SA';
-    utterance.rate = 0.95;
-
-    const voices = window.speechSynthesis.getVoices();
-    const arVoice = voices.find((v) => v.lang.startsWith('ar'));
-    if (arVoice) utterance.voice = arVoice;
-
-    utterance.onstart = () => setIsSpeechActive(true);
-    utterance.onend = () => setIsSpeechActive(false);
-    utterance.onerror = () => setIsSpeechActive(false);
-
-    speechUtteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
-  };
-
-  const stopSpeechReader = () => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
-    setIsSpeechActive(false);
-  };
-
-  // Keyboard Shortcuts
+  // Keyboard Shortcuts (ArrowRight / ArrowLeft for navigation)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA'].includes((document.activeElement as HTMLElement)?.tagName)) {
@@ -404,7 +499,7 @@ export default function HomePage() {
     return Math.max(1, Math.round(words / 140));
   }, [currentEpisode]);
 
-  // Enhanced HTML formatting for Quran, Hadith, Poetry
+  // Enhanced HTML formatting for Quran, Hadith, Poetry and TTS Spans
   const formattedHtml = useMemo(() => {
     if (!currentEpisode) return '';
     let html = currentEpisode.html;
@@ -429,13 +524,28 @@ export default function HomePage() {
       return match;
     });
 
-    return html;
-  }, [currentEpisode]);
+    // Wrap sentences with TTS tracking spans if sentences are loaded
+    if (tts.sentences && tts.sentences.length > 0) {
+      tts.sentences.forEach((sentence, idx) => {
+        const escaped = sentence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(${escaped})`, '');
+        html = html.replace(regex, `<span id="tts-sentence-${idx}" class="tts-sentence">$1</span>`);
+      });
+    }
 
-  // Sharing Text
-  const shareText = currentEpisode
-    ? `«${currentEpisode.title}» - ${currentEpisode.subtitle || currentEpisode.era}\nمن السيرة النبوية الشريفة ﷺ\n${typeof window !== 'undefined' ? window.location.href : ''}`
-    : '';
+    return html;
+  }, [currentEpisode, tts.sentences]);
+
+  // Deep direct URL and Share formatting
+  const episodeDirectUrl = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}${window.location.pathname}?ep=${currentIndex + 1}`;
+  }, [currentIndex]);
+
+  const shareText = useMemo(() => {
+    if (!currentEpisode) return '';
+    return `«${currentEpisode.title}» - ${currentEpisode.subtitle || currentEpisode.era}\nمن السيرة النبوية الشريفة ﷺ\n${episodeDirectUrl}`;
+  }, [currentEpisode, episodeDirectUrl]);
 
   const handleNativeShare = async () => {
     if (navigator.share && currentEpisode) {
@@ -443,12 +553,12 @@ export default function HomePage() {
         await navigator.share({
           title: currentEpisode.title,
           text: shareText,
-          url: window.location.href,
+          url: episodeDirectUrl,
         });
       } catch (e) {}
     } else {
-      navigator.clipboard.writeText(shareText).then(() => {
-        triggerToast('تم نسخ مقتطف الحلقة ورابطها للمشاركة!', 'success');
+      navigator.clipboard.writeText(`${shareText}\n${episodeDirectUrl}`).then(() => {
+        triggerToast('تم نسخ مقتطف الحلقة ورابطها المباشر للمشاركة!', 'success');
       });
     }
   };
@@ -459,10 +569,30 @@ export default function HomePage() {
 
   return (
     <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      {/* Sticky Article Scroll Progress Indicator */}
+      <div
+        className="article-scroll-progress-bar"
+        style={{ width: `${articleScrollProgress}%` }}
+        title={`نسبة قراءة المقال: ${articleScrollProgress}%`}
+      />
+
+      {/* Focus Mode Exit Floating Button */}
+      {isFocusMode && (
+        <button
+          type="button"
+          className="focus-exit-floating-btn"
+          onClick={() => setIsFocusMode(false)}
+          title="الخروج من وضع القراءة الهادئة (Esc)"
+        >
+          <EyeOff size={16} />
+          <span>إنهاء وضع التركيز (Esc)</span>
+        </button>
+      )}
+
       {/* Toast Notifications */}
       <Toast toasts={toasts} />
 
-      {/* Header */}
+      {/* Header with dynamic site title and Focus Mode trigger */}
       <Header
         currentTheme={currentTheme}
         onThemeCycle={cycleTheme}
@@ -471,11 +601,14 @@ export default function HomePage() {
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onToggleDrawer={() => setIsDrawerOpen(true)}
+        siteSettings={siteSettings}
+        isFocusMode={isFocusMode}
+        onToggleFocusMode={() => setIsFocusMode(!isFocusMode)}
       />
 
       {/* Main Layout */}
       <div className="app-layout">
-        {/* Sidebar / Drawer */}
+        {/* Sidebar / Drawer with smart tabs & resume card */}
         <Sidebar
           episodes={episodes}
           currentIndex={currentIndex}
@@ -488,14 +621,15 @@ export default function HomePage() {
           readEpisodes={readEpisodes}
           isOpenMobile={isDrawerOpen}
           onCloseMobile={() => setIsDrawerOpen(false)}
+          lastReadIndex={lastReadIndex}
         />
 
         {/* Main Reader View */}
         <main className="reader-main">
           {currentEpisode ? (
             <article className="reading-card" id="mainReadingCard">
-              {/* Progress Bar */}
-              <div className="progress-bar-container">
+              {/* Overall Series Progress Bar */}
+              <div className="progress-bar-container" title={`إنجاز السلسلة: ${progressPercent}%`}>
                 <div
                   className="progress-bar-fill"
                   style={{ width: `${progressPercent}%` }}
@@ -535,18 +669,27 @@ export default function HomePage() {
               {/* Reader Controls Toolbar */}
               <div className="reader-toolbar">
                 <div className="toolbar-group">
-                  {/* Built-in Speech Synthesis */}
+                  {/* Advanced Speech Synthesis Trigger */}
                   <button
-                    className={`tool-btn ${isSpeechActive ? 'active' : 'accent'}`}
-                    onClick={toggleSpeechReader}
-                    title="استماع صوتي آلي للنص"
+                    type="button"
+                    className={`tool-btn ${isTtsBarVisible && tts.isPlaying ? 'active' : 'accent'}`}
+                    onClick={toggleTtsReader}
+                    title="استماع صوتي آلي ذكي للنص مع التتبع والتظليل"
                   >
-                    <Volume2 size={16} />
-                    <span>{isSpeechActive ? 'إيقاف القراءة' : 'استماع آلي'}</span>
+                    <Volume2
+                      size={16}
+                      className={isTtsBarVisible && tts.isPlaying && !tts.isPaused ? 'animate-pulse' : ''}
+                    />
+                    <span>
+                      {isTtsBarVisible && tts.isPlaying && !tts.isPaused
+                        ? 'إيقاف القارئ'
+                        : 'استماع آلي (TTS)'}
+                    </span>
                   </button>
 
                   {/* Gemini Prompt Modal */}
                   <button
+                    type="button"
                     className="tool-btn"
                     onClick={() => setIsGeminiModalOpen(true)}
                     title="استخراج الدروس والعبر بالذكاء الاصطناعي"
@@ -557,6 +700,7 @@ export default function HomePage() {
 
                   {/* Bookmark Button */}
                   <button
+                    type="button"
                     className="tool-btn"
                     onClick={toggleBookmark}
                     title="حفظ في المفضلة"
@@ -570,8 +714,20 @@ export default function HomePage() {
                 </div>
 
                 <div className="toolbar-group">
+                  {/* Focus Mode Button inside Reader Toolbar */}
+                  <button
+                    type="button"
+                    className={`tool-btn ${isFocusMode ? 'active' : ''}`}
+                    onClick={() => setIsFocusMode(!isFocusMode)}
+                    title="وضع القراءة الهادئة بدون تشتيت"
+                  >
+                    <Eye size={16} />
+                    <span>وضع التركيز</span>
+                  </button>
+
                   {/* Share Button */}
                   <button
+                    type="button"
                     className="tool-btn"
                     onClick={handleNativeShare}
                     title="مشاركة الحلقة"
@@ -582,25 +738,8 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Active Speech Banner */}
-              {isSpeechActive && (
-                <div className="speech-active-banner">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Volume2 size={16} className="animate-pulse" />
-                    <span>القارئ الآلي يقرأ نص الحلقة بصوت واضح الآن...</span>
-                  </div>
-                  <button
-                    className="tool-btn"
-                    onClick={stopSpeechReader}
-                    style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-                  >
-                    <StopCircle size={14} /> إيقاف
-                  </button>
-                </div>
-              )}
-
-              {/* Episode Audio Player (Rendered purely if audioUrl is present) */}
-              <AudioWidget episode={currentEpisode} />
+              {/* Episode Audio Player (Rendered purely if audioUrl is present, coordinated with TTS) */}
+              <AudioWidget episode={currentEpisode} onPlay={handleOtherAudioPlay} />
 
               {/* Reading Content Body */}
               <div className="reading-content-body">
@@ -619,6 +758,7 @@ export default function HomePage() {
               {/* Navigation Footer */}
               <div className="reader-nav-footer">
                 <button
+                  type="button"
                   className="nav-btn"
                   onClick={() => goToEpisode(currentIndex - 1)}
                   disabled={currentIndex === 0}
@@ -628,6 +768,7 @@ export default function HomePage() {
                 </button>
 
                 <button
+                  type="button"
                   className="tool-btn"
                   onClick={() => goToEpisode(episodes.length - 1)}
                   title="الانتقال لأحدث حلقة"
@@ -637,6 +778,7 @@ export default function HomePage() {
                 </button>
 
                 <button
+                  type="button"
                   className="nav-btn primary"
                   onClick={() => goToEpisode(currentIndex + 1)}
                   disabled={currentIndex === episodes.length - 1}
@@ -677,7 +819,12 @@ export default function HomePage() {
                   </div>
                 ) : (
                   resolvedGlobalAudioUrl && (
-                    <audio controls src={resolvedGlobalAudioUrl} preload="metadata" />
+                    <audio
+                      controls
+                      src={resolvedGlobalAudioUrl}
+                      preload="metadata"
+                      onPlay={handleOtherAudioPlay}
+                    />
                   )
                 )}
               </div>
@@ -703,7 +850,7 @@ export default function HomePage() {
                 <span style={{ fontWeight: 'bold' }}>واتساب</span>
               </a>
               <a
-                href={`https://t.me/share/url?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}&text=${encodeURIComponent(shareText)}`}
+                href={`https://t.me/share/url?url=${encodeURIComponent(episodeDirectUrl)}&text=${encodeURIComponent(shareText)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="share-btn"
@@ -712,13 +859,14 @@ export default function HomePage() {
                 <span style={{ fontWeight: 'bold' }}>تيليجرام</span>
               </a>
               <button
+                type="button"
                 className="share-btn"
                 onClick={() => {
-                  navigator.clipboard.writeText(window.location.href).then(() => {
-                    triggerToast('تم نسخ رابط الموقع بنجاح!', 'success');
+                  navigator.clipboard.writeText(episodeDirectUrl).then(() => {
+                    triggerToast('تم نسخ رابط الحلقة المباشر بنجاح!', 'success');
                   });
                 }}
-                title="نسخ الرابط"
+                title="نسخ الرابط المباشر"
               >
                 <Link2 size={16} />
                 <span>نسخ الرابط</span>
@@ -736,9 +884,47 @@ export default function HomePage() {
         </main>
       </div>
 
+      {/* Floating TTS Bar */}
+      {isTtsBarVisible && (
+        <TtsFloatingBar
+          isPlaying={tts.isPlaying}
+          isPaused={tts.isPaused}
+          currentSentenceIndex={tts.currentSentenceIndex}
+          totalSentences={tts.totalSentences}
+          rate={tts.rate}
+          voices={tts.voices}
+          selectedVoiceUri={tts.selectedVoiceUri}
+          onPlayPause={() => {
+            if (tts.isPlaying && !tts.isPaused) {
+              tts.pause();
+            } else if (tts.isPaused) {
+              tts.resume();
+            } else {
+              const plain = currentEpisode?.html.replace(/<[^>]+>/g, ' ').trim() || '';
+              tts.play(plain);
+            }
+          }}
+          onStop={() => {
+            tts.stop();
+            setIsTtsBarVisible(false);
+            document.querySelectorAll('.tts-highlight').forEach((el) => el.classList.remove('tts-highlight'));
+          }}
+          onNext={tts.nextSentence}
+          onPrev={tts.prevSentence}
+          onSetRate={tts.setRate}
+          onSetVoice={tts.setVoice}
+          onClose={() => {
+            tts.stop();
+            setIsTtsBarVisible(false);
+            document.querySelectorAll('.tts-highlight').forEach((el) => el.classList.remove('tts-highlight'));
+          }}
+        />
+      )}
+
       {/* Mobile Bottom Navigation Bar */}
       <nav className="mobile-bottom-bar">
         <button
+          type="button"
           className="mobile-tab-btn"
           onClick={() => goToEpisode(currentIndex - 1)}
           disabled={currentIndex === 0}
@@ -747,6 +933,7 @@ export default function HomePage() {
           <span>السابقة</span>
         </button>
         <button
+          type="button"
           className="mobile-tab-btn"
           onClick={() => setIsDrawerOpen(true)}
         >
@@ -754,6 +941,7 @@ export default function HomePage() {
           <span>الفهرس</span>
         </button>
         <button
+          type="button"
           className="mobile-tab-btn"
           onClick={cycleTheme}
         >
@@ -761,6 +949,7 @@ export default function HomePage() {
           <span>المظهر</span>
         </button>
         <button
+          type="button"
           className="mobile-tab-btn"
           onClick={() => goToEpisode(currentIndex + 1)}
           disabled={currentIndex === episodes.length - 1}
@@ -776,7 +965,11 @@ export default function HomePage() {
           <div className="modal-card" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>استخراج الدروس والعبر عبر Gemini</h3>
-              <button className="modal-close-btn" onClick={() => setIsGeminiModalOpen(false)}>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setIsGeminiModalOpen(false)}
+              >
                 <X size={20} />
               </button>
             </div>
@@ -791,6 +984,7 @@ export default function HomePage() {
             />
             <div className="modal-actions">
               <button
+                type="button"
                 className="btn-gold"
                 onClick={() => {
                   const text = `أنا أقرأ هذه الحلقة من السيرة النبوية الشريفة: «${currentEpisode.title}»:\n\n${currentEpisode.html.replace(/<[^>]+>/g, '').trim()}\n\nالمطلوب:\n1. استخرج أهم 3 دروس وعبر تربوية وعملية لحياتنا المعاصرة من هذا الموقف.\n2. بين أهم الفوائد الإيمانية.\n3. صغ ذلك بأسلوب مؤثر وجميل ومختصر.`;
@@ -803,6 +997,7 @@ export default function HomePage() {
                 <span>نسخ الأمر والنص</span>
               </button>
               <button
+                type="button"
                 className="tool-btn"
                 onClick={() => window.open('https://gemini.google.com/app', '_blank')}
               >
@@ -810,6 +1005,7 @@ export default function HomePage() {
                 <span>فتح Gemini</span>
               </button>
               <button
+                type="button"
                 className="tool-btn"
                 onClick={() => setIsGeminiModalOpen(false)}
               >

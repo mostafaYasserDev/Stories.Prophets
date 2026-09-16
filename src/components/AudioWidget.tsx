@@ -7,9 +7,10 @@ import { resolveAudioUrl } from '@/lib/audioStorage';
 
 interface AudioWidgetProps {
   episode: Episode;
+  onPlay?: () => void;
 }
 
-export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode }) => {
+export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => {
   const [playbackSpeed, setPlaybackSpeed] = useState('1');
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
   const [isLoadingAudio, setIsLoadingAudio] = useState<boolean>(false);
@@ -91,7 +92,15 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode }) => {
             <span>جارٍ تجهيز التسجيل الصوتي من السحابة...</span>
           </div>
         ) : (
-          resolvedUrl && <audio ref={audioElRef} controls src={resolvedUrl} preload="metadata" />
+          resolvedUrl && (
+            <audio
+              ref={audioElRef}
+              controls
+              src={resolvedUrl}
+              preload="metadata"
+              onPlay={onPlay}
+            />
+          )
         )}
       </div>
     </div>

@@ -28,6 +28,8 @@ export interface Reflection {
   id: string;
   episodeId: string;
   text: string;
+  author?: string;
+  likesCount?: number;
   createdAt?: any;
 }
 

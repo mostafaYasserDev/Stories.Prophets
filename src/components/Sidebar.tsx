@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Search, X, Volume2, Bookmark, Check, Pin } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Search, X, Volume2, Bookmark, Check, Pin, BookOpen, Star, Sparkles } from 'lucide-react';
 import { Episode } from '@/types';
 
 interface SidebarProps {
@@ -16,6 +16,7 @@ interface SidebarProps {
   readEpisodes: Set<string>;
   isOpenMobile: boolean;
   onCloseMobile: () => void;
+  lastReadIndex?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -30,29 +31,80 @@ export const Sidebar: React.FC<SidebarProps> = ({
   readEpisodes,
   isOpenMobile,
   onCloseMobile,
+  lastReadIndex,
 }) => {
-  // Extract unique eras
-  const distinctEras = Array.from(new Set(episodes.map((e) => e.era).filter(Boolean)));
+  // Quick Filter Tab: 'all' | 'bookmarks' | 'audio' | 'unread'
+  const [filterType, setFilterType] = useState<'all' | 'bookmarks' | 'audio' | 'unread'>('all');
 
-  // Filter episodes
-  const filtered = episodes
-    .map((ep, originalIndex) => ({ ep, originalIndex }))
-    .filter(({ ep }) => {
-      if (activeEra !== 'all' && ep.era !== activeEra) return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const titleMatch = (ep.title || '').toLowerCase().includes(q);
-        const subMatch = (ep.subtitle || '').toLowerCase().includes(q);
-        const eraMatch = (ep.era || '').toLowerCase().includes(q);
-        const textMatch = (ep.html || '').replace(/<[^>]+>/g, '').toLowerCase().includes(q);
-        return titleMatch || subMatch || eraMatch || textMatch;
-      }
-      return true;
-    });
+  // Extract unique eras
+  const distinctEras = useMemo(
+    () => Array.from(new Set(episodes.map((e) => e.era).filter(Boolean))),
+    [episodes]
+  );
+
+  const episodesWithAudioCount = useMemo(
+    () => episodes.filter((e) => Boolean(e.audioUrl)).length,
+    [episodes]
+  );
+
+  const unreadCount = useMemo(
+    () => Math.max(0, episodes.length - readEpisodes.size),
+    [episodes.length, readEpisodes.size]
+  );
+
+  // Filter episodes based on Era, Search Query, and Smart Tab
+  const filtered = useMemo(() => {
+    return episodes
+      .map((ep, originalIndex) => ({ ep, originalIndex }))
+      .filter(({ ep }) => {
+        // Smart tab filter
+        if (filterType === 'bookmarks' && !bookmarks.has(ep.docId)) return false;
+        if (filterType === 'audio' && !ep.audioUrl) return false;
+        if (filterType === 'unread' && readEpisodes.has(ep.docId)) return false;
+
+        // Era filter
+        if (activeEra !== 'all' && ep.era !== activeEra) return false;
+
+        // Search text query
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim();
+          const titleMatch = (ep.title || '').toLowerCase().includes(q);
+          const subMatch = (ep.subtitle || '').toLowerCase().includes(q);
+          const eraMatch = (ep.era || '').toLowerCase().includes(q);
+          const textMatch = (ep.html || '').replace(/<[^>]+>/g, '').toLowerCase().includes(q);
+          return titleMatch || subMatch || eraMatch || textMatch;
+        }
+        return true;
+      });
+  }, [episodes, filterType, activeEra, searchQuery, bookmarks, readEpisodes]);
 
   const readPercent = episodes.length
     ? Math.round((readEpisodes.size / episodes.length) * 100)
     : 0;
+
+  // Helper to highlight matching search term
+  const renderHighlightedTitle = (title: string) => {
+    const q = searchQuery.trim();
+    if (!q) return title;
+    const parts = title.split(new RegExp(`(${q})`, 'gi'));
+    return parts.map((part, i) =>
+      part.toLowerCase() === q.toLowerCase() ? (
+        <span key={i} className="search-matched-text">
+          {part}
+        </span>
+      ) : (
+        part
+      )
+    );
+  };
+
+  const resumeEp =
+    typeof lastReadIndex === 'number' &&
+    lastReadIndex >= 0 &&
+    lastReadIndex < episodes.length &&
+    lastReadIndex !== currentIndex
+      ? episodes[lastReadIndex]
+      : null;
 
   return (
     <>
@@ -77,6 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             />
             {searchQuery && (
               <button
+                type="button"
                 className="search-clear"
                 onClick={() => onSearchChange('')}
                 title="مسح البحث"
@@ -86,13 +139,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
+          {/* Smart Tabs Bar: All, Bookmarks, Audio, Unread */}
+          <div className="sidebar-smart-tabs">
+            <button
+              type="button"
+              className={`sidebar-tab-chip ${filterType === 'all' ? 'active' : ''}`}
+              onClick={() => setFilterType('all')}
+            >
+              <span>الكل</span>
+            </button>
+            <button
+              type="button"
+              className={`sidebar-tab-chip ${filterType === 'bookmarks' ? 'active' : ''}`}
+              onClick={() => setFilterType('bookmarks')}
+            >
+              <Star size={12} />
+              <span>المفضلة ({bookmarks.size})</span>
+            </button>
+            <button
+              type="button"
+              className={`sidebar-tab-chip ${filterType === 'audio' ? 'active' : ''}`}
+              onClick={() => setFilterType('audio')}
+            >
+              <Volume2 size={12} />
+              <span>صوتية ({episodesWithAudioCount})</span>
+            </button>
+            <button
+              type="button"
+              className={`sidebar-tab-chip ${filterType === 'unread' ? 'active' : ''}`}
+              onClick={() => setFilterType('unread')}
+            >
+              <BookOpen size={12} />
+              <span>غير مقروءة ({unreadCount})</span>
+            </button>
+          </div>
+
           {/* Era / Series Filter Chips */}
           <div className="era-chips">
             <div
               className={`era-chip ${activeEra === 'all' ? 'active' : ''}`}
               onClick={() => onSelectEra('all')}
             >
-              الكل ({episodes.length})
+              جميع السلاسل ({episodes.length})
             </div>
             {distinctEras.map((era) => {
               const count = episodes.filter((e) => e.era === era).length;
@@ -108,9 +196,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
             })}
           </div>
 
+          {/* Resume Reading Card if user has a different last read episode */}
+          {resumeEp && (
+            <div
+              className="resume-reading-card"
+              onClick={() => {
+                if (typeof lastReadIndex === 'number') {
+                  onSelectEpisode(lastReadIndex);
+                  onCloseMobile();
+                }
+              }}
+              title="متابعة القراءة من آخر حلقة"
+            >
+              <div className="resume-info">
+                <BookOpen size={18} className="resume-icon" />
+                <div className="resume-text-wrap">
+                  <span className="resume-label">آخر ما توقفت عنده:</span>
+                  <span className="resume-title">{resumeEp.title}</span>
+                </div>
+              </div>
+              <span className="resume-action-btn">متابعة ⬅</span>
+            </div>
+          )}
+
           {/* Stats Bar */}
           <div className="sidebar-stats">
-            <span>الحلقات: <b>{episodes.length}</b></span>
+            <span>الحلقات المعروضة: <b>{filtered.length}</b></span>
             <span>المقروء: <b>{readPercent}%</b></span>
           </div>
         </div>
@@ -119,7 +230,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="episode-list">
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted)' }}>
-              <p>لا توجد نتائج تطابق بحثك</p>
+              <p>لا توجد نتائج تطابق التصفية أو البحث</p>
             </div>
           ) : (
             filtered.map(({ ep, originalIndex }) => {
@@ -140,7 +251,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <div className="ep-badge-num">{originalIndex + 1}</div>
                     <div className="ep-item-meta">
                       <div className="ep-item-title-row">
-                        <span className="ep-item-title">{ep.title}</span>
+                        <span className="ep-item-title">{renderHighlightedTitle(ep.title)}</span>
                         {ep.isPinned && (
                           <span title="حلقة مثبتة في الصدارة">
                             <Pin size={12} className="pin-icon-tag" />

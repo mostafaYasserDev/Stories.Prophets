@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Lightbulb, Plus, Trash2 } from 'lucide-react';
+import { Lightbulb, Plus, Trash2, Heart, User, Send, Check } from 'lucide-react';
 import { Reflection } from '@/types';
 import { db } from '@/lib/firebase';
 import {
@@ -11,7 +11,9 @@ import {
   onSnapshot,
   addDoc,
   deleteDoc,
+  updateDoc,
   doc,
+  increment,
   serverTimestamp,
 } from 'firebase/firestore';
 
@@ -24,8 +26,23 @@ export const Reflections: React.FC<ReflectionsProps> = ({ episodeId, onToast }) 
   const [reflections, setReflections] = useState<Reflection[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [text, setText] = useState('');
+  const [authorName, setAuthorName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
 
+  // Load saved author name and liked reflections from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedName = localStorage.getItem('seerah_author_name') || '';
+      setAuthorName(savedName);
+      const savedLikes = new Set<string>(
+        JSON.parse(localStorage.getItem('seerah_reflection_likes') || '[]')
+      );
+      setLikedIds(savedLikes);
+    }
+  }, []);
+
+  // Real-time reflections listener
   useEffect(() => {
     if (!episodeId) return;
 
@@ -59,10 +76,18 @@ export const Reflections: React.FC<ReflectionsProps> = ({ episodeId, onToast }) 
     if (!text.trim()) return;
     setIsSubmitting(true);
 
+    const finalAuthor = authorName.trim() || 'محب للسيرة النبوية';
+
     try {
+      if (typeof window !== 'undefined' && authorName.trim()) {
+        localStorage.setItem('seerah_author_name', authorName.trim());
+      }
+
       await addDoc(collection(db, 'reflections'), {
         episodeId,
         text: text.trim(),
+        author: finalAuthor,
+        likesCount: 0,
         createdAt: serverTimestamp(),
       });
       setText('');
@@ -75,11 +100,36 @@ export const Reflections: React.FC<ReflectionsProps> = ({ episodeId, onToast }) 
     }
   };
 
+  const handleToggleLike = async (reflection: Reflection) => {
+    const isAlreadyLiked = likedIds.has(reflection.id);
+    const updated = new Set(likedIds);
+
+    if (isAlreadyLiked) {
+      updated.delete(reflection.id);
+      setLikedIds(updated);
+      localStorage.setItem('seerah_reflection_likes', JSON.stringify(Array.from(updated)));
+      try {
+        await updateDoc(doc(db, 'reflections', reflection.id), {
+          likesCount: increment(-1),
+        });
+      } catch (e) {}
+    } else {
+      updated.add(reflection.id);
+      setLikedIds(updated);
+      localStorage.setItem('seerah_reflection_likes', JSON.stringify(Array.from(updated)));
+      try {
+        await updateDoc(doc(db, 'reflections', reflection.id), {
+          likesCount: increment(1),
+        });
+      } catch (e) {}
+    }
+  };
+
   const handleDelete = async (id: string) => {
-    if (!confirm('هل تريد حذف هذا التأمل؟')) return;
+    if (!confirm('هل تريد بالتأكيد حذف هذا التأمل؟')) return;
     try {
       await deleteDoc(doc(db, 'reflections', id));
-      onToast('تم حذف التأمل.', 'info');
+      onToast('تم حذف التأمل بنجاح', 'info');
     } catch (e: any) {
       onToast('تعذّر الحذف: ' + e.message, 'error');
     }
@@ -93,24 +143,37 @@ export const Reflections: React.FC<ReflectionsProps> = ({ episodeId, onToast }) 
           <span>تأملات وفوائد من الحلقة ({reflections.length})</span>
         </div>
         <button
+          type="button"
           className="tool-btn"
           onClick={() => setIsOpen(!isOpen)}
         >
           <Plus size={14} />
-          <span>إضافة تأمل</span>
+          <span>{isOpen ? 'إغلاق' : 'إضافة تأمل'}</span>
         </button>
       </div>
 
       {isOpen && (
         <div className="reflection-input-box" style={{ marginBottom: '16px' }}>
+          <div style={{ marginBottom: '10px' }}>
+            <input
+              type="text"
+              className="form-input"
+              style={{ fontSize: '0.82rem', padding: '8px 12px' }}
+              placeholder="اسمك أو كنيتك (اختياري، مثلاً: أبو أنس، سارة...)"
+              value={authorName}
+              onChange={(e) => setAuthorName(e.target.value)}
+            />
+          </div>
+
           <textarea
             className="reflection-textarea"
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="اكتب هنا فائدة أو تأملاً أو خاطرة استفدتها من هذه الحلقة المباركة..."
           />
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '10px' }}>
             <button
+              type="button"
               className="btn-gold"
               onClick={handleSave}
               disabled={isSubmitting}
@@ -118,6 +181,7 @@ export const Reflections: React.FC<ReflectionsProps> = ({ episodeId, onToast }) 
               {isSubmitting ? 'جارٍ الحفظ...' : 'حفظ التأمل'}
             </button>
             <button
+              type="button"
               className="tool-btn"
               onClick={() => {
                 setIsOpen(false);
@@ -132,7 +196,7 @@ export const Reflections: React.FC<ReflectionsProps> = ({ episodeId, onToast }) 
 
       {reflections.length === 0 && !isOpen ? (
         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          لا توجد تأملات مسجلة لهذه الحلقة بعد. اضغط على «إضافة تأمل» لتسجيل خواطرك.
+          لا توجد تأملات مسجلة لهذه الحلقة بعد. اضغط على «إضافة تأمل» لتسجيل خواطرك والفوائد المستفادة.
         </p>
       ) : (
         reflections.map((r) => {
@@ -144,18 +208,52 @@ export const Reflections: React.FC<ReflectionsProps> = ({ episodeId, onToast }) 
               day: 'numeric',
             });
           }
+          const isLiked = likedIds.has(r.id);
+          const currentLikes = Math.max(0, r.likesCount || 0);
+
           return (
             <div key={r.id} className="reflection-item">
-              <p>{r.text}</p>
+              <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.7' }}>{r.text}</p>
               <div className="reflection-meta">
-                <span>{dateStr}</span>
-                <button
-                  className="reflection-del-btn"
-                  onClick={() => handleDelete(r.id)}
-                  title="حذف التأمل"
-                >
-                  <Trash2 size={13} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--gold-light)', fontWeight: 600 }}>
+                    <User size={12} />
+                    <span>{r.author || 'محب للسيرة النبوية'}</span>
+                  </span>
+                  <span>•</span>
+                  <span>{dateStr}</span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {/* Like Button */}
+                  <button
+                    type="button"
+                    className="tool-btn"
+                    style={{
+                      padding: '3px 8px',
+                      fontSize: '0.74rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      color: isLiked ? '#ef4444' : 'var(--text-muted)',
+                      borderColor: isLiked ? 'rgba(239, 68, 68, 0.3)' : 'var(--border-light)',
+                    }}
+                    onClick={() => handleToggleLike(r)}
+                    title={isLiked ? 'إلغاء الإعجاب' : 'أعجبني هذا التأمل'}
+                  >
+                    <Heart size={13} fill={isLiked ? '#ef4444' : 'none'} />
+                    <span>{currentLikes > 0 ? currentLikes : ''}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="reflection-del-btn"
+                    onClick={() => handleDelete(r.id)}
+                    title="حذف التأمل"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               </div>
             </div>
           );

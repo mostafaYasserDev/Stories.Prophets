@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Palette, Type, ZoomIn, ZoomOut, Plus, Menu } from 'lucide-react';
-import { ThemeType, FontType } from '@/types';
+import { Palette, Type, ZoomIn, ZoomOut, Menu, Maximize2, Eye } from 'lucide-react';
+import { ThemeType, FontType, SiteSettings } from '@/types';
 
 interface HeaderProps {
   currentTheme: ThemeType;
@@ -12,6 +12,9 @@ interface HeaderProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onToggleDrawer: () => void;
+  siteSettings?: SiteSettings;
+  isFocusMode?: boolean;
+  onToggleFocusMode?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,23 +23,39 @@ export const Header: React.FC<HeaderProps> = ({
   onZoomIn,
   onZoomOut,
   onToggleDrawer,
+  siteSettings,
+  isFocusMode,
+  onToggleFocusMode,
 }) => {
   return (
     <header className="app-header">
       <div className="header-inner">
-        <a href="#" className="brand">
+        <a href="/" className="brand">
           <div className="brand-emblem">
             <span style={{ fontSize: '24px' }}>🕌</span>
           </div>
           <div className="brand-info">
-            <h1>السيرة النبوية الشريفة</h1>
-            <p>رحلة تفاعلية مباركة في سيرة خير الأنام ﷺ</p>
+            <h1>{siteSettings?.siteTitle || 'السيرة النبوية الشريفة'}</h1>
+            <p>{siteSettings?.siteSubtitle || 'رحلة تفاعلية مباركة في سيرة خير الأنام ﷺ'}</p>
           </div>
         </a>
 
         <div className="header-actions">
+          {/* Focus Mode Trigger */}
+          {onToggleFocusMode && (
+            <button
+              type="button"
+              className={`btn-icon ${isFocusMode ? 'active' : ''}`}
+              onClick={onToggleFocusMode}
+              title="وضع القراءة الهادئة بدون تشتيت (Focus Mode)"
+            >
+              <Eye size={18} />
+            </button>
+          )}
+
           {/* Theme Switcher */}
           <button
+            type="button"
             className="btn-icon"
             onClick={onThemeCycle}
             title="تغيير المظهر / الثيم"
@@ -46,6 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Font Family Switcher */}
           <button
+            type="button"
             className="btn-icon"
             onClick={onFontCycle}
             title="نوع الخط"
@@ -55,6 +75,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Font Zoom Controls */}
           <button
+            type="button"
             className="btn-icon"
             onClick={onZoomIn}
             title="تكبير الخط"
@@ -62,6 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
             <ZoomIn size={18} />
           </button>
           <button
+            type="button"
             className="btn-icon"
             onClick={onZoomOut}
             title="تصغير الخط"
@@ -71,11 +93,10 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Mobile Drawer Trigger */}
           <button
-            className="btn-icon"
-            id="mobileMenuBtn"
+            type="button"
+            className="btn-icon mobile-header-menu-btn"
             onClick={onToggleDrawer}
-            title="قائمة الحلقات"
-            style={{ display: 'none' }}
+            title="قائمة وفهرس الحلقات"
           >
             <Menu size={18} />
           </button>
