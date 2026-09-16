@@ -715,23 +715,40 @@ export default function HomePage() {
               {/* Reader Controls Toolbar */}
               <div className="reader-toolbar">
                 <div className="toolbar-group">
-                  {/* Advanced Speech Synthesis Trigger */}
-                  <button
-                    type="button"
-                    className={`tool-btn ${isTtsBarVisible && tts.isPlaying ? 'active' : 'accent'}`}
-                    onClick={toggleTtsReader}
-                    title="استماع صوتي آلي ذكي للنص مع التتبع والتظليل"
-                  >
-                    <Volume2
-                      size={16}
-                      className={isTtsBarVisible && tts.isPlaying && !tts.isPaused ? 'animate-pulse' : ''}
-                    />
-                    <span>
-                      {isTtsBarVisible && tts.isPlaying && !tts.isPaused
-                        ? 'إيقاف القارئ'
-                        : 'استماع آلي (TTS)'}
-                    </span>
-                  </button>
+                  {/* Audio Playback Trigger (Studio Audio if available, else TTS) */}
+                  {currentEpisode.audioUrl ? (
+                    <button
+                      type="button"
+                      className="tool-btn accent"
+                      onClick={() => {
+                        const el = document.querySelector('.studio-audio-player');
+                        if (el) {
+                          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                      }}
+                      title="الانتقال لمشغل التسجيل الصوتي البشري"
+                    >
+                      <Headphones size={16} />
+                      <span>استماع استوديو (AI)</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={`tool-btn ${isTtsBarVisible && tts.isPlaying ? 'active' : 'accent'}`}
+                      onClick={toggleTtsReader}
+                      title="استماع صوتي آلي للنص"
+                    >
+                      <Volume2
+                        size={16}
+                        className={isTtsBarVisible && tts.isPlaying && !tts.isPaused ? 'animate-pulse' : ''}
+                      />
+                      <span>
+                        {isTtsBarVisible && tts.isPlaying && !tts.isPaused
+                          ? 'إيقاف القارئ'
+                          : 'استماع آلي (TTS)'}
+                      </span>
+                    </button>
+                  )}
 
                   {/* Gemini Prompt Modal */}
                   <button

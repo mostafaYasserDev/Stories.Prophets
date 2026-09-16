@@ -67,6 +67,13 @@ import {
 } from '@/lib/audioStorage';
 import { compressAudio, formatBytes, CompressionResult } from '@/lib/audioCompressor';
 import { normalizeArabicText, formatFriendlyError } from '@/lib/errorHandler';
+import {
+  GEMINI_VOICES,
+  generateGeminiEpisodeAudio,
+  cleanHtmlForSpeech,
+  GenerationProgress,
+  DEFAULT_GEMINI_KEY,
+} from '@/lib/geminiAudio';
 
 export default function AdminPage() {
   // Authentication State
@@ -155,8 +162,18 @@ export default function AdminPage() {
   const [isQuickSeriesOpen, setIsQuickSeriesOpen] = useState<boolean>(false);
   const [quickSeriesTitle, setQuickSeriesTitle] = useState<string>('');
 
-  // Audio Compression State
-  const [audioUploadTab, setAudioUploadTab] = useState<'upload' | 'url'>('upload');
+  // Audio Compression & AI Generation State
+  const [audioUploadTab, setAudioUploadTab] = useState<'ai' | 'upload' | 'url'>('ai');
+  const [selectedGeminiVoice, setSelectedGeminiVoice] = useState<string>('Charon');
+  const [geminiApiKeyInput, setGeminiApiKeyInput] = useState<string>(DEFAULT_GEMINI_KEY);
+  const [isGeneratingAiAudio, setIsGeneratingAiAudio] = useState<boolean>(false);
+  const [aiGenerationProgress, setAiGenerationProgress] = useState<GenerationProgress | null>(null);
+  const [aiGeneratedResult, setAiGeneratedResult] = useState<{
+    base64DataUrl: string;
+    durationSeconds: number;
+    sizeBytes: number;
+  } | null>(null);
+
   const [isCompressing, setIsCompressing] = useState<boolean>(false);
   const [compressionProgress, setCompressionProgress] = useState<number>(0);
   const [compressionMessage, setCompressionMessage] = useState<string>('');
@@ -924,8 +941,67 @@ export default function AdminPage() {
     setIsCompressing(false);
     setCompressionProgress(0);
     setCompressionMessage('');
-    setAudioUploadTab('upload');
+    setAiGeneratedResult(null);
+    setAiGenerationProgress(null);
+    setIsGeneratingAiAudio(false);
+    setAudioUploadTab('ai');
     setIsAudioModalOpen(true);
+  };
+
+  // Gemini AI Audio Generation Handler
+  const handleGenerateAiAudio = async () => {
+    if (!audioTargetEpisode) return;
+    setIsGeneratingAiAudio(true);
+    setAiGenerationProgress(null);
+    setAiGeneratedResult(null);
+
+    try {
+      const result = await generateGeminiEpisodeAudio({
+        text: audioTargetEpisode.html,
+        voiceName: selectedGeminiVoice,
+        apiKey: geminiApiKeyInput || DEFAULT_GEMINI_KEY,
+        onProgress: setAiGenerationProgress,
+      });
+
+      setAiGeneratedResult(result);
+      triggerToast(
+        `تم توليد الصوت البشري بنجاح! المدة: ${Math.round(result.durationSeconds)} ثانية (${formatBytes(result.sizeBytes)})`,
+        'success',
+        'تم التوليد بنجاح'
+      );
+    } catch (err: any) {
+      console.error('Gemini audio generation failed:', err);
+      const friendly = formatFriendlyError(err, 'تعذّر توليد الصوت بنموذج Gemini');
+      triggerToast(friendly.message, 'error', friendly.title);
+    } finally {
+      setIsGeneratingAiAudio(false);
+    }
+  };
+
+  const handleSaveAiAudio = async () => {
+    if (!audioTargetEpisode || !aiGeneratedResult) return;
+    setIsSavingAudio(true);
+    try {
+      await saveAudioToEpisode(audioTargetEpisode.docId, aiGeneratedResult.base64DataUrl);
+
+      // Update local state
+      setEpisodes((prev) =>
+        prev.map((ep) =>
+          ep.docId === audioTargetEpisode.docId
+            ? { ...ep, audioUrl: aiGeneratedResult.base64DataUrl, audioType: 'direct' }
+            : ep
+        )
+      );
+
+      triggerToast('تم حفظ التسجيل الصوتي الاستوديو للحلقة بنجاح! 🎵', 'success', 'تم حفظ الصوت');
+      setIsAudioModalOpen(false);
+    } catch (err: any) {
+      console.error('Save AI audio failed:', err);
+      const friendly = formatFriendlyError(err, 'فشل حفظ الصوت في السحابة');
+      triggerToast(friendly.message, 'error', friendly.title);
+    } finally {
+      setIsSavingAudio(false);
+    }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2427,20 +2503,162 @@ export default function AdminPage() {
             {/* Audio Mode Tabs */}
             <div className="audio-tabs-bar">
               <button
+                className={`audio-tab-btn ${audioUploadTab === 'ai' ? 'active' : ''}`}
+                onClick={() => setAudioUploadTab('ai')}
+              >
+                <Sparkles size={16} />
+                <span>توليد بالذكاء الاصطناعي (Gemini)</span>
+              </button>
+              <button
                 className={`audio-tab-btn ${audioUploadTab === 'upload' ? 'active' : ''}`}
                 onClick={() => setAudioUploadTab('upload')}
               >
                 <UploadCloud size={16} />
-                <span>رفع ملف وضغطه تلقائياً (Base64)</span>
+                <span>رفع ملف وضغطه (Base64)</span>
               </button>
               <button
                 className={`audio-tab-btn ${audioUploadTab === 'url' ? 'active' : ''}`}
                 onClick={() => setAudioUploadTab('url')}
               >
                 <Link2 size={16} />
-                <span>رابط خارجي مباشر</span>
+                <span>رابط مباشر</span>
               </button>
             </div>
+
+            {/* TAB 0: Gemini AI Studio Audio */}
+            {audioUploadTab === 'ai' && (
+              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ background: 'var(--bg-surface)', padding: '14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <Sparkles size={18} style={{ color: 'var(--gold)' }} />
+                    <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-title)' }}>
+                      توليد صوت بشري فخم بنموذج Gemini
+                    </h4>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
+                    يقوم النموذج بقراءة نص الحلقة بأسلوب راوٍ عربي وقور ذي نطق فصيح سليم بمخارج حروف منضبطة وتوقفات طبيعية، ثم يُحفظ في قاعدة البيانات ليسمعه الزوار فورياً في مشغل الاستوديو.
+                  </p>
+                </div>
+
+                {/* Voice Selection */}
+                <div>
+                  <label className="form-label" style={{ marginBottom: '8px' }}>
+                    اختر شخصية الراوي ونبرة الإلقاء:
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                    {GEMINI_VOICES.map((v) => (
+                      <div
+                        key={v.id}
+                        onClick={() => setSelectedGeminiVoice(v.id)}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: `1px solid ${selectedGeminiVoice === v.id ? 'var(--gold)' : 'var(--border-light)'}`,
+                          background: selectedGeminiVoice === v.id ? 'rgba(212, 175, 55, 0.12)' : 'var(--bg-base)',
+                          cursor: 'pointer',
+                          transition: 'all 0.18s ease',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.84rem', color: selectedGeminiVoice === v.id ? 'var(--gold)' : 'var(--text-title)' }}>
+                            {v.name}
+                          </span>
+                          {selectedGeminiVoice === v.id && <Check size={14} style={{ color: 'var(--gold)' }} />}
+                        </div>
+                        <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                          {v.description}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Text Excerpt Preview */}
+                <div style={{ background: 'var(--bg-base)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>مقتطف نص الحلقة:</span>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'var(--text-body)', maxHeight: '70px', overflowY: 'auto', lineHeight: '1.6' }}>
+                    {cleanHtmlForSpeech(audioTargetEpisode.html).slice(0, 220)}...
+                  </p>
+                </div>
+
+                {/* Action Button */}
+                {!isGeneratingAiAudio && !aiGeneratedResult && (
+                  <button
+                    type="button"
+                    className="btn-gold"
+                    style={{ width: '100%', padding: '12px' }}
+                    onClick={handleGenerateAiAudio}
+                  >
+                    <Sparkles size={18} />
+                    <span>توليد التسجيل الصوتي للحلقة الآن</span>
+                  </button>
+                )}
+
+                {/* Progress Status */}
+                {isGeneratingAiAudio && (
+                  <div className="compression-progress-box">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <RefreshCw className="animate-spin" size={16} style={{ color: 'var(--gold)' }} />
+                      <span style={{ fontSize: '0.84rem', color: 'var(--gold)' }}>
+                        {aiGenerationProgress?.statusText || 'جارٍ التواصل مع نموذج Gemini الصوتي وتوليد التسجيل...'}
+                      </span>
+                    </div>
+                    {aiGenerationProgress && (
+                      <div className="progress-track">
+                        <div
+                          className="progress-fill"
+                          style={{
+                            width: `${Math.round((aiGenerationProgress.currentChunk / aiGenerationProgress.totalChunks) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Result Preview & Save */}
+                {aiGeneratedResult && !isGeneratingAiAudio && (
+                  <div className="compression-result-card" style={{ border: '1px solid rgba(212, 175, 55, 0.4)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--gold)' }}>
+                        ✓ تم التوليد الصوتي بنجاح!
+                      </span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        المدة: {Math.round(aiGeneratedResult.durationSeconds)} ثانية | الحجم: {formatBytes(aiGeneratedResult.sizeBytes)}
+                      </span>
+                    </div>
+
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                      استمع للتسجيل قبل الاعتماد:
+                    </label>
+                    <audio controls src={aiGeneratedResult.base64DataUrl} style={{ width: '100%', height: '42px' }} />
+
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+                      <button
+                        type="button"
+                        className="btn-gold"
+                        style={{ flex: 1, padding: '12px' }}
+                        onClick={handleSaveAiAudio}
+                        disabled={isSavingAudio}
+                      >
+                        <Check size={18} />
+                        <span>{isSavingAudio ? 'جارٍ الحفظ في السحابة...' : 'اعتماد وحفظ الصوت في الحلقة'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="tool-btn"
+                        onClick={handleGenerateAiAudio}
+                        disabled={isSavingAudio}
+                        title="إعادة التوليد"
+                      >
+                        <RefreshCw size={16} />
+                        <span>إعادة</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* TAB 1: Upload & Compress */}
             {audioUploadTab === 'upload' && (
