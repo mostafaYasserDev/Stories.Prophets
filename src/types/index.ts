@@ -1,13 +1,25 @@
+export interface Series {
+  id: string;
+  title: string;
+  description?: string;
+  order: number;
+  isPinned: boolean;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
 export interface Episode {
   docId: string;
   order: number;
-  era: string;
+  era: string; // Title of the era / series
+  seriesId?: string; // Optional reference to series document
   title: string;
   subtitle?: string;
   html: string;
   audioUrl?: string | null;
   audioType?: 'direct' | 'chunked' | null;
   audioChunksCount?: number;
+  isPinned?: boolean; // Pinned episode to highlight in index
   createdAt?: any;
   updatedAt?: any;
 }
@@ -21,6 +33,15 @@ export interface Reflection {
 
 export interface GlobalAudio {
   audioUrl: string;
+  updatedAt?: any;
+}
+
+export interface SiteSettings {
+  siteTitle?: string;
+  siteSubtitle?: string;
+  dedicationBadge?: string;
+  dedicationName?: string;
+  dedicationParents?: string;
   updatedAt?: any;
 }
 

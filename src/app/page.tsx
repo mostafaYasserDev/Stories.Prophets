@@ -23,9 +23,10 @@ import {
   Palette,
   ShieldCheck,
   Check,
+  Pin,
 } from 'lucide-react';
 
-import { Episode, ThemeType, FontType, GlobalAudio } from '@/types';
+import { Episode, ThemeType, FontType, GlobalAudio, SiteSettings } from '@/types';
 import { db, initAnalytics } from '@/lib/firebase';
 import { INITIAL_SEED_EPISODES } from '@/lib/seedData';
 import {
@@ -53,6 +54,13 @@ export default function HomePage() {
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
   const [readEpisodes, setReadEpisodes] = useState<Set<string>>(new Set());
   const [globalAudio, setGlobalAudio] = useState<GlobalAudio | null>(null);
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>({
+    siteTitle: 'السيرة النبوية الشريفة',
+    siteSubtitle: 'رحلة تفاعلية مباركة في سيرة خير الأنام ﷺ',
+    dedicationBadge: 'صَدَقَةٌ جَارِيَةٌ عَنّي',
+    dedicationName: 'محمد هاشم ضيف الله',
+    dedicationParents: 'وعن أبي وأمي رحمهم الله',
+  });
 
   // UI State
   const [currentTheme, setCurrentTheme] = useState<ThemeType>('midnight');
@@ -161,6 +169,17 @@ export default function HomePage() {
         setGlobalAudio(docSnap.data() as GlobalAudio);
       } else {
         setGlobalAudio(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Real-time Site Settings Listener
+  useEffect(() => {
+    const docRef = doc(db, 'settings', 'site_info');
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setSiteSettings((prev) => ({ ...prev, ...(docSnap.data() as SiteSettings) }));
       }
     });
     return () => unsubscribe();
@@ -453,6 +472,12 @@ export default function HomePage() {
                 <div className="reading-stage-tag">
                   <Feather size={14} />
                   <span>{currentEpisode.era}</span>
+                  {currentEpisode.isPinned && (
+                    <span className="pinned-reader-tag">
+                      <Pin size={11} />
+                      <span>مثبتة في الصدارة</span>
+                    </span>
+                  )}
                 </div>
 
                 <h2 className="reading-title">{currentEpisode.title}</h2>
@@ -613,9 +638,11 @@ export default function HomePage() {
 
           {/* Dedication Banner & Footer */}
           <footer className="dedication-card">
-            <div className="dedication-badge">صَدَقَةٌ جَارِيَةٌ عَنّي</div>
-            <div className="dedication-name">محمد هاشم ضيف الله</div>
-            <div className="dedication-parents">وعن أبي وأمي رحمهم الله</div>
+            <div className="dedication-badge">{siteSettings.dedicationBadge || 'صَدَقَةٌ جَارِيَةٌ عَنّي'}</div>
+            <div className="dedication-name">{siteSettings.dedicationName || 'محمد هاشم ضيف الله'}</div>
+            {siteSettings.dedicationParents && (
+              <div className="dedication-parents">{siteSettings.dedicationParents}</div>
+            )}
 
             <div className="social-share-row">
               <a

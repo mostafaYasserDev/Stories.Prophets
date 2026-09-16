@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, X, Mic, Bookmark, Check } from 'lucide-react';
+import { Search, X, Volume2, Bookmark, Check, Pin } from 'lucide-react';
 import { Episode } from '@/types';
 
 interface SidebarProps {
@@ -86,7 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
-          {/* Era Filter Chips */}
+          {/* Era / Series Filter Chips */}
           <div className="era-chips">
             <div
               className={`era-chip ${activeEra === 'all' ? 'active' : ''}`}
@@ -130,7 +130,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               return (
                 <div
                   key={ep.docId || originalIndex}
-                  className={`episode-card-item ${isCurrent ? 'active' : ''}`}
+                  className={`episode-card-item ${isCurrent ? 'active' : ''} ${ep.isPinned ? 'pinned-item' : ''}`}
                   onClick={() => {
                     onSelectEpisode(originalIndex);
                     onCloseMobile();
@@ -139,20 +139,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <div className="ep-item-left">
                     <div className="ep-badge-num">{originalIndex + 1}</div>
                     <div className="ep-item-meta">
-                      <div className="ep-item-title">{ep.title}</div>
+                      <div className="ep-item-title-row">
+                        <span className="ep-item-title">{ep.title}</span>
+                        {ep.isPinned && (
+                          <span title="حلقة مثبتة في الصدارة">
+                            <Pin size={12} className="pin-icon-tag" />
+                          </span>
+                        )}
+                      </div>
                       <div className="ep-item-sub">{ep.subtitle || ep.era}</div>
                     </div>
                   </div>
 
                   <div className="ep-item-badges">
                     {ep.audioUrl && (
-                      <Mic size={14} className="icon-badge" />
+                      <span title="تحتوي على تسجيل صوتي">
+                        <Volume2 size={14} className="icon-badge audio" />
+                      </span>
                     )}
                     {isBookmarked && (
-                      <Bookmark size={14} className="icon-badge" style={{ color: 'var(--gold)' }} />
+                      <span title="في المفضلة">
+                        <Bookmark size={14} className="icon-badge" style={{ color: 'var(--gold)' }} />
+                      </span>
                     )}
                     {isRead && (
-                      <Check size={14} className="icon-badge" style={{ color: '#10b981' }} />
+                      <span title="تمت قراءتها">
+                        <Check size={14} className="icon-badge" style={{ color: '#10b981' }} />
+                      </span>
                     )}
                   </div>
                 </div>

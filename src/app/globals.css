@@ -2057,4 +2057,324 @@ body {
   font-weight: 700;
 }
 
+/* ========================================================
+   SERIES, PINNING, TABS & CUSTOM DIALOG STYLES
+   ======================================================== */
+
+/* Admin Main Navigation Tabs */
+.admin-main-tabs {
+  display: flex;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 4px;
+}
+
+.admin-main-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.admin-main-tab:hover {
+  color: var(--text-title);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-main-tab.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+  background: rgba(212, 175, 55, 0.08);
+  font-weight: 700;
+}
+
+/* Stat Card Purple variant */
+.stat-icon.purple {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+/* Pin Toggle Buttons */
+.pin-toggle-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pin-toggle-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.pin-toggle-btn.pinned {
+  background: rgba(212, 175, 55, 0.2);
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow: 0 0 10px var(--gold-glow);
+}
+
+/* Pinned Row & Badge */
+.admin-table-row.row-pinned {
+  background: rgba(212, 175, 55, 0.04);
+}
+
+.pin-tiny-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: rgba(212, 175, 55, 0.18);
+  color: var(--gold);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.pinned-reader-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 8px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(212, 175, 55, 0.2);
+  border: 1px solid var(--border-color);
+  color: var(--gold);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.pinned-item {
+  border-right: 3px solid var(--gold) !important;
+}
+
+.ep-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pin-icon-tag {
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+.filter-active-tag {
+  font-size: 0.78rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--gold);
+  border: 1px solid var(--border-color);
+}
+
+/* Series Cards Grid */
+.series-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.series-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: var(--shadow-card);
+  transition: all var(--transition-fast);
+}
+
+.series-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -6px rgba(0, 0, 0, 0.4);
+}
+
+.series-card.series-pinned {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.08), var(--bg-card));
+  box-shadow: 0 0 15px var(--gold-glow);
+}
+
+.series-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.series-order-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid var(--border-color);
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.series-title {
+  font-size: 1.05rem;
+  color: var(--text-title);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.series-ep-count {
+  display: inline-block;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.series-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 12px 0;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.series-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+/* Site Settings Cards */
+.admin-settings-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settings-section-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 22px;
+  box-shadow: var(--shadow-card);
+}
+
+.section-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.section-card-header h4 {
+  font-size: 1.1rem;
+  color: var(--text-title);
+  font-weight: 700;
+}
+
+.section-card-header p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.gold-text {
+  color: var(--gold);
+}
+
+/* Pin Checkbox & Inline Series creator */
+.pin-checkbox-row {
+  margin-bottom: 12px;
+}
+
+.custom-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: var(--text-title);
+}
+
+.custom-checkbox-label input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+
+.inline-text-btn {
+  background: none;
+  border: none;
+  color: var(--gold);
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  font-family: var(--font-ui);
+}
+
+.inline-text-btn:hover {
+  color: var(--gold-light);
+}
+
+/* Custom Confirmation Modal */
+.confirm-modal-card {
+  max-width: 440px !important;
+  text-align: center;
+  padding: 28px !important;
+}
+
+.confirm-icon-box {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.confirm-modal-card h3 {
+  font-size: 1.25rem;
+  color: var(--text-title);
+  margin-bottom: 8px;
+}
+
+.confirm-modal-card p {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+
 
