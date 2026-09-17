@@ -38,7 +38,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://mostafayasserdev.github.io/Stories.Prophets/'),
+  metadataBase: new URL('https://storiesprophets.pages.dev/'),
   title: {
     default: 'قصص الأنبياء وسيرة الرسول ﷺ | رحلة مباركة في هدايات الوحي وسيرة خير الأنام',
     template: '%s | قصص الأنبياء وسيرة الرسول ﷺ',
@@ -71,7 +71,7 @@ export const metadata: Metadata = {
   applicationName: 'قصص الأنبياء وسيرة الرسول',
   category: 'Islamic Studies & Education',
   alternates: {
-    canonical: 'https://mostafayasserdev.github.io/Stories.Prophets/',
+    canonical: 'https://storiesprophets.pages.dev/',
   },
   manifest: '/manifest.json',
   appleWebApp: {
@@ -94,7 +94,7 @@ export const metadata: Metadata = {
     title: 'قصص الأنبياء وسيرة الرسول ﷺ | رحلة إيمانية مباركة',
     description:
       'موسوعة إسلامية تفاعلية لقصص الأنبياء وسيرة خير الأنام ﷺ، تسجيلات صوتية نقية، عِبر وفوائد إيمانية، ومراجع موثقة تعمل بدون إنترنت.',
-    url: 'https://mostafayasserdev.github.io/Stories.Prophets/',
+    url: 'https://storiesprophets.pages.dev/',
     siteName: 'قصص الأنبياء وسيرة الرسول ﷺ',
     images: [
       {
@@ -133,8 +133,8 @@ const jsonLdSchema = {
   '@graph': [
     {
       '@type': 'WebSite',
-      '@id': 'https://mostafayasserdev.github.io/Stories.Prophets/#website',
-      url: 'https://mostafayasserdev.github.io/Stories.Prophets/',
+      '@id': 'https://storiesprophets.pages.dev/#website',
+      url: 'https://storiesprophets.pages.dev/',
       name: 'قصص الأنبياء وسيرة الرسول ﷺ',
       alternateName: ['قصص الأنبياء', 'السيرة النبوية', 'Stories of the Prophets'],
       description:
@@ -148,7 +148,7 @@ const jsonLdSchema = {
     },
     {
       '@type': 'CreativeWorkSeries',
-      '@id': 'https://mostafayasserdev.github.io/Stories.Prophets/#series',
+      '@id': 'https://storiesprophets.pages.dev/#series',
       name: 'قصص الأنبياء وسيرة الرسول ﷺ',
       headline: 'رحلة مباركة في هدايات الوحي وسيرة خير الأنام ﷺ',
       author: {
@@ -158,29 +158,29 @@ const jsonLdSchema = {
       genre: ['Islamic Studies', 'Prophetic Biography', 'Spiritual Reflections'],
       inLanguage: 'ar',
       isAccessibleForFree: true,
-      image: 'https://mostafayasserdev.github.io/Stories.Prophets/og-image.png',
+      image: 'https://storiesprophets.pages.dev/og-image.png',
     },
     {
       '@type': 'BreadcrumbList',
-      '@id': 'https://mostafayasserdev.github.io/Stories.Prophets/#breadcrumbs',
+      '@id': 'https://storiesprophets.pages.dev/#breadcrumbs',
       itemListElement: [
         {
           '@type': 'ListItem',
           position: 1,
           name: 'الرئيسية',
-          item: 'https://mostafayasserdev.github.io/Stories.Prophets/',
+          item: 'https://storiesprophets.pages.dev/',
         },
         {
           '@type': 'ListItem',
           position: 2,
           name: 'السلاسل الإيمانية',
-          item: 'https://mostafayasserdev.github.io/Stories.Prophets/#series',
+          item: 'https://storiesprophets.pages.dev/#series',
         },
         {
           '@type': 'ListItem',
           position: 3,
           name: 'الجزيرة العربية في العصر الجاهلي',
-          item: 'https://mostafayasserdev.github.io/Stories.Prophets/',
+          item: 'https://storiesprophets.pages.dev/read/',
         },
       ],
     },

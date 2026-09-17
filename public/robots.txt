@@ -7,4 +7,4 @@ Disallow: /admin
 Disallow: /admin/
 
 # Sitemap location
-Sitemap: https://mostafayasserdev.github.io/Stories.Prophets/sitemap.xml
+Sitemap: https://storiesprophets.pages.dev/sitemap.xml

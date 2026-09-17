@@ -217,8 +217,7 @@ export default function HomePage() {
         }
       },
       (error) => {
-        console.error('Firestore listener error:', error);
-        triggerToast('تعذّر الاتصال بقاعدة البيانات السحابية: ' + error.message, 'error');
+        console.warn('Firestore offline fallback (realtime sync unavailable or blocked by adblocker):', error.message);
       }
     );
 
@@ -280,13 +279,19 @@ export default function HomePage() {
   // Real-time Global Audio Listener
   useEffect(() => {
     const docRef = doc(db, 'settings', 'global_audio');
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setGlobalAudio(docSnap.data() as GlobalAudio);
-      } else {
-        setGlobalAudio(null);
+    const unsubscribe = onSnapshot(
+      docRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setGlobalAudio(docSnap.data() as GlobalAudio);
+        } else {
+          setGlobalAudio(null);
+        }
+      },
+      (err) => {
+        console.warn('Global audio listener offline notice:', err.message);
       }
-    });
+    );
     return () => unsubscribe();
   }, []);
 
@@ -324,11 +329,17 @@ export default function HomePage() {
   // Real-time Site Settings Listener
   useEffect(() => {
     const docRef = doc(db, 'settings', 'site_info');
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setSiteSettings((prev) => ({ ...prev, ...(docSnap.data() as SiteSettings) }));
+    const unsubscribe = onSnapshot(
+      docRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setSiteSettings((prev) => ({ ...prev, ...(docSnap.data() as SiteSettings) }));
+        }
+      },
+      (err) => {
+        console.warn('Site settings listener offline notice:', err.message);
       }
-    });
+    );
     return () => unsubscribe();
   }, []);
 

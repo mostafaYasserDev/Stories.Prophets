@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, getFirestore } from 'firebase/firestore';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 
 // Safely decode API key to avoid automated GitHub regex alerts on public client keys
@@ -29,7 +29,18 @@ const firebaseConfig = {
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-export const db = getFirestore(app);
+
+// Initialize Firestore with auto-detect long-polling fallback
+// This gracefully handles environments where WebChannel streaming is blocked by AdBlockers (ERR_BLOCKED_BY_CLIENT), proxies, or restrictive firewalls.
+let firestoreDb;
+try {
+  firestoreDb = initializeFirestore(app, {
+    experimentalAutoDetectLongPolling: true,
+  });
+} catch {
+  firestoreDb = getFirestore(app);
+}
+export const db = firestoreDb;
 
 export const initAnalytics = async () => {
   if (typeof window !== 'undefined' && (await isSupported())) {

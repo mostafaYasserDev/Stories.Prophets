@@ -1,76 +1,146 @@
-# 🌟 السيرة النبوية الشريفة ﷺ
+# 🕌 منصة «قصص الأنبياء وسيرة الرسول ﷺ»
 
-> **صَدَقَةٌ جَارِيَةٌ عَن مُحَمَّد هَاشِم ضَيْف الله وعن والديه رحمهما الله تعالى وأسكنهما الفردوس الأعلى من الجنة.**
+<div align="center">
 
-تطبيق ويب سحابي تفاعلي متطور وفاخر مبني بأحدث معايير الويب باستخدام **Next.js (App Router + React 19 + TypeScript)** ومتصل بسحابة **Firebase (Firestore & Storage)** لتسجيل وعرض ومتابعة رحلة السيرة النبوية العطرة من المولد النبوي الشريف إلى الرفيق الأعلى ﷺ.
+> **«صَدَقَةٌ جَارِيَةٌ عَن مُحَمَّد هَاشِم ضَيْف الله وعن والديه رحمهما الله تعالى وأسكنهما الفردوس الأعلى من الجنة»**
 
----
+[![Website](https://img.shields.io/badge/Website-storiesprophets.pages.dev-d4af37?style=for-the-badge&logo=google-chrome&logoColor=white)](https://storiesprophets.pages.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js_16-Turbopack-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React_19-TypeScript-blue?style=for-the-badge&logo=react)](https://react.dev/)
+[![PWA Ready](https://img.shields.io/badge/PWA-Offline_Ready-success?style=for-the-badge&logo=pwa)](https://storiesprophets.pages.dev/)
+[![License](https://img.shields.io/badge/Waqf-صدقة_جارية-emerald?style=for-the-badge)](https://storiesprophets.pages.dev/)
 
-## ✨ المميزات الرئيسية
+**موسوعة إسلامية سحابية تفاعلية شاملة لقصص الأنبياء والمرسلين وسيرة الحبيب المصطفى ﷺ، تجمع بين جمال السرد القرآني، ونقاء التسجيلات الصوتية، ورصانة التوثيق بالمصادر والمراجع، مع إمكانية التثبيت كبرنامج كامل يعمل بدون إنترنت (PWA).**
 
-1. **سحابي وحي 100% (Realtime Cloud Sync)**:
-   - جميع الحلقات، التعديلات، والتأملات مخزنة في **Cloud Firestore**.
-   - لا حاجة لتنزيل أي ملفات أو إعادة بناء الموقع؛ أي إضافة من هاتفك أو جهازك تنعكس فوراً وتلقائياً على شاشات جميع الزوار حول العالم لحظياً وبدون Refresh.
-2. **تسجيل ومشغل صوتي مباشر**:
-   - إمكانية تسجيل الصوت مباشرة من ميكروفون الهاتف أو الحاسوب، ورفعه تلقائياً إلى **Firebase Storage** مع مؤشر تقدم الرفع.
-   - دعم رفع الملفات الصوتية الجاهزة (MP3, WAV, M4A).
-   - مشغل صوتي يدعم تغيير سرعة القراءة (0.75x, 1.0x, 1.25x, 1.5x, 2.0x).
-3. **قارئ صوتي آلي ودمج Gemini**:
-   - قارئ صوتي فوري مدمج (Web Speech API) ينطق نص الحلقة باللغة العربية داخل الموقع بنقرة زر.
-   - زر نسخ وتجهيز فوري للنص لتطبيقه داخل Google Gemini للقراءة الصوتية المؤثرة.
-4. **جماليات ملكية وتجاوب فائق (Desktop & Mobile)**:
-   - **على سطح المكتب (Desktop)**: شريط جانبي ثابت لفهرس الحلقات مع البحث والفرز، ومساحة قراءة واسعة ومريحة للعين.
-   - **على الهاتف (Mobile)**: تجربة تطبيق ذكي أصيل مع قائمة منزلقة (Drawer)، وشريط سفلي عائم مريح باليد الواحدة، ودعم إيماءات السحب باللمس (Swipe gestures).
-5. **نظام طباعة وثيمات فاخر**:
-   - 4 ثيمات منسقة بعناية: (كحل ملكي، الذهب والظلال، رملي دافئ، ونهاري نقي).
-   - 4 خطوط عربية أصيلة: (الأميري القرآني، الرقعة الشريف، النسخ، وخط كايرو العصري).
-   - أزرار تكبير وتصغير حجم الخط.
-   - تنسيق مخصص ومميز للآيات القرآنية بأقواس وزخارف مذهبة ﴿ ... ﴾، وللأحاديث الشريفة، والأبيات الشعرية.
-6. **تأملات شخصية ومفضلة**:
-   - قسم خاص لتدوين الخواطر والفوائد والاستنباطات من كل حلقة مع حفظها سحابياً.
-   - إمكانية حفظ الحلقات في المفضلة وتتبع نسبة إنجاز القراءة.
-7. **مشاركة سهلة**:
-   - مشاركة مقتطفات الحلقات بنقرة واحدة عبر واتساب وتيليجرام وتويتر/X ورابط مباشر.
+[🌐 استكشف المنصة مباشرة](https://storiesprophets.pages.dev/) • [📖 قارئ السلاسل والدروس](https://storiesprophets.pages.dev/read/) • [📱 تثبيت التطبيق](https://storiesprophets.pages.dev/)
+
+</div>
 
 ---
 
-## 🛠️ التقنيات المستخدمة
+## 🌟 المعاينة البصرية وبطاقة المشاركة الاجتماعية
 
-- **Framework**: Next.js 16 (App Router)
-- **UI Library**: React 19 + TypeScript
-- **Icons**: Lucide React
-- **Typography**: Google Fonts (Amiri, Aref Ruqaa, Cairo, Noto Naskh Arabic)
-- **Cloud Database**: Firebase Cloud Firestore (Modular SDK v10)
-- **Cloud Storage**: Firebase Storage
-- **Styling**: Vanilla CSS Design System with CSS Custom Properties & Glassmorphism
+<div align="center">
+  <img src="public/og-image.png" alt="غلاف وشعار منصة قصص الأنبياء وسيرة الرسول ﷺ" width="850" style="border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+</div>
 
 ---
 
-## 🔒 قواعد أمان Firebase (مهم جداً للعمل بدون مشاكل)
+## ✨ أبرز مميزات المنصة
 
-لكي يتمكن التطبيق من حفظ وقراءة الحلقات والتسجيلات الصوتية مباشرة، تأكد من ضبط قواعد الأمان في [Firebase Console](https://console.firebase.google.com):
+### 1. 📱 تطبيق ويب تقدمي كامل (Progressive Web App - PWA)
+- **تثبيت كبرنامج مستقل:** إمكانية تثبيت المنصة بنقرة واحدة على هواتف **Android** و **iPhone (iOS)** وحواسيب **Windows** و **Mac**.
+- **العمل دون اتصال (Offline Support):** بفضل محرك الـ Service Worker المتقدم باستراتيجية *Network-First Cache Fallback*، يمكنك متابعة قراءة الحلقات والصفحات حتى عند انقطاع الإنترنت.
+- **شاشة إقلاع سريعة (Instant Splash Screen):** وأيقونات متكيفة عالية الدقة (192x192 و 512x512 و Maskable).
 
-### 1. قواعد Firestore (Firestore Rules)
-اذهب إلى **Firestore Database** > تبويب **Rules** وضع الكود التالي:
+### 2. 🏛️ صفحة هبوط ترحيبية فاخرة (Landing Page)
+- واجهة استقبال أنيقة وموجزة بشاشة واحدة مدمجة (`Single Viewport Canvas`) تسبق الدخول للدروس.
+- **ميزة استئناف القراءة الذكية (Smart Resume):** فحص تلقائي لآخر حلقة توقف عندها الزائر وإتاحة زر مباشر للعودة إليها فوراً.
+- شبكة للمزايا الأربع وزر الاستماع الصوتي المباشر.
+
+### 3. 📚 قارئ السلاسل والحلقات التفاعلي المتقدم
+- **سلاسل وحلقات مطوية (Collapsible Series):** فهرس شجري تفاعلي يعرض كل سلسلة مع عدد حلقاتها، ونسبة إنجاز القراءة (`%`)، والحلقات التابعة لها بتدرج وسلاسة.
+- **عِبر وفوائد إيمانية مطوية (Collapsible Morals):** نظام أكورديون وقور أسفل كل قصة يحتوي على الدروس المستفادة مع إمكانية نسخها للحافظة بنقرة واحدة.
+- **توثيق كامل بالمصادر والمراجع (Documented References):** بطاقة مخصصة لكل حلقة تعرض مراجعها المعتمدة، مع الكشف التلقائي عن الروابط الخارجية وزر لنسخ التوثيق كاملاً.
+- **نظام طباعة ومظهر ملكي:**
+  - **4 خطوط عربية أصيلة:** (الأميري، عارف الرقعة، النسخ، وكايرو).
+  - **4 مظاهر لونية هادئة:** (ليلي Midnight، داكن Obsidian، دافئ Sepia، ونهاري Light).
+  - وضع القراءة الصامتة المركزة (**Focus Mode**) لإخفاء كافة أشرطة التشتيت.
+  - إيماءات اللمس السريعة (Swipe Gestures) للتنقل بين الحلقات على الهواتف.
+
+### 4. 🎙️ محرك الصوت الذكي ومعالجة Gemini AI
+- **توليد صوتي إيماني نقي:** تكامل مع واجهة **Google Gemini AI (TTS)** لقراءة نصوص الحلقات بنبرة وقورة ومؤثرة.
+- **تقنية معالجة الـ Blob المباشرة:** تضمن تحميل الصوت الفوري بدون أي تجميد للمتصفح.
+- **ضغط ذكي للملفات الصوتية:** ضغط احترافي يقلل حجم التسجيلات بنسبة تتجاوز 70% لتسريع البث وحفظ استهلاك البيانات.
+
+### 5. 🛡️ لوحة تحكم إدارية متكاملة (`/admin`)
+- مسار محمي لإدارة السلاسل وترتيبها وتثبيتها.
+- إضافة وتعديل الحلقات بنظام محرر نصوص منسق وتوليد الصوت بضغطة زر.
+- إضافة مراجع ومصادر الحلقة سطراً بسطر مع معاينة حية.
+- التحكم في الصوت العام للمنصة وإعدادات الإهداء.
+
+### 6. 🚀 تصدر محركات البحث والـ SEO المتقدم
+- بيانات منظمة متوافقة 100% مع معايير **Schema.org (JSON-LD)** للظهور في بطاقات المعرفة على Google (`WebSite`, `CreativeWorkSeries`, `BreadcrumbList`, `Article`).
+- خريطة موقع قياسية [`sitemap.xml`](https://storiesprophets.pages.dev/sitemap.xml) وملف روبوتات [`robots.txt`](https://storiesprophets.pages.dev/robots.txt).
+- بطاقة مشاركة اجتماعية احترافية مخصصة بدقة 1200×630 تظهر بأبهى صورة عند المشاركة عبر WhatsApp و Telegram و Facebook و X.
+
+---
+
+## 🛠️ البنية التقنية (Tech Stack)
+
+| المجال | التقنيات المستخدمة |
+|---|---|
+| **بيئة العمل (Framework)** | [Next.js 16 (App Router)](https://nextjs.org/) مع Turbopack |
+| **واجهة المستخدم (UI)** | [React 19](https://react.dev/) + [TypeScript 5](https://www.typescriptlang.org/) |
+| **الأيقونات والتصميم** | [Lucide React](https://lucide.dev/) + نظام تصميم CSS نقي (Custom Properties) |
+| **الخطوط العربية** | [Google Fonts](https://fonts.google.com/) (Amiri, Aref Ruqaa, Cairo, Noto Naskh) |
+| **قاعدة البيانات السحابية** | [Firebase Cloud Firestore](https://firebase.google.com/docs/firestore) (Modular SDK v12) |
+| **الذكاء الاصطناعي والصوت** | [Google Gemini 2.5 Flash API](https://ai.google.dev/) + Web Audio API |
+| **النشر والاستضافة** | [Cloudflare Pages](https://pages.cloudflare.com/) / [GitHub Pages](https://pages.github.com/) |
+
+---
+
+## 🚀 التشغيل والتطوير المحلي (Getting Started)
+
+### 1. استنساخ المستودع:
+```bash
+git clone git@github.com:mostafaYasserDev/Stories.Prophets.git
+cd Stories.Prophets
+```
+
+### 2. تثبيت الاعتمادات:
+```bash
+npm install
+```
+
+### 3. إعداد المتغيرات البيئية (`.env.local`):
+أنشئ ملف `.env.local` في المجلد الرئيسي وضع به مفتاح Gemini API:
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+### 4. تشغيل خادم التطوير:
+```bash
+npm run dev
+```
+افتح المتصفح على: `http://localhost:3000`
+
+### 5. البناء للإنتاج والتصدير الساكن:
+```bash
+npm run build
+```
+سيتم توليد كافة الملفات الساكنة الجاهزة للنشر المباشر داخل مجلد `out/`.
+
+---
+
+## ☁️ النشر على Cloudflare Pages (الموصى به)
+
+المشروع مُعد للعمل تلقائياً وبأقصى سرعة مع **Cloudflare Pages**:
+
+1. في لوحة تحكم [Cloudflare Dashboard](https://dash.cloudflare.com/)، اذهب إلى **Workers & Pages** > اضغط **Create application** > تبويب **Pages** > ثم **Connect to Git**.
+2. اختر مستودع: `mostafaYasserDev/Stories.Prophets`.
+3. اضبط إعدادات البناء (Build Settings):
+   - **Framework preset**: `Next.js (Static Export)`
+   - **Build command**: `npm run build`
+   - **Build output directory**: `out`
+   - **Node.js Version**: `20` أو أحدث في Environment variables (`NODE_VERSION: 20`).
+4. اضغط **Save and Deploy**؛ سيتم النشر وتحديث الموقع تلقائياً مع كل عملية `git push`.
+
+---
+
+## 🔒 قواعد أمان Firebase Firestore
+
+لضمان عمل قراءة وتحديث الحلقات والتأملات بسلاسة وأمان، تأكد من اعتماد القواعد التالية في [Firebase Console](https://console.firebase.google.com/):
+
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // إتاحة القراءة للجميع، وحصر التعديل للمشرف
     match /{document=**} {
-      allow read, write: if true;
-    }
-  }
-}
-```
-
-### 2. قواعد التخزين (Storage Rules)
-اذهب إلى **Storage** > تبويب **Rules** وضع الكود التالي:
-```javascript
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if true;
     }
   }
 }
@@ -78,44 +148,15 @@ service firebase.storage {
 
 ---
 
-## 🚀 التشغيل المحلي (Local Development)
+## 👥 فريق العمل والمساهمون
 
-```bash
-# تثبيت الحزم
-npm install
-
-# تشغيل خادم التطوير
-npm run dev
-```
-
-افتح المتصفح على: `http://localhost:3000`
+- **صاحب الفكرة وإعداد المحتوى الإيماني:**  
+  **محمد هاشم ضيف الله** — جزاه الله خيراً وجعل هذا العمل صدقة جارية له ولوالديه.
+- **التطوير والبرمجة والتصميم:**  
+  **مصطفى ياسر** — [mostafayasser.online](https://mostafayasser.online)
 
 ---
 
-## ☁️ النشر على Cloudflare Pages (الخيار الموصى به - فائق السرعة)
+## 📜 الوقف والترخيص
 
-المشروع جاهز ومُهيّأ تماماً للنشر على **Cloudflare Pages**:
-
-1. في لوحة تحكم [Cloudflare Dashboard](https://dash.cloudflare.com/)، اذهب إلى **Workers & Pages** > اضغط **Create application** > تبويب **Pages** > ثم **Connect to Git**.
-2. اختر مستودعك: `mostafaYasserDev/Stories.Prophets`.
-3. اضبط إعدادات البناء (Build settings) كالتالي:
-   - **Framework preset**: اختر `Next.js (Static HTML Export)` أو اتركها `None`.
-   - **Build command**: `npm run build`
-   - **Build output directory**: `out`
-4. في خيار **Environment variables (advanced)**، تأكد من إضافة:
-   - **Variable name**: `NODE_VERSION`
-   - **Value**: `20`
-5. اضغط **Save and Deploy**. سيبدأ البناء وينتهي بنجاح، وسيعمل موقعك مباشرة مع سرعة شبكة Cloudflare العالمية وبشهادة SSL مجانية مدى الحياة!
-
----
-
-## 🌐 النشر على GitHub Pages (خيار بديل)
-
-المشروع مزود بملف سير عمل تلقائي جاهز (`.github/workflows/deploy.yml`):
-
-1. في مستودعك على GitHub، اذهب إلى تبويب **Settings**.
-2. من القائمة الجانبية، اختر **Pages**.
-3. تحت خيار **Build and deployment > Source**، اختر: **GitHub Actions**.
-4. سيبدأ سير العمل التلقائي بنشر الموقع ليكون متاحاً على الرابط:
-   `https://mostafayasserdev.github.io/Stories.Prophets/`
-
+هذا المشروع وقف إسلامي وعمل خيري، متاح لخدمة كتاب الله وسنة رسوله ﷺ، ومتاح لنشر الخير والعلم النافع لوجه الله تعالى.

@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Smartphone, Download, X, Share, PlusSquare, CheckCircle2 } from 'lucide-react';
 
 export const PwaInstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const deferredPromptRef = useRef<any>(null);
   const [isStandalone, setIsStandalone] = useState<boolean>(false);
   const [isIos, setIsIos] = useState<boolean>(false);
   const [showIosModal, setShowIosModal] = useState<boolean>(false);
@@ -30,6 +31,7 @@ export const PwaInstallPrompt: React.FC = () => {
     // Listen for Chrome / Android / Edge / Desktop PWA install prompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
+      deferredPromptRef.current = e;
       setDeferredPrompt(e);
       if (!checkStandalone && !dismissed) {
         setShowBanner(true);
@@ -42,6 +44,7 @@ export const PwaInstallPrompt: React.FC = () => {
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setShowBanner(false);
+      deferredPromptRef.current = null;
       setDeferredPrompt(null);
     };
 
@@ -49,8 +52,9 @@ export const PwaInstallPrompt: React.FC = () => {
 
     // Custom event listener to trigger install from buttons anywhere in the app
     const handleTriggerInstall = () => {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
+      const promptEvent = deferredPromptRef.current;
+      if (promptEvent) {
+        promptEvent.prompt();
       } else if (isIosDevice) {
         setShowIosModal(true);
       } else {
@@ -60,33 +64,31 @@ export const PwaInstallPrompt: React.FC = () => {
     window.addEventListener('trigger-pwa-install', handleTriggerInstall);
 
     // If iOS and not standalone and not dismissed, show banner after 4 seconds
+    let iosTimer: NodeJS.Timeout | null = null;
     if (isIosDevice && !checkStandalone && !dismissed) {
-      const timer = setTimeout(() => {
+      iosTimer = setTimeout(() => {
         setShowBanner(true);
       }, 4000);
-      return () => {
-        clearTimeout(timer);
-        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        window.removeEventListener('appinstalled', handleAppInstalled);
-        window.removeEventListener('trigger-pwa-install', handleTriggerInstall);
-      };
     }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
       window.removeEventListener('trigger-pwa-install', handleTriggerInstall);
+      if (iosTimer) clearTimeout(iosTimer);
     };
-  }, [deferredPrompt]);
+  }, []);
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
+    const promptEvent = deferredPromptRef.current;
+    if (promptEvent) {
+      promptEvent.prompt();
+      const { outcome } = await promptEvent.userChoice;
       if (outcome === 'accepted') {
         setIsInstalled(true);
         setShowBanner(false);
       }
+      deferredPromptRef.current = null;
       setDeferredPrompt(null);
     } else if (isIos) {
       setShowIosModal(true);
