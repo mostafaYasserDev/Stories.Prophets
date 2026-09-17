@@ -82,6 +82,7 @@ import {
   DailyUsageStatus,
   FREE_TIER_DAILY_LIMIT,
 } from '@/lib/geminiAudio';
+import { CustomAudioPlayer } from '@/components/CustomAudioPlayer';
 
 export default function AdminPage() {
   // Authentication State
@@ -2085,10 +2086,11 @@ export default function AdminPage() {
                         </div>
 
                         <div style={{ marginTop: '14px' }}>
-                          <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                            معاينة المقطع العام المضغوط قبل اعتماده:
-                          </label>
-                          <audio controls src={globalCompressionResult.base64DataUrl} style={{ width: '100%' }} />
+                          <CustomAudioPlayer
+                            src={globalCompressionResult.base64DataUrl}
+                            title="معاينة المقطع الصوتي العام الموحد"
+                            downloadFilename="المقطع_الصوتي_العام.mp3"
+                          />
                         </div>
 
                         <button
@@ -2796,26 +2798,6 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {/* Narrator Banner */}
-                <div
-                  style={{
-                    background: 'var(--bg-surface)',
-                    padding: '12px 14px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--border-light)',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <Sparkles size={17} style={{ color: 'var(--gold)' }} />
-                    <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-title)' }}>
-                      قراءة استوديو بصوت {DEFAULT_VOICE_NAME} (الذكاء الاصطناعي Gemini)
-                    </h4>
-                  </div>
-                  <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-                    الأولوية المطلقة للفصحى الوقورة، مع نطق سياقي ذكي للكلمات بالعامية المصرية الخفيفة، وتلاوة الآيات والأحاديث بخشوع تام.
-                  </p>
-                </div>
-
                 {/* Optional Custom Instructions: Hidden by default, toggled via small text */}
                 {!isGeneratingAiAudio && !aiGeneratedResult && (
                   <>
@@ -2977,20 +2959,24 @@ export default function AdminPage() {
 
                 {/* Result Preview & Save */}
                 {aiGeneratedResult && !isGeneratingAiAudio && (
-                  <div className="compression-result-card" style={{ border: '1px solid rgba(212, 175, 55, 0.4)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--gold)' }}>
-                        ✓ تم التوليد الصوتي بنجاح!
+                  <div className="compression-result-card" style={{ border: '1px solid rgba(212, 175, 55, 0.4)', padding: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                      <span style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--gold)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <CheckCircle2 size={17} style={{ color: '#22c55e' }} />
+                        <span>تم التوليد الصوتي بنجاح!</span>
                       </span>
-                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', background: 'var(--bg-base)', padding: '3px 8px', borderRadius: '4px', border: '1px solid var(--border-light)' }}>
                         المدة: {Math.round(aiGeneratedResult.durationSeconds)} ثانية | الحجم: {formatBytes(aiGeneratedResult.sizeBytes)}
                       </span>
                     </div>
 
-                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                      استمع للتسجيل قبل الاعتماد:
-                    </label>
-                    <audio controls src={aiGeneratedResult.base64DataUrl} style={{ width: '100%', height: '42px' }} />
+                    <CustomAudioPlayer
+                      src={aiGeneratedResult.base64DataUrl}
+                      title={`معاينة التسجيل: ${audioTargetEpisode?.title || 'حلقة السيرة'}`}
+                      durationSeconds={aiGeneratedResult.durationSeconds}
+                      sizeBytes={aiGeneratedResult.sizeBytes}
+                      downloadFilename={`${audioTargetEpisode?.title || 'تسجيل_السيرة'}.wav`}
+                    />
 
                     <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
                       <button
@@ -3080,10 +3066,11 @@ export default function AdminPage() {
                     </div>
 
                     <div style={{ marginTop: '14px' }}>
-                      <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                        معاينة الصوت المضغوط قبل الحفظ:
-                      </label>
-                      <audio controls src={compressionResult.base64DataUrl} style={{ width: '100%' }} />
+                      <CustomAudioPlayer
+                        src={compressionResult.base64DataUrl}
+                        title={`معاينة الصوت المضغوط: ${audioTargetEpisode?.title || 'ملف صوتي'}`}
+                        downloadFilename={`${audioTargetEpisode?.title || 'ملف_صوتي'}.mp3`}
+                      />
                     </div>
 
                     <button
