@@ -29,7 +29,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 
-import { Episode, ThemeType, FontType, GlobalAudio, SiteSettings } from '@/types';
+import { Episode, Series, ThemeType, FontType, GlobalAudio, SiteSettings } from '@/types';
 import { db, initAnalytics } from '@/lib/firebase';
 import { INITIAL_SEED_EPISODES } from '@/lib/seedData';
 import {
@@ -58,6 +58,7 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
   const [readEpisodes, setReadEpisodes] = useState<Set<string>>(new Set());
+  const [seriesList, setSeriesList] = useState<Series[]>([]);
   const [globalAudio, setGlobalAudio] = useState<GlobalAudio | null>(null);
   const [resolvedGlobalAudioUrl, setResolvedGlobalAudioUrl] = useState<string | null>(null);
   const [isLoadingGlobalAudio, setIsLoadingGlobalAudio] = useState<boolean>(false);
@@ -210,6 +211,26 @@ export default function HomePage() {
       }
     );
 
+    return () => unsubscribe();
+  }, []);
+
+  // Real-time Firestore Series Listener
+  useEffect(() => {
+    const q = query(collection(db, 'series'), orderBy('order', 'asc'));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const items = snapshot.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        })) as Series[];
+        items.sort((a, b) => (a.order || 0) - (b.order || 0));
+        setSeriesList(items);
+      },
+      (err) => {
+        console.warn('Reader series fetch error:', err);
+      }
+    );
     return () => unsubscribe();
   }, []);
 
@@ -605,6 +626,7 @@ export default function HomePage() {
           isOpenMobile={isDrawerOpen}
           onCloseMobile={() => setIsDrawerOpen(false)}
           lastReadIndex={lastReadIndex}
+          seriesList={seriesList}
         />
 
         {/* Main Reader View */}
