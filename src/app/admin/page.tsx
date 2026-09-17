@@ -71,14 +71,15 @@ import {
 import { compressAudio, formatBytes, CompressionResult } from '@/lib/audioCompressor';
 import { normalizeArabicText, formatFriendlyError } from '@/lib/errorHandler';
 import {
-  GEMINI_VOICES,
   generateGeminiEpisodeAudio,
   cleanHtmlForSpeech,
-  detectArabicDialect,
-  DialectType,
-  DialectAnalysis,
   GenerationProgress,
   DEFAULT_GEMINI_KEY,
+  DEFAULT_VOICE_ID,
+  DEFAULT_VOICE_NAME,
+  getDailyAudioUsage,
+  DailyUsageStatus,
+  FREE_TIER_DAILY_LIMIT,
 } from '@/lib/geminiAudio';
 
 export default function AdminPage() {
@@ -170,10 +171,17 @@ export default function AdminPage() {
 
   // Audio Compression & AI Generation State
   const [audioUploadTab, setAudioUploadTab] = useState<'ai' | 'upload' | 'url'>('ai');
-  const [selectedGeminiVoice, setSelectedGeminiVoice] = useState<string>('Charon');
-  const [selectedDialect, setSelectedDialect] = useState<DialectType>('fusha');
-  const [detectedDialectInfo, setDetectedDialectInfo] = useState<DialectAnalysis | null>(null);
+  const [customAudioInstructions, setCustomAudioInstructions] = useState<string>('');
+  const [dailyQuotaStatus, setDailyQuotaStatus] = useState<DailyUsageStatus>({
+    dateStr: '',
+    count: 0,
+    maxLimit: FREE_TIER_DAILY_LIMIT,
+    remaining: FREE_TIER_DAILY_LIMIT,
+  });
+  const [simulatedProgress, setSimulatedProgress] = useState<number>(0);
+  const [simulatedPhrase, setSimulatedPhrase] = useState<string>('');
   const [geminiApiKeyInput, setGeminiApiKeyInput] = useState<string>(DEFAULT_GEMINI_KEY);
+  const [showApiKeySettings, setShowApiKeySettings] = useState<boolean>(false);
   const [isGeneratingAiAudio, setIsGeneratingAiAudio] = useState<boolean>(false);
   const [aiGenerationProgress, setAiGenerationProgress] = useState<GenerationProgress | null>(null);
   const [aiGeneratedResult, setAiGeneratedResult] = useState<{
@@ -952,11 +960,10 @@ export default function AdminPage() {
     setAiGeneratedResult(null);
     setAiGenerationProgress(null);
     setIsGeneratingAiAudio(false);
-
-    // Analyze dialect and pronunciation style
-    const dialectAnalysis = detectArabicDialect(ep.html);
-    setDetectedDialectInfo(dialectAnalysis);
-    setSelectedDialect(dialectAnalysis.dialect);
+    setCustomAudioInstructions('');
+    setSimulatedProgress(0);
+    setSimulatedPhrase('');
+    setDailyQuotaStatus(getDailyAudioUsage());
 
     setAudioUploadTab('ai');
     setIsAudioModalOpen(true);
@@ -968,26 +975,64 @@ export default function AdminPage() {
     setIsGeneratingAiAudio(true);
     setAiGenerationProgress(null);
     setAiGeneratedResult(null);
+    setSimulatedProgress(6);
+    setSimulatedPhrase('🎙️ استدعاء الراوي وضبط النبرة الإيمانية...');
+
+    const phrases = [
+      '🎙️ استدعاء الراوي وضبط النبرة الإيمانية...',
+      '📖 قراءة فصيحة متقنة مع مراعاة سياق المعاني...',
+      '✨ ترتيل الآيات الكريمة والأحاديث بالفصحى والخشوع...',
+      '🎵 مواءمة الوقفات التعبيرية وتلوين نبرة السرد القصصي...',
+      '🎼 هندسة الصوت الاستوديو وتجميع التردد النقي (24kHz)...',
+      '⚡ اللمسات الأخيرة وتجهيز الملف الصوتي النهائي...',
+    ];
+    let phraseIdx = 0;
+    let currentPct = 6;
+
+    const progressTimer = setInterval(() => {
+      currentPct = Math.min(93, currentPct + Math.max(1, Math.floor((93 - currentPct) * 0.08)));
+      setSimulatedProgress(currentPct);
+    }, 450);
+
+    const phraseTimer = setInterval(() => {
+      phraseIdx = (phraseIdx + 1) % phrases.length;
+      setSimulatedPhrase(phrases[phraseIdx]);
+    }, 3200);
 
     try {
       const result = await generateGeminiEpisodeAudio({
         text: audioTargetEpisode.html,
-        voiceName: selectedGeminiVoice,
-        dialect: selectedDialect,
+        customInstructions: customAudioInstructions,
+        voiceName: DEFAULT_VOICE_ID,
         apiKey: geminiApiKeyInput || DEFAULT_GEMINI_KEY,
-        onProgress: setAiGenerationProgress,
+        onProgress: (p) => {
+          setAiGenerationProgress(p);
+          if (p.percent) {
+            setSimulatedProgress((prev) => Math.max(prev, p.percent));
+          }
+        },
       });
 
+      clearInterval(progressTimer);
+      clearInterval(phraseTimer);
+      setSimulatedProgress(100);
+      setSimulatedPhrase('✓ تم اكتمال هندسة التسجيل الصوتي بنجاح!');
+
       setAiGeneratedResult(result);
+      setDailyQuotaStatus(getDailyAudioUsage());
+
       triggerToast(
-        `تم توليد الصوت البشري بنجاح! المدة: ${Math.round(result.durationSeconds)} ثانية (${formatBytes(result.sizeBytes)})`,
+        `تم توليد الصوت الاستوديو بنجاح! المدة: ${Math.round(result.durationSeconds)} ثانية (${formatBytes(result.sizeBytes)})`,
         'success',
         'تم التوليد بنجاح'
       );
     } catch (err: any) {
+      clearInterval(progressTimer);
+      clearInterval(phraseTimer);
       console.error('Gemini audio generation failed:', err);
       const friendly = formatFriendlyError(err, 'تعذّر توليد الصوت بنموذج Gemini');
       triggerToast(friendly.message, 'error', friendly.title);
+      setDailyQuotaStatus(getDailyAudioUsage());
     } finally {
       setIsGeneratingAiAudio(false);
     }
@@ -2632,217 +2677,193 @@ export default function AdminPage() {
 
             {/* TAB 0: Gemini AI Studio Audio */}
             {audioUploadTab === 'ai' && (
-              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ background: 'var(--bg-surface)', padding: '14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                    <Mic size={18} style={{ color: 'var(--gold)' }} />
-                    <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-title)' }}>
-                      توليد قراءة استوديو بشرية بنموذج Gemini 2.5 TTS
-                    </h4>
-                  </div>
-                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-                    يقوم النموذج بقراءة نص الحلقة بأسلوب راوٍ عربي ذي نطق سليم بمخارج حروف منضبطة وتوقفات طبيعية، ويتم حفظ التسجيل في قاعدة البيانات ليسمعه الزوار في مشغل الاستوديو فوراً.
-                  </p>
-                </div>
-
-                {/* Intelligent Dialect & Pronunciation Analysis Card */}
-                {detectedDialectInfo && (
-                  <div
-                    style={{
-                      background: 'rgba(212, 175, 55, 0.07)',
-                      border: '1px solid rgba(212, 175, 55, 0.28)',
-                      borderRadius: 'var(--radius-sm)',
-                      padding: '12px 14px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '10px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Compass size={17} style={{ color: 'var(--gold)' }} />
-                        <strong style={{ fontSize: '0.86rem', color: 'var(--text-title)' }}>
-                          تحليل الأسلوب اللغوي وطريقة النطق
+              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {/* Daily Quota Status Banner */}
+                <div
+                  style={{
+                    background: 'rgba(212, 175, 55, 0.08)',
+                    border: '1px solid rgba(212, 175, 55, 0.28)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '12px 14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '10px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                      style={{
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '50%',
+                        background: dailyQuotaStatus.remaining > 0 ? 'rgba(34, 197, 94, 0.16)' : 'rgba(239, 68, 68, 0.16)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: dailyQuotaStatus.remaining > 0 ? '#22c55e' : '#ef4444',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Mic size={17} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-title)' }}>
+                        الحصة اليومية المجانية: {dailyQuotaStatus.maxLimit} طلبات يومياً
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                        المستخدم اليوم:{' '}
+                        <strong style={{ color: 'var(--gold)' }}>{dailyQuotaStatus.count}</strong> من{' '}
+                        {dailyQuotaStatus.maxLimit} | المتبقي اليوم:{' '}
+                        <strong
+                          style={{
+                            color: dailyQuotaStatus.remaining > 0 ? '#22c55e' : '#ef4444',
+                          }}
+                        >
+                          {dailyQuotaStatus.remaining} طلبات
                         </strong>
                       </div>
-                      <span
-                        style={{
-                          fontSize: '0.74rem',
-                          fontWeight: 700,
-                          padding: '3px 9px',
-                          borderRadius: '6px',
-                          background: detectedDialectInfo.badgeColor,
-                          color: '#000',
-                          boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
-                        }}
-                      >
-                        {detectedDialectInfo.label}
-                      </span>
                     </div>
+                  </div>
 
-                    <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-body)', lineHeight: '1.55' }}>
-                      {detectedDialectInfo.description}
-                    </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKeySettings(!showApiKeySettings)}
+                    className="inline-text-btn"
+                    style={{ fontSize: '0.75rem', color: 'var(--gold)', textDecoration: 'underline' }}
+                  >
+                    {showApiKeySettings ? 'إخفاء المفتاح' : 'مفتاح API إضافي ⚙️'}
+                  </button>
+                </div>
 
-                    {/* Dialect Selector Buttons */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>تحديد أسلوب النطق:</span>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedDialect('egyptian')}
-                        style={{
-                          padding: '5px 11px',
-                          borderRadius: '6px',
-                          fontSize: '0.76rem',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          border: selectedDialect === 'egyptian' ? '1px solid var(--gold)' : '1px solid var(--border-light)',
-                          background: selectedDialect === 'egyptian' ? 'var(--gold)' : 'var(--bg-base)',
-                          color: selectedDialect === 'egyptian' ? '#000' : 'var(--text-body)',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        🇪🇬 لهجة مصرية قصصية
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedDialect('fusha')}
-                        style={{
-                          padding: '5px 11px',
-                          borderRadius: '6px',
-                          fontSize: '0.76rem',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          border: selectedDialect === 'fusha' ? '1px solid var(--gold)' : '1px solid var(--border-light)',
-                          background: selectedDialect === 'fusha' ? 'var(--gold)' : 'var(--bg-base)',
-                          color: selectedDialect === 'fusha' ? '#000' : 'var(--text-body)',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        📖 عربية فصحى وقورة
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedDialect('mixed')}
-                        style={{
-                          padding: '5px 11px',
-                          borderRadius: '6px',
-                          fontSize: '0.76rem',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          border: selectedDialect === 'mixed' ? '1px solid var(--gold)' : '1px solid var(--border-light)',
-                          background: selectedDialect === 'mixed' ? 'var(--gold)' : 'var(--bg-base)',
-                          color: selectedDialect === 'mixed' ? '#000' : 'var(--text-body)',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        ⚖️ أسلوب متوازن
-                      </button>
-                    </div>
-
-                    {/* Detected Keyword Badges */}
-                    {detectedDialectInfo.egyptianKeywordsFound.length > 0 && selectedDialect === 'egyptian' && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>مفردات تم رصدها بالنص:</span>
-                        {detectedDialectInfo.egyptianKeywordsFound.slice(0, 8).map((kw, i) => (
-                          <span
-                            key={i}
-                            style={{
-                              fontSize: '0.7rem',
-                              background: 'rgba(234, 179, 8, 0.18)',
-                              color: 'var(--gold)',
-                              padding: '1px 7px',
-                              borderRadius: '4px',
-                            }}
-                          >
-                            {kw}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                {/* Optional API Key Input */}
+                {showApiKeySettings && (
+                  <div
+                    style={{
+                      background: 'var(--bg-base)',
+                      padding: '10px 14px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-light)',
+                    }}
+                  >
+                    <label className="form-label" style={{ fontSize: '0.76rem', marginBottom: '4px' }}>
+                      مفتاح Gemini API مخصص (في حال نفاد حصة المفتاح الافتراضي):
+                    </label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="أدخل مفتاح Google AI Studio الخاص بك..."
+                      value={geminiApiKeyInput}
+                      onChange={(e) => setGeminiApiKeyInput(e.target.value)}
+                      style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+                    />
                   </div>
                 )}
 
-                {/* Voice Selection */}
-                <div>
-                  <label className="form-label" style={{ marginBottom: '8px' }}>
-                    اختر شخصية القارئ ونبرة الإلقاء:
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '8px' }}>
-                    {GEMINI_VOICES.map((v) => (
-                      <div
-                        key={v.id}
-                        onClick={() => setSelectedGeminiVoice(v.id)}
-                        style={{
-                          padding: '11px 13px',
-                          borderRadius: 'var(--radius-sm)',
-                          border: `1px solid ${selectedGeminiVoice === v.id ? 'var(--gold)' : 'var(--border-light)'}`,
-                          background: selectedGeminiVoice === v.id ? 'rgba(212, 175, 55, 0.12)' : 'var(--bg-base)',
-                          cursor: 'pointer',
-                          transition: 'all 0.18s ease',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontWeight: 700, fontSize: '0.86rem', color: selectedGeminiVoice === v.id ? 'var(--gold)' : 'var(--text-title)' }}>
-                              {v.arabicName}
-                            </span>
-                            {v.recommended && (
-                              <span style={{ fontSize: '0.66rem', padding: '1px 5px', borderRadius: '4px', background: 'rgba(212, 175, 55, 0.22)', color: 'var(--gold)', fontWeight: 600 }}>
-                                موصى به 🌟
-                              </span>
-                            )}
-                          </div>
-                          {selectedGeminiVoice === v.id && <Check size={14} style={{ color: 'var(--gold)' }} />}
-                        </div>
-                        <p style={{ margin: 0, fontSize: '0.73rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
-                          {v.description}
-                        </p>
-                      </div>
-                    ))}
+                {/* Narrator Banner */}
+                <div
+                  style={{
+                    background: 'var(--bg-surface)',
+                    padding: '12px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border-light)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <Sparkles size={17} style={{ color: 'var(--gold)' }} />
+                    <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-title)' }}>
+                      قراءة استوديو بصوت {DEFAULT_VOICE_NAME} (الذكاء الاصطناعي Gemini)
+                    </h4>
                   </div>
-                </div>
-
-                {/* Text Excerpt Preview */}
-                <div style={{ background: 'var(--bg-base)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>مقتطف نص الحلقة:</span>
-                  <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'var(--text-body)', maxHeight: '70px', overflowY: 'auto', lineHeight: '1.6' }}>
-                    {cleanHtmlForSpeech(audioTargetEpisode.html).slice(0, 220)}...
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
+                    الأولوية المطلقة للفصحى الوقورة، مع نطق سياقي ذكي للكلمات بالعامية المصرية الخفيفة، وتلاوة الآيات والأحاديث بخشوع تام.
                   </p>
                 </div>
+
+                {/* Optional Custom Instructions Field */}
+                {!isGeneratingAiAudio && !aiGeneratedResult && (
+                  <div>
+                    <label
+                      className="form-label"
+                      style={{ marginBottom: '6px', fontSize: '0.8rem', color: 'var(--text-title)' }}
+                    >
+                      توجيهات إضافية للنطق والأداء (اختياري):
+                    </label>
+                    <textarea
+                      className="form-textarea"
+                      rows={2}
+                      style={{ minHeight: '62px', fontSize: '0.82rem', padding: '8px 12px' }}
+                      placeholder="اكتب أي ملاحظة تريد أن يراعيها الراوي يوسف (مثال: اجعل النبرة حزينة ومؤثرة في البداية، تمهل عند ذكر الأحداث...)"
+                      value={customAudioInstructions}
+                      onChange={(e) => setCustomAudioInstructions(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {/* Text Excerpt Preview */}
+                {!isGeneratingAiAudio && !aiGeneratedResult && (
+                  <div
+                    style={{
+                      background: 'var(--bg-base)',
+                      padding: '10px 14px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-light)',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>مقتطف نص الحلقة:</span>
+                    <p
+                      style={{
+                        margin: '4px 0 0',
+                        fontSize: '0.82rem',
+                        color: 'var(--text-body)',
+                        maxHeight: '65px',
+                        overflowY: 'auto',
+                        lineHeight: '1.6',
+                      }}
+                    >
+                      {cleanHtmlForSpeech(audioTargetEpisode.html).slice(0, 240)}...
+                    </p>
+                  </div>
+                )}
 
                 {/* Action Button */}
                 {!isGeneratingAiAudio && !aiGeneratedResult && (
                   <button
                     type="button"
                     className="btn-gold"
-                    style={{ width: '100%', padding: '12px' }}
+                    style={{ width: '100%', padding: '12px', fontSize: '0.92rem', fontWeight: 700 }}
                     onClick={handleGenerateAiAudio}
                   >
-                    <Sparkles size={18} />
+                    <Mic size={18} />
                     <span>توليد التسجيل الصوتي للحلقة الآن</span>
                   </button>
                 )}
 
-                {/* Progress Status */}
+                {/* Modern Dynamic Studio Loading & Progress Bar */}
                 {isGeneratingAiAudio && (
-                  <div className="compression-progress-box">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                      <RefreshCw className="animate-spin" size={16} style={{ color: 'var(--gold)' }} />
-                      <span style={{ fontSize: '0.84rem', color: 'var(--gold)' }}>
-                        {aiGenerationProgress?.statusText || 'جارٍ التواصل مع نموذج Gemini الصوتي وتوليد التسجيل...'}
-                      </span>
+                  <div className="studio-ai-progress-card">
+                    <div className="studio-pulse-icon-wrap">
+                      <div className="studio-pulse-ring"></div>
+                      <Mic size={28} style={{ color: 'var(--gold)' }} />
                     </div>
-                    {aiGenerationProgress && (
-                      <div className="progress-track">
-                        <div
-                          className="progress-fill"
-                          style={{
-                            width: `${Math.round((aiGenerationProgress.currentChunk / aiGenerationProgress.totalChunks) * 100)}%`,
-                          }}
-                        />
-                      </div>
-                    )}
+
+                    <div className="studio-progress-pct">{simulatedProgress}%</div>
+
+                    <div className="studio-progress-phrase">
+                      {simulatedPhrase || '🎙️ جارٍ استدعاء الراوي وضبط النبرة...'}
+                    </div>
+
+                    <div className="studio-progress-track">
+                      <div
+                        className="studio-progress-bar"
+                        style={{ width: `${simulatedProgress}%` }}
+                      />
+                    </div>
+
+                    <div className="studio-progress-hint">
+                      يستغرق التوليد الاستوديو حوالي 15-25 ثانية لإنتاج مقطع صوتي نقي متصل.
+                    </div>
                   </div>
                 )}
 
