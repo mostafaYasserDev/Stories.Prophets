@@ -23,6 +23,8 @@ import {
   Eye,
   EyeOff,
   BookOpen,
+  BookMarked,
+  ExternalLink,
   ChevronDown,
 } from 'lucide-react';
 
@@ -712,6 +714,24 @@ export default function HomePage() {
                     <span>العبر والفوائد {currentEpisode.moralLesson ? '✨' : ''}</span>
                   </button>
 
+                  {/* Sources & References Toolbar Button */}
+                  {currentEpisode.sources && currentEpisode.sources.length > 0 && (
+                    <button
+                      type="button"
+                      className="tool-btn"
+                      onClick={() => {
+                        const el = document.querySelector('.episode-sources-card');
+                        if (el) {
+                          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                      }}
+                      title="الانتقال إلى المصادر والمراجع المعتمدة للحلقة"
+                    >
+                      <BookOpen size={16} style={{ color: 'var(--gold)' }} />
+                      <span>المراجع ({currentEpisode.sources.length})</span>
+                    </button>
+                  )}
+
                   {/* Bookmark Button */}
                   <button
                     type="button"
@@ -762,6 +782,88 @@ export default function HomePage() {
                   dangerouslySetInnerHTML={{ __html: formattedHtml }}
                 />
               </div>
+
+              {/* Documented Sources & References Card */}
+              {currentEpisode.sources && currentEpisode.sources.length > 0 && (
+                <section className="episode-sources-card">
+                  <div className="sources-card-header">
+                    <div className="sources-header-left">
+                      <div className="sources-icon-wrap">
+                        <BookMarked size={20} />
+                      </div>
+                      <div className="sources-titles">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <h3 className="sources-title">المصادر والمراجع المعتمدة</h3>
+                          <span className="sources-count-badge">
+                            {currentEpisode.sources.length} {currentEpisode.sources.length === 1 ? 'مرجع موثق' : 'مراجع موثقة'}
+                          </span>
+                        </div>
+                        <p className="sources-subtitle">
+                          توثيق تاريخي وإسناد علمي لروايات وأحداث هذه الحلقة المباركة
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="sources-header-right">
+                      <button
+                        type="button"
+                        className="tool-btn"
+                        style={{ fontSize: '0.8rem', padding: '6px 14px' }}
+                        onClick={() => {
+                          const allSourcesText = (currentEpisode.sources || [])
+                            .map((s, idx) => `${idx + 1}. ${s}`)
+                            .join('\n');
+                          const copyPayload = `مصادر ومراجع حلقة: «${currentEpisode.title}»\nمن قصص الأنبياء وسير الرسول ﷺ:\n\n${allSourcesText}`;
+                          navigator.clipboard.writeText(copyPayload).then(() => {
+                            triggerToast('تم نسخ قائمة المصادر والمراجع للحافظة بنجاح! 📚', 'success');
+                          });
+                        }}
+                        title="نسخ جميع المراجع للحافظة"
+                      >
+                        <Copy size={15} />
+                        <span>نسخ المراجع</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="sources-list-wrap">
+                    <ol className="sources-list">
+                      {currentEpisode.sources.map((sourceItem, sIdx) => {
+                        const urlRegex = /(https?:\/\/[^\s]+)/g;
+                        const parts = sourceItem.split(urlRegex);
+
+                        return (
+                          <li key={sIdx} className="source-list-item">
+                            <span className="source-num-pill">
+                              {String(sIdx + 1).padStart(2, '0')}
+                            </span>
+                            <div className="source-content-text">
+                              {parts.map((part, pIdx) => {
+                                if (part.match(urlRegex)) {
+                                  return (
+                                    <a
+                                      key={pIdx}
+                                      href={part}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="source-external-link"
+                                      title="فتح الرابط المرجعي في نافذة جديدة"
+                                    >
+                                      <span>{part}</span>
+                                      <ExternalLink size={12} />
+                                    </a>
+                                  );
+                                }
+                                return <span key={pIdx}>{part}</span>;
+                              })}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </div>
+                </section>
+              )}
 
               {/* Collapsible Moral Lessons Accordion Section */}
               {currentEpisode.moralLesson && (

@@ -27,6 +27,7 @@ export interface Episode {
   audioChunksCount?: number;
   audioSourceType?: 'ai' | 'upload' | 'url' | null;
   moralLesson?: string | null;
+  sources?: string[] | null; // Episode references and sources
   isPinned?: boolean; // Pinned episode to highlight in index
   createdAt?: FirestoreTimestamp | any;
   updatedAt?: FirestoreTimestamp | any;

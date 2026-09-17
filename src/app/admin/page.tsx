@@ -40,6 +40,7 @@ import {
   Mic,
   Compass,
   Languages,
+  BookOpen,
 } from 'lucide-react';
 
 import { Episode, Series, GlobalAudio, SiteSettings, ThemeType } from '@/types';
@@ -168,6 +169,7 @@ export default function AdminPage() {
   const [formTitle, setFormTitle] = useState<string>('');
   const [formSubtitle, setFormSubtitle] = useState<string>('');
   const [formContent, setFormContent] = useState<string>('');
+  const [formSources, setFormSources] = useState<string>('');
   const [formIsPinned, setFormIsPinned] = useState<boolean>(false);
   const [isSavingEpisode, setIsSavingEpisode] = useState<boolean>(false);
   const [episodeFormErrors, setEpisodeFormErrors] = useState<{
@@ -633,6 +635,7 @@ export default function AdminPage() {
     setFormSubtitle(`الحلقة ${String(episodes.length + 1).padStart(3, '0')}`);
     setFormContent('');
     setFormMoralLesson('');
+    setFormSources('');
     setFormIsPinned(false);
     setIsEpisodeModalOpen(true);
   };
@@ -647,6 +650,10 @@ export default function AdminPage() {
     const plain = (ep.html || '').replace(/<p>/gi, '').replace(/<\/p>/gi, '\n\n').trim();
     setFormContent(plain);
     setFormMoralLesson(ep.moralLesson || '');
+    const sourcesText = Array.isArray(ep.sources)
+      ? ep.sources.join('\n')
+      : (ep.sources || '');
+    setFormSources(sourcesText);
     setFormIsPinned(!!ep.isPinned);
     setIsEpisodeModalOpen(true);
   };
@@ -672,6 +679,11 @@ export default function AdminPage() {
       .map((p) => `<p>${p.trim().replace(/\n/g, '<br>')}</p>`)
       .join('\n');
 
+    const parsedSources = formSources
+      .split('\n')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
     // Find matching series id if exists
     const matchingSeries = seriesList.find(
       (s) => normalizeArabicText(s.title) === normalizeArabicText(formEra.trim())
@@ -687,6 +699,7 @@ export default function AdminPage() {
           subtitle: formSubtitle.trim(),
           html: formattedHtml,
           moralLesson: formMoralLesson.trim() || null,
+          sources: parsedSources.length > 0 ? parsedSources : null,
           isPinned: formIsPinned,
           updatedAt: serverTimestamp(),
         });
@@ -700,6 +713,7 @@ export default function AdminPage() {
           subtitle: formSubtitle.trim(),
           html: formattedHtml,
           moralLesson: formMoralLesson.trim() || null,
+          sources: parsedSources.length > 0 ? parsedSources : null,
           audioUrl: null,
           isPinned: formIsPinned,
           createdAt: serverTimestamp(),
@@ -1828,9 +1842,22 @@ export default function AdminPage() {
                             </td>
                             <td>
                               <div className="title-cell">
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                   <strong className="ep-title-text">{ep.title}</strong>
                                   {ep.isPinned && <span className="pin-tiny-badge">مثبتة 📌</span>}
+                                  {ep.sources && ep.sources.length > 0 && (
+                                    <span
+                                      className="pin-tiny-badge"
+                                      style={{
+                                        background: 'rgba(59, 130, 246, 0.15)',
+                                        color: '#60a5fa',
+                                        borderColor: 'rgba(59, 130, 246, 0.35)',
+                                      }}
+                                      title={`تحتوي على ${ep.sources.length} مراجع ومصادر موثقة`}
+                                    >
+                                      📚 {ep.sources.length} مراجع
+                                    </span>
+                                  )}
                                 </div>
                                 <span className="ep-subtitle-text">{ep.subtitle || '—'}</span>
                               </div>
@@ -2748,6 +2775,105 @@ export default function AdminPage() {
                   value={formMoralLesson}
                   onChange={(e) => setFormMoralLesson(e.target.value)}
                 />
+              </div>
+
+              {/* 6. Episode Sources & References */}
+              <div className="form-group" style={{ marginTop: '14px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '8px',
+                    flexWrap: 'wrap',
+                    gap: '8px',
+                  }}
+                >
+                  <label
+                    className="form-label"
+                    style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <BookOpen size={16} className="gold-text" />
+                    <span>مراجع ومصادر الحلقة (اختياري)</span>
+                  </label>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {formSources.split('\n').filter((s) => s.trim().length > 0).length > 0 && (
+                      <span
+                        style={{
+                          fontSize: '0.76rem',
+                          color: '#60a5fa',
+                          background: 'rgba(59, 130, 246, 0.12)',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                        }}
+                      >
+                        {formSources.split('\n').filter((s) => s.trim().length > 0).length} مراجع مسجلة
+                      </span>
+                    )}
+                    {formSources.trim() && (
+                      <button
+                        type="button"
+                        className="inline-text-btn"
+                        style={{
+                          fontSize: '0.74rem',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          background: 'transparent',
+                          border: 'none',
+                        }}
+                        onClick={() => setFormSources('')}
+                        title="مسح كافة المراجع"
+                      >
+                        مسح الكل
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <textarea
+                  className="form-textarea"
+                  rows={3}
+                  style={{ minHeight: '85px', fontSize: '0.88rem', lineHeight: '1.65' }}
+                  placeholder={`اكتب كل مصدر أو مرجع في سطر مستقل، مثال:\nالبداية والنهاية - الحافظ ابن كثير (الجزء الثاني)\nصحيح البخاري - كتاب أحاديث الأنبياء (حديث رقم 3326)\nالسيرة النبوية لابن هشام`}
+                  value={formSources}
+                  onChange={(e) => setFormSources(e.target.value)}
+                />
+                <p className="field-hint" style={{ marginTop: '5px', fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                  💡 اكتب كل كتاب أو مرجع أو رابط في سطر منفصل؛ سيتم تنسيقها تلقائياً كقائمة مراجع توثيقية إسلامية تحت القصة.
+                </p>
+
+                {/* Live preview of sources */}
+                {formSources.split('\n').filter((s) => s.trim()).length > 0 && (
+                  <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {formSources
+                      .split('\n')
+                      .map((s) => s.trim())
+                      .filter(Boolean)
+                      .map((srcItem, idx) => (
+                        <span
+                          key={idx}
+                          style={{
+                            fontSize: '0.76rem',
+                            background: 'var(--bg-surface)',
+                            border: '1px solid var(--border-gold-subtle)',
+                            borderRadius: '6px',
+                            padding: '3px 8px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            color: 'var(--text-main)',
+                          }}
+                        >
+                          <span style={{ color: 'var(--gold)', fontWeight: 'bold' }}>#{idx + 1}</span>
+                          <span style={{ maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {srcItem}
+                          </span>
+                        </span>
+                      ))}
+                  </div>
+                )}
               </div>
 
               <div className="modal-actions">
