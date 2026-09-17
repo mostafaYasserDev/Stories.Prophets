@@ -3619,19 +3619,14 @@ export default function AdminPage() {
               <div className="form-group" style={{ margin: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <label className="form-label" style={{ margin: 0, fontSize: '0.84rem' }}>
-                    نص العبر والفوائد الإيمانية (يمكنك تعديله وصياغته بحرية قبل الحفظ):
+                    نص العبر والفوائد الإيمانية (يمكنك تعديلها وإضافة ما تشاء بحرية تامة دون أي حد للأحرف):
                   </label>
-                  {moralLessonInput && (
-                    <span style={{ fontSize: '0.74rem', color: 'var(--gold)' }}>
-                      {moralLessonInput.length} حرف
-                    </span>
-                  )}
                 </div>
                 <textarea
                   className="form-textarea"
-                  rows={8}
-                  style={{ minHeight: '190px', fontSize: '0.92rem', lineHeight: '1.8' }}
-                  placeholder="اضغط على زر الاستخلاص بالأعلى، أو اكتب العبر والفوائد الإيمانية الخاصة بالحلقة هنا..."
+                  rows={11}
+                  style={{ minHeight: '260px', fontSize: '0.92rem', lineHeight: '1.85' }}
+                  placeholder="اضغط على زر الاستخلاص بالأعلى ليقوم الذكاء الاصطناعي باستخراج العبر كاملة، أو اكتب ما تشاء بحرية هنا..."
                   value={moralLessonInput}
                   onChange={(e) => setMoralLessonInput(e.target.value)}
                 />

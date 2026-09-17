@@ -3840,3 +3840,27 @@ body.focus-mode .reading-card {
   border-radius: 0 6px 6px 0;
 }
 
+.moral-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(200, 155, 60, 0.12);
+  border: 1px solid rgba(200, 155, 60, 0.35);
+  color: var(--gold);
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-bottom: 6px;
+  letter-spacing: 0.02em;
+}
+
+.moral-ai-footer-note {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(200, 155, 60, 0.2);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+

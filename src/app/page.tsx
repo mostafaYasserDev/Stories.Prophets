@@ -6,8 +6,6 @@ import {
   Feather,
   Clock,
   Hash,
-  Volume2,
-  Bot,
   Bookmark,
   Share2,
   Sparkles,
@@ -43,13 +41,11 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { resolveGlobalAudioUrl } from '@/lib/audioStorage';
-import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { AudioWidget } from '@/components/AudioWidget';
 import { Reflections } from '@/components/Reflections';
-import { TtsFloatingBar } from '@/components/TtsFloatingBar';
 import { Toast, ToastMessage } from '@/components/Toast';
 
 export default function HomePage() {
@@ -83,9 +79,6 @@ export default function HomePage() {
 
   // Modals State
   const [isGeminiModalOpen, setIsGeminiModalOpen] = useState<boolean>(false);
-
-  // Advanced TTS State
-  const [isTtsBarVisible, setIsTtsBarVisible] = useState<boolean>(false);
 
   // Touch Swipe Gesture State
   const touchStartCoords = useRef<{ x: number; y: number } | null>(null);
@@ -352,43 +345,12 @@ export default function HomePage() {
     return episodes[safeIndex];
   }, [episodes, currentIndex]);
 
-  // Advanced TTS Hook
-  const tts = useTextToSpeech({
-    onSentenceChange: (idx) => {
-      document.querySelectorAll('.tts-highlight').forEach((el) => el.classList.remove('tts-highlight'));
-      const targetEl = document.getElementById(`tts-sentence-${idx}`);
-      if (targetEl) {
-        targetEl.classList.add('tts-highlight');
-        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    },
-    onEnd: () => {
-      document.querySelectorAll('.tts-highlight').forEach((el) => el.classList.remove('tts-highlight'));
-      triggerToast('اكتملت قراءة نص الحلقة المباركة بحمد الله 🤲', 'success');
-    },
-  });
-
-  // Preload sentences when current episode changes
-  useEffect(() => {
-    if (!currentEpisode) return;
-    const plain = currentEpisode.html.replace(/<[^>]+>/g, ' ').trim();
-    tts.loadText(plain);
-    // Clear existing highlight classes
-    document.querySelectorAll('.tts-highlight').forEach((el) => el.classList.remove('tts-highlight'));
-  }, [currentEpisode]);
-
-  // Pause TTS if any HTML5 audio starts
-  const handleOtherAudioPlay = useCallback(() => {
-    if (tts.isPlaying) {
-      tts.pause();
-    }
-  }, [tts]);
+  // Coordinated Audio Playback Handler
+  const handleOtherAudioPlay = useCallback(() => {}, []);
 
   // Navigate to Episode with URL sync
   const goToEpisode = (index: number) => {
     if (index < 0 || index >= episodes.length) return;
-    tts.stop();
-    setIsTtsBarVisible(false);
     setCurrentIndex(index);
     setLastReadIndex(index);
     localStorage.setItem('seerah_last_index', String(index));
@@ -408,26 +370,6 @@ export default function HomePage() {
     }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Toggle TTS Playback
-  const toggleTtsReader = () => {
-    if (!tts.isSupported) {
-      triggerToast('المتصفح الحالي لا يدعم ميزة تحويل النص إلى صوت (SpeechSynthesis).', 'error');
-      return;
-    }
-
-    if (tts.isPlaying && !tts.isPaused) {
-      tts.pause();
-    } else if (tts.isPaused) {
-      tts.resume();
-      setIsTtsBarVisible(true);
-    } else {
-      const plain = currentEpisode?.html.replace(/<[^>]+>/g, ' ').trim() || '';
-      tts.play(plain);
-      setIsTtsBarVisible(true);
-      triggerToast('بدأ القارئ الآلي الذكي في تلاوة نص الحلقة 🎧', 'info');
-    }
   };
 
   // Bookmark Toggle
@@ -571,17 +513,8 @@ export default function HomePage() {
       return match;
     });
 
-    // Wrap sentences with TTS tracking spans if sentences are loaded
-    if (tts.sentences && tts.sentences.length > 0) {
-      tts.sentences.forEach((sentence, idx) => {
-        const escaped = sentence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(`(${escaped})`, '');
-        html = html.replace(regex, `<span id="tts-sentence-${idx}" class="tts-sentence">$1</span>`);
-      });
-    }
-
     return html;
-  }, [currentEpisode, tts.sentences]);
+  }, [currentEpisode]);
 
   // Deep direct URL and Share formatting
   const episodeDirectUrl = useMemo(() => {
@@ -716,8 +649,8 @@ export default function HomePage() {
               {/* Reader Controls Toolbar */}
               <div className="reader-toolbar">
                 <div className="toolbar-group">
-                  {/* Audio Playback Trigger (Studio Audio if available, else TTS) */}
-                  {currentEpisode.audioUrl ? (
+                  {/* Episode Audio Button */}
+                  {currentEpisode.audioUrl && (
                     <button
                       type="button"
                       className="tool-btn accent"
@@ -727,27 +660,10 @@ export default function HomePage() {
                           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         }
                       }}
-                      title="الانتقال لمشغل التسجيل الصوتي البشري"
+                      title="الانتقال لمشغل التسجيل الصوتي للحلقة"
                     >
                       <Headphones size={16} />
-                      <span>استماع استوديو (AI)</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className={`tool-btn ${isTtsBarVisible && tts.isPlaying ? 'active' : 'accent'}`}
-                      onClick={toggleTtsReader}
-                      title="استماع صوتي آلي للنص"
-                    >
-                      <Volume2
-                        size={16}
-                        className={isTtsBarVisible && tts.isPlaying && !tts.isPaused ? 'animate-pulse' : ''}
-                      />
-                      <span>
-                        {isTtsBarVisible && tts.isPlaying && !tts.isPaused
-                          ? 'إيقاف القارئ'
-                          : 'استماع آلي (TTS)'}
-                      </span>
+                      <span>الاستماع للحلقة</span>
                     </button>
                   )}
 
@@ -813,7 +729,7 @@ export default function HomePage() {
                 />
               </div>
 
-              {/* Moral Lessons & Reflections Section (Rendered directly when available) */}
+              {/* Moral Lessons & Reflections Section (Extracted via AI) */}
               {currentEpisode.moralLesson && (
                 <section className="moral-lessons-container">
                   <div className="moral-lessons-header">
@@ -821,8 +737,11 @@ export default function HomePage() {
                       <Sparkles size={20} />
                     </div>
                     <div>
+                      <div className="moral-ai-badge">✨ مستخلصة بواسطة الذكاء الاصطناعي (AI)</div>
                       <h3 className="moral-lessons-title">العبر والفوائد الإيمانية المستخلصة</h3>
-                      <p className="moral-lessons-subtitle">وقفات تربوية وتأملات في هدي النبي ﷺ ومواقف الحلقة</p>
+                      <p className="moral-lessons-subtitle">
+                        وقفات تربوية وتأملات استخلصها الذكاء الاصطناعي من أحداث الحلقة للتدبر والعمل بهدي النبي ﷺ
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -852,6 +771,10 @@ export default function HomePage() {
                           </p>
                         );
                       })}
+                  </div>
+
+                  <div className="moral-ai-footer-note">
+                    <span>💡 <strong>تنبيه للمتدبر:</strong> تم استنباط هذه الدروس والعبر وصياغتها استناداً لأحداث ومواقف الحلقة بواسطة الذكاء الاصطناعي (AI) لمساعدة القارئ على الاستفادة والتطبيق العملي.</span>
                   </div>
                 </section>
               )}
@@ -1018,42 +941,7 @@ export default function HomePage() {
         </main>
       </div>
 
-      {/* Floating TTS Bar */}
-      {isTtsBarVisible && (
-        <TtsFloatingBar
-          isPlaying={tts.isPlaying}
-          isPaused={tts.isPaused}
-          currentSentenceIndex={tts.currentSentenceIndex}
-          totalSentences={tts.totalSentences}
-          rate={tts.rate}
-          voices={tts.availableVoices}
-          selectedVoiceId={tts.selectedVoiceId}
-          onPlayPause={() => {
-            if (tts.isPlaying && !tts.isPaused) {
-              tts.pause();
-            } else if (tts.isPaused) {
-              tts.resume();
-            } else {
-              const plain = currentEpisode?.html.replace(/<[^>]+>/g, ' ').trim() || '';
-              tts.play(plain);
-            }
-          }}
-          onStop={() => {
-            tts.stop();
-            setIsTtsBarVisible(false);
-            document.querySelectorAll('.tts-highlight').forEach((el) => el.classList.remove('tts-highlight'));
-          }}
-          onNext={tts.nextSentence}
-          onPrev={tts.prevSentence}
-          onSetRate={tts.setRate}
-          onSetVoice={tts.setVoice}
-          onClose={() => {
-            tts.stop();
-            setIsTtsBarVisible(false);
-            document.querySelectorAll('.tts-highlight').forEach((el) => el.classList.remove('tts-highlight'));
-          }}
-        />
-      )}
+
 
       {/* Mobile Bottom Navigation Bar */}
       <nav className="mobile-bottom-bar">
@@ -1119,6 +1007,7 @@ export default function HomePage() {
                   <Sparkles size={20} />
                 </div>
                 <div>
+                  <div className="moral-ai-badge" style={{ marginBottom: '2px' }}>✨ مستخلصة بواسطة الذكاء الاصطناعي (AI)</div>
                   <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-title)' }}>
                     العبر والفوائد الإيمانية المستخلصة
                   </h3>
@@ -1139,7 +1028,7 @@ export default function HomePage() {
             {currentEpisode.moralLesson ? (
               <>
                 <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: '1.7' }}>
-                  تأملات تربوية وعبر إيمانية تم استخلاصها بعناية في هدي النبي ﷺ ومواقف هذه الحلقة المباركة:
+                  تأملات تربوية وعبر إيمانية تم استخلاصها وصياغتها بواسطة <strong>الذكاء الاصطناعي (AI)</strong> استناداً لأحداث ومواقف هذه الحلقة المباركة:
                 </p>
 
                 <div className="moral-modal-quote-box">

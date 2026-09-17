@@ -112,7 +112,7 @@ export const Reflections: React.FC<ReflectionsProps> = ({ episodeId, onToast }) 
         await updateDoc(doc(db, 'reflections', reflection.id), {
           likesCount: increment(-1),
         });
-      } catch (e) {}
+      } catch (e) { }
     } else {
       updated.add(reflection.id);
       setLikedIds(updated);
@@ -121,7 +121,7 @@ export const Reflections: React.FC<ReflectionsProps> = ({ episodeId, onToast }) 
         await updateDoc(doc(db, 'reflections', reflection.id), {
           likesCount: increment(1),
         });
-      } catch (e) {}
+      } catch (e) { }
     }
   };
 
