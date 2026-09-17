@@ -37,6 +37,7 @@ import {
   Sliders,
   BookmarkCheck,
   CheckCircle2,
+  Mic,
 } from 'lucide-react';
 
 import { Episode, Series, GlobalAudio, SiteSettings, ThemeType } from '@/types';
@@ -1535,10 +1536,10 @@ export default function AdminPage() {
                         <th style={{ width: '60px', textAlign: 'center' }}>تثبيت</th>
                         <th style={{ width: '190px' }}>السلسلة / التصنيف</th>
                         <th>عنوان الحلقة</th>
-                        <th style={{ width: '180px' }}>المقطع الصوتي</th>
+                        <th style={{ width: '210px' }}>🎙️ التسجيل الصوتي (AI)</th>
                         <th style={{ width: '90px' }}>الكلمات</th>
                         <th style={{ width: '100px', textAlign: 'center' }}>الترتيب</th>
-                        <th style={{ width: '120px', textAlign: 'center' }}>الإجراءات</th>
+                        <th style={{ width: '130px', textAlign: 'center' }}>الإجراءات</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1578,7 +1579,7 @@ export default function AdminPage() {
                             </td>
                             <td>
                               {hasAudio ? (
-                                <div className="audio-cell-active">
+                                <div className="audio-cell-active" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <button
                                     className={`audio-play-mini-btn ${isAudioPlaying ? 'playing' : ''}`}
                                     onClick={() => togglePlayPreview(ep)}
@@ -1589,18 +1590,35 @@ export default function AdminPage() {
                                   <button
                                     className="audio-link-tag"
                                     onClick={() => handleOpenAudioModal(ep)}
-                                    title="تعديل أو استبدال الصوت"
+                                    title="إدارة أو إعادة توليد الصوت"
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                                   >
-                                    <span>{isBase64 ? 'مضغوط Base64 ✓' : 'رابط خارجي ✓'}</span>
+                                    <Mic size={12} style={{ color: 'var(--gold)' }} />
+                                    <span>{isBase64 ? 'صوت استوديو ✓' : 'رابط خارجي ✓'}</span>
                                   </button>
                                 </div>
                               ) : (
                                 <button
                                   className="audio-add-prompt-btn"
                                   onClick={() => handleOpenAudioModal(ep)}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    background: 'linear-gradient(135deg, rgba(200, 155, 60, 0.16), rgba(200, 155, 60, 0.06))',
+                                    border: '1px solid rgba(200, 155, 60, 0.4)',
+                                    color: 'var(--gold)',
+                                    fontWeight: 600,
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.82rem',
+                                    transition: 'all 0.2s ease',
+                                  }}
+                                  title="🎙️ توليد صوت بشري بالذكاء الاصطناعي (Gemini) أو رفع ملف"
                                 >
-                                  <UploadCloud size={13} />
-                                  <span>رفع صوت مضغوط</span>
+                                  <Mic size={14} style={{ color: 'var(--gold)' }} />
+                                  <span>🎙️ توليد صوت (AI)</span>
                                 </button>
                               )}
                             </td>
@@ -1629,6 +1647,14 @@ export default function AdminPage() {
                             </td>
                             <td>
                               <div className="actions-cell">
+                                <button
+                                  className="action-icon-btn"
+                                  onClick={() => handleOpenAudioModal(ep)}
+                                  title="🎙️ توليد تسجيل صوتي بالذكاء الاصطناعي (Gemini) أو إدارة الصوت"
+                                  style={{ color: hasAudio ? 'var(--gold)' : 'var(--text-muted)' }}
+                                >
+                                  <Mic size={16} />
+                                </button>
                                 <button
                                   className="action-icon-btn"
                                   onClick={() => handleOpenEditEpisode(ep)}
@@ -2269,6 +2295,71 @@ export default function AdminPage() {
                 </label>
               </div>
 
+              {/* Studio AI Audio Status & Quick Generate Action */}
+              {editingEpisode && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    background: 'rgba(200, 155, 60, 0.08)',
+                    border: '1px solid rgba(200, 155, 60, 0.25)',
+                    borderRadius: 'var(--radius-sm)',
+                    marginTop: '10px',
+                    marginBottom: '16px',
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div
+                      style={{
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '50%',
+                        background: editingEpisode.audioUrl ? 'rgba(34, 197, 94, 0.15)' : 'rgba(200, 155, 60, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: editingEpisode.audioUrl ? '#22c55e' : 'var(--gold)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Mic size={20} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-title)' }}>
+                        {editingEpisode.audioUrl ? 'التسجيل الصوتي متوفر للحلقة ✓' : 'لم يتم توليد تسجيل صوتي بعد لهذه الحلقة'}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        {editingEpisode.audioUrl
+                          ? 'الحلقة جاهزة ومتاحة للزوار في مشغل الاستوديو الفخم'
+                          : 'يمكنك توليد قراءة استوديو بشرية بنموذج Gemini 2.5 AI بضغطة زر'}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-gold"
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '0.82rem',
+                      whiteSpace: 'nowrap',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                    onClick={() => {
+                      setIsEpisodeModalOpen(false);
+                      handleOpenAudioModal(editingEpisode);
+                    }}
+                  >
+                    <Mic size={15} />
+                    <span>{editingEpisode.audioUrl ? 'إدارة / إعادة توليد الصوت' : '🎙️ توليد صوت (AI)'}</span>
+                  </button>
+                </div>
+              )}
+
               {/* Text Body */}
               <div className={`form-group ${episodeFormErrors.content ? 'has-error' : ''}`}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -2489,8 +2580,8 @@ export default function AdminPage() {
           >
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Sparkles size={20} style={{ color: 'var(--gold)' }} />
-                <h3>رفع وضغط صوت: {audioTargetEpisode.title}</h3>
+                <Mic size={22} style={{ color: 'var(--gold)' }} />
+                <h3>🎙️ تسجيل استوديو بالذكاء الاصطناعي (Gemini): {audioTargetEpisode.title}</h3>
               </div>
               <button
                 className="modal-close-btn"
@@ -2506,8 +2597,8 @@ export default function AdminPage() {
                 className={`audio-tab-btn ${audioUploadTab === 'ai' ? 'active' : ''}`}
                 onClick={() => setAudioUploadTab('ai')}
               >
-                <Sparkles size={16} />
-                <span>توليد بالذكاء الاصطناعي (Gemini)</span>
+                <Mic size={16} />
+                <span>🎙️ توليد صوت بشري (Gemini AI)</span>
               </button>
               <button
                 className={`audio-tab-btn ${audioUploadTab === 'upload' ? 'active' : ''}`}
