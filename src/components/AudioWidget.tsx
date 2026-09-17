@@ -379,7 +379,7 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
               {resolvedUrl && (
                 <a
                   href={resolvedUrl}
-                  download={`${episode.title || 'حلقة_السيرة'}.wav`}
+                  download={`${episode.title || 'قصص_الأنبياء_وسير_الرسول'}.wav`}
                   className="studio-aux-btn"
                   title="تحميل المقطع الصوتي للجهاز"
                 >

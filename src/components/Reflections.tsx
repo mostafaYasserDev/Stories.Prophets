@@ -76,7 +76,7 @@ export const Reflections: React.FC<ReflectionsProps> = ({ episodeId, onToast }) 
     if (!text.trim()) return;
     setIsSubmitting(true);
 
-    const finalAuthor = authorName.trim() || 'محب للسيرة النبوية';
+    const finalAuthor = authorName.trim() || 'قارئ متدبر';
 
     try {
       if (typeof window !== 'undefined' && authorName.trim()) {
@@ -222,7 +222,7 @@ export const Reflections: React.FC<ReflectionsProps> = ({ episodeId, onToast }) 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--gold-light)', fontWeight: 600 }}>
                     <User size={12} />
-                    <span>{r.author || 'محب للسيرة النبوية'}</span>
+                    <span>{r.author || 'قارئ متدبر'}</span>
                   </span>
                   <span>•</span>
                   <span>{dateStr}</span>

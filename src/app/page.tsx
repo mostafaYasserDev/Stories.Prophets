@@ -925,7 +925,7 @@ export default function HomePage() {
                   <Headphones size={20} />
                 </div>
                 <div className="global-audio-text">
-                  <h4>مقطع صوتي عام للسيرة النبوية</h4>
+                  <h4>مقطع صوتي عام لقصص الأنبياء وسير الرسول</h4>
                   <p>
                     {globalAudio.originalFileName
                       ? globalAudio.originalFileName

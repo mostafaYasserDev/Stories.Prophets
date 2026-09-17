@@ -1517,7 +1517,7 @@ export default function AdminPage() {
     setConfirmDialog({
       isOpen: true,
       title: 'تأكيد إزالة المقطع الصوتي العام',
-      message: 'هل تريد بالتأكيد إزالة المقطع الصوتي العام للسيرة الشريفة نهائياً من السحابة؟',
+      message: 'هل تريد بالتأكيد إزالة المقطع الصوتي العام نهائياً من السحابة؟',
       onConfirm: async () => {
         try {
           await removeGlobalAudio();
@@ -2115,7 +2115,7 @@ export default function AdminPage() {
               <div className="section-card-header">
                 <Headphones size={20} className="gold-text" />
                 <div>
-                  <h4>المقطع الصوتي العام للسيرة الشريفة</h4>
+                  <h4>المقطع الصوتي العام لقصص الأنبياء وسير الرسول</h4>
                   <p>مقطع صوتي رئيسي يظهر لجميع الزوار في أسفل صفحة القراءة كمقدمة وتلاوة عامة</p>
                 </div>
               </div>
