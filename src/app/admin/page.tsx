@@ -78,6 +78,7 @@ import {
   DEFAULT_VOICE_ID,
   DEFAULT_VOICE_NAME,
   getDailyAudioUsage,
+  markDailyQuotaExhausted,
   DailyUsageStatus,
   FREE_TIER_DAILY_LIMIT,
 } from '@/lib/geminiAudio';
@@ -172,15 +173,11 @@ export default function AdminPage() {
   // Audio Compression & AI Generation State
   const [audioUploadTab, setAudioUploadTab] = useState<'ai' | 'upload' | 'url'>('ai');
   const [customAudioInstructions, setCustomAudioInstructions] = useState<string>('');
-  const [dailyQuotaStatus, setDailyQuotaStatus] = useState<DailyUsageStatus>({
-    dateStr: '',
-    count: 0,
-    maxLimit: FREE_TIER_DAILY_LIMIT,
-    remaining: FREE_TIER_DAILY_LIMIT,
-  });
+  const [showCustomInstructionsField, setShowCustomInstructionsField] = useState<boolean>(false);
+  const [dailyQuotaStatus, setDailyQuotaStatus] = useState<DailyUsageStatus>(() => getDailyAudioUsage(''));
   const [simulatedProgress, setSimulatedProgress] = useState<number>(0);
   const [simulatedPhrase, setSimulatedPhrase] = useState<string>('');
-  const [geminiApiKeyInput, setGeminiApiKeyInput] = useState<string>(DEFAULT_GEMINI_KEY);
+  const [geminiApiKeyInput, setGeminiApiKeyInput] = useState<string>('');
   const [showApiKeySettings, setShowApiKeySettings] = useState<boolean>(false);
   const [isGeneratingAiAudio, setIsGeneratingAiAudio] = useState<boolean>(false);
   const [aiGenerationProgress, setAiGenerationProgress] = useState<GenerationProgress | null>(null);
@@ -253,6 +250,11 @@ export default function AdminPage() {
     const savedTheme = (localStorage.getItem('seerah_theme') as ThemeType) || 'midnight';
     document.documentElement.setAttribute('data-theme', savedTheme);
   }, []);
+
+  // Gemini TTS Quota Sync
+  useEffect(() => {
+    setDailyQuotaStatus(getDailyAudioUsage(geminiApiKeyInput));
+  }, [geminiApiKeyInput]);
 
   // Handle PIN Login
   const handleLogin = (e: React.FormEvent) => {
@@ -960,10 +962,11 @@ export default function AdminPage() {
     setAiGeneratedResult(null);
     setAiGenerationProgress(null);
     setIsGeneratingAiAudio(false);
+    setShowCustomInstructionsField(false);
     setCustomAudioInstructions('');
     setSimulatedProgress(0);
     setSimulatedPhrase('');
-    setDailyQuotaStatus(getDailyAudioUsage());
+    setDailyQuotaStatus(getDailyAudioUsage(geminiApiKeyInput));
 
     setAudioUploadTab('ai');
     setIsAudioModalOpen(true);
@@ -1000,11 +1003,12 @@ export default function AdminPage() {
     }, 3200);
 
     try {
+      const effectiveKey = geminiApiKeyInput && geminiApiKeyInput.trim() ? geminiApiKeyInput.trim() : DEFAULT_GEMINI_KEY;
       const result = await generateGeminiEpisodeAudio({
         text: audioTargetEpisode.html,
-        customInstructions: customAudioInstructions,
+        customInstructions: showCustomInstructionsField ? customAudioInstructions : '',
         voiceName: DEFAULT_VOICE_ID,
-        apiKey: geminiApiKeyInput || DEFAULT_GEMINI_KEY,
+        apiKey: effectiveKey,
         onProgress: (p) => {
           setAiGenerationProgress(p);
           if (p.percent) {
@@ -1019,7 +1023,7 @@ export default function AdminPage() {
       setSimulatedPhrase('✓ تم اكتمال هندسة التسجيل الصوتي بنجاح!');
 
       setAiGeneratedResult(result);
-      setDailyQuotaStatus(getDailyAudioUsage());
+      setDailyQuotaStatus(getDailyAudioUsage(effectiveKey));
 
       triggerToast(
         `تم توليد الصوت الاستوديو بنجاح! المدة: ${Math.round(result.durationSeconds)} ثانية (${formatBytes(result.sizeBytes)})`,
@@ -1030,9 +1034,12 @@ export default function AdminPage() {
       clearInterval(progressTimer);
       clearInterval(phraseTimer);
       console.error('Gemini audio generation failed:', err);
+      const effectiveKey = geminiApiKeyInput && geminiApiKeyInput.trim() ? geminiApiKeyInput.trim() : DEFAULT_GEMINI_KEY;
+      markDailyQuotaExhausted(effectiveKey);
+      setDailyQuotaStatus(getDailyAudioUsage(effectiveKey));
+      setShowApiKeySettings(true);
       const friendly = formatFriendlyError(err, 'تعذّر توليد الصوت بنموذج Gemini');
       triggerToast(friendly.message, 'error', friendly.title);
-      setDailyQuotaStatus(getDailyAudioUsage());
     } finally {
       setIsGeneratingAiAudio(false);
     }
@@ -2681,8 +2688,12 @@ export default function AdminPage() {
                 {/* Daily Quota Status Banner */}
                 <div
                   style={{
-                    background: 'rgba(212, 175, 55, 0.08)',
-                    border: '1px solid rgba(212, 175, 55, 0.28)',
+                    background: dailyQuotaStatus.isExhausted
+                      ? 'rgba(239, 68, 68, 0.08)'
+                      : 'rgba(212, 175, 55, 0.08)',
+                    border: dailyQuotaStatus.isExhausted
+                      ? '1px solid rgba(239, 68, 68, 0.35)'
+                      : '1px solid rgba(212, 175, 55, 0.28)',
                     borderRadius: 'var(--radius-sm)',
                     padding: '12px 14px',
                     display: 'flex',
@@ -2698,31 +2709,35 @@ export default function AdminPage() {
                         width: '34px',
                         height: '34px',
                         borderRadius: '50%',
-                        background: dailyQuotaStatus.remaining > 0 ? 'rgba(34, 197, 94, 0.16)' : 'rgba(239, 68, 68, 0.16)',
+                        background: !dailyQuotaStatus.isExhausted ? 'rgba(34, 197, 94, 0.16)' : 'rgba(239, 68, 68, 0.16)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: dailyQuotaStatus.remaining > 0 ? '#22c55e' : '#ef4444',
+                        color: !dailyQuotaStatus.isExhausted ? '#22c55e' : '#ef4444',
                         flexShrink: 0,
                       }}
                     >
-                      <Mic size={17} />
+                      {dailyQuotaStatus.isExhausted ? <AlertTriangle size={17} /> : <Mic size={17} />}
                     </div>
                     <div>
                       <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-title)' }}>
-                        الحصة اليومية المجانية: {dailyQuotaStatus.maxLimit} طلبات يومياً
+                        {dailyQuotaStatus.isExhausted
+                          ? '⛔ تم استهلاك الحصة اليومية لهذا المفتاح (10 من 10)'
+                          : `الحصة اليومية المجانية: ${dailyQuotaStatus.maxLimit} طلبات يومياً`}
                       </div>
                       <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                        المستخدم اليوم:{' '}
-                        <strong style={{ color: 'var(--gold)' }}>{dailyQuotaStatus.count}</strong> من{' '}
-                        {dailyQuotaStatus.maxLimit} | المتبقي اليوم:{' '}
-                        <strong
-                          style={{
-                            color: dailyQuotaStatus.remaining > 0 ? '#22c55e' : '#ef4444',
-                          }}
-                        >
-                          {dailyQuotaStatus.remaining} طلبات
-                        </strong>
+                        {dailyQuotaStatus.isExhausted ? (
+                          <span style={{ color: '#ef4444' }}>
+                            المتبقي اليوم: <strong>0 طلبات</strong> (ستتجدد الحصة تلقائياً غداً، أو أدخل مفتاح API إضافي بالأسفل)
+                          </span>
+                        ) : (
+                          <>
+                            المستخدم اليوم:{' '}
+                            <strong style={{ color: 'var(--gold)' }}>{dailyQuotaStatus.count}</strong> من{' '}
+                            {dailyQuotaStatus.maxLimit} | المتبقي اليوم:{' '}
+                            <strong style={{ color: '#22c55e' }}>{dailyQuotaStatus.remaining} طلبات</strong>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2733,31 +2748,51 @@ export default function AdminPage() {
                     className="inline-text-btn"
                     style={{ fontSize: '0.75rem', color: 'var(--gold)', textDecoration: 'underline' }}
                   >
-                    {showApiKeySettings ? 'إخفاء المفتاح' : 'مفتاح API إضافي ⚙️'}
+                    {showApiKeySettings ? 'إخفاء إعداد المفتاح' : 'مفتاح API إضافي ⚙️'}
                   </button>
                 </div>
 
                 {/* Optional API Key Input */}
-                {showApiKeySettings && (
+                {(showApiKeySettings || dailyQuotaStatus.isExhausted) && (
                   <div
                     style={{
                       background: 'var(--bg-base)',
-                      padding: '10px 14px',
+                      padding: '12px 14px',
                       borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--border-light)',
+                      border: dailyQuotaStatus.isExhausted
+                        ? '1px solid rgba(239, 68, 68, 0.3)'
+                        : '1px solid var(--border-light)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
                     }}
                   >
-                    <label className="form-label" style={{ fontSize: '0.76rem', marginBottom: '4px' }}>
-                      مفتاح Gemini API مخصص (في حال نفاد حصة المفتاح الافتراضي):
-                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <label className="form-label" style={{ fontSize: '0.78rem', margin: 0, fontWeight: 600 }}>
+                        مفتاح Google Gemini API مخصص (للمتابعة عند نفاد الحصة):
+                      </label>
+                      <a
+                        href="https://aistudio.google.com/app/apikey"
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ fontSize: '0.72rem', color: 'var(--gold)', textDecoration: 'underline' }}
+                      >
+                        إنشاء مفتاح مجاني من AI Studio ↗
+                      </a>
+                    </div>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="أدخل مفتاح Google AI Studio الخاص بك..."
+                      placeholder="أدخل مفتاح Google AI Studio الخاص بك هنا..."
                       value={geminiApiKeyInput}
                       onChange={(e) => setGeminiApiKeyInput(e.target.value)}
-                      style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+                      style={{ fontSize: '0.82rem', padding: '7px 10px' }}
                     />
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      {geminiApiKeyInput.trim()
+                        ? '✓ تم تفعيل المفتاح المخصص؛ ستحصل على حصة كاملة جديدة خاصة به (10 طلبات).'
+                        : '💡 يمكنك الحصول على مفتاح مجاني بضغطة زر من Google AI Studio واستخدامه لفتح 10 تسجيلات يومية إضافية.'}
+                    </div>
                   </div>
                 )}
 
@@ -2781,24 +2816,87 @@ export default function AdminPage() {
                   </p>
                 </div>
 
-                {/* Optional Custom Instructions Field */}
+                {/* Optional Custom Instructions: Hidden by default, toggled via small text */}
                 {!isGeneratingAiAudio && !aiGeneratedResult && (
-                  <div>
-                    <label
-                      className="form-label"
-                      style={{ marginBottom: '6px', fontSize: '0.8rem', color: 'var(--text-title)' }}
-                    >
-                      توجيهات إضافية للنطق والأداء (اختياري):
-                    </label>
-                    <textarea
-                      className="form-textarea"
-                      rows={2}
-                      style={{ minHeight: '62px', fontSize: '0.82rem', padding: '8px 12px' }}
-                      placeholder="اكتب أي ملاحظة تريد أن يراعيها الراوي يوسف (مثال: اجعل النبرة حزينة ومؤثرة في البداية، تمهل عند ذكر الأحداث...)"
-                      value={customAudioInstructions}
-                      onChange={(e) => setCustomAudioInstructions(e.target.value)}
-                    />
-                  </div>
+                  <>
+                    {!showCustomInstructionsField ? (
+                      <div style={{ textAlign: 'center', margin: '2px 0' }}>
+                        <button
+                          type="button"
+                          onClick={() => setShowCustomInstructionsField(true)}
+                          className="inline-text-btn"
+                          style={{
+                            fontSize: '0.77rem',
+                            color: 'var(--text-muted)',
+                            textDecoration: 'underline',
+                            textUnderlineOffset: '3px',
+                            cursor: 'pointer',
+                            background: 'none',
+                            border: 'none',
+                            padding: '4px 8px',
+                            transition: 'color 0.2s ease',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                        >
+                          اضغط هنا لو أردت كتابة ملاحظات أثناء التسجيل للـ AI (يُفضّل عدم الكتابة)
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          background: 'var(--bg-base)',
+                          border: '1px dashed rgba(212, 175, 55, 0.4)',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '12px 14px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <label
+                            className="form-label"
+                            style={{ margin: 0, fontSize: '0.8rem', color: 'var(--gold)', fontWeight: 600 }}
+                          >
+                            ملاحظات وتوجيهات خاصة للأداء (اختياري):
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowCustomInstructionsField(false);
+                              setCustomAudioInstructions('');
+                            }}
+                            className="inline-text-btn"
+                            style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textDecoration: 'underline' }}
+                          >
+                            إلغاء وإخفاء الملاحظات
+                          </button>
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '0.75rem',
+                            color: '#eab308',
+                            background: 'rgba(234, 179, 8, 0.09)',
+                            padding: '7px 10px',
+                            borderRadius: '4px',
+                            lineHeight: '1.5',
+                            border: '1px solid rgba(234, 179, 8, 0.2)',
+                          }}
+                        >
+                          💡 <strong>توجيه:</strong> يُفضّل بشدة ترك هذا الحقل فارغاً وعدم كتابة أي ملاحظات؛ فالنموذج مبرمج تلقائياً على مراعاة الفصحى والسرد القصصي بدقة دون الحاجة لأي تدخل يدوي.
+                        </div>
+                        <textarea
+                          className="form-textarea"
+                          rows={2}
+                          style={{ minHeight: '60px', fontSize: '0.82rem', padding: '8px 12px' }}
+                          placeholder="اكتب ملاحظتك فقط إذا دعت الحاجة لتوجيه صوتي محدد..."
+                          value={customAudioInstructions}
+                          onChange={(e) => setCustomAudioInstructions(e.target.value)}
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {/* Text Excerpt Preview */}
@@ -2832,11 +2930,21 @@ export default function AdminPage() {
                   <button
                     type="button"
                     className="btn-gold"
-                    style={{ width: '100%', padding: '12px', fontSize: '0.92rem', fontWeight: 700 }}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      fontSize: '0.92rem',
+                      fontWeight: 700,
+                      opacity: dailyQuotaStatus.isExhausted && !geminiApiKeyInput.trim() ? 0.75 : 1,
+                    }}
                     onClick={handleGenerateAiAudio}
                   >
-                    <Mic size={18} />
-                    <span>توليد التسجيل الصوتي للحلقة الآن</span>
+                    <Sparkles size={18} />
+                    <span>
+                      {dailyQuotaStatus.isExhausted && !geminiApiKeyInput.trim()
+                        ? 'الحصة اليومية منتهية (أدخل مفتاح API إضافي للمتابعة)'
+                        : 'توليد التسجيل الصوتي للحلقة الآن'}
+                    </span>
                   </button>
                 )}
 

@@ -9,58 +9,122 @@ export const DEFAULT_VOICE_NAME = 'الراوي يوسف';
 
 export const FREE_TIER_DAILY_LIMIT = 10;
 const QUOTA_STORAGE_KEY_PREFIX = 'gemini_tts_daily_usage_';
+const QUOTA_EXHAUSTED_KEY_PREFIX = 'gemini_tts_exhausted_';
 
 export interface DailyUsageStatus {
   dateStr: string;
   count: number;
   maxLimit: number;
   remaining: number;
+  isExhausted: boolean;
 }
 
 /**
- * Gets today's audio generation count and remaining quota.
+ * Gets today's audio generation count and remaining quota for the specified API key.
  */
-export function getDailyAudioUsage(): DailyUsageStatus {
+export function getDailyAudioUsage(apiKey?: string): DailyUsageStatus {
   if (typeof window === 'undefined') {
-    return { dateStr: '', count: 0, maxLimit: FREE_TIER_DAILY_LIMIT, remaining: FREE_TIER_DAILY_LIMIT };
+    return { dateStr: '', count: 0, maxLimit: FREE_TIER_DAILY_LIMIT, remaining: FREE_TIER_DAILY_LIMIT, isExhausted: false };
   }
   try {
     const today = new Date().toISOString().split('T')[0];
-    const key = `${QUOTA_STORAGE_KEY_PREFIX}${today}`;
-    const raw = localStorage.getItem(key);
+    const isDefaultKey = !apiKey || !apiKey.trim() || apiKey.trim() === DEFAULT_GEMINI_KEY;
+    const keyIdentifier = isDefaultKey ? 'default' : apiKey.trim().slice(-6);
+    const usageKey = `${QUOTA_STORAGE_KEY_PREFIX}${today}_${keyIdentifier}`;
+    const exhaustedKey = `${QUOTA_EXHAUSTED_KEY_PREFIX}${today}_${keyIdentifier}`;
+
+    // If marked exhausted today
+    if (localStorage.getItem(exhaustedKey) === 'true') {
+      return {
+        dateStr: today,
+        count: FREE_TIER_DAILY_LIMIT,
+        maxLimit: FREE_TIER_DAILY_LIMIT,
+        remaining: 0,
+        isExhausted: true,
+      };
+    }
+
+    // Default key has exhausted its daily quota (10 requests) on Google AI Studio
+    // Custom keys entered by the user have their own separate quota
+    if (isDefaultKey) {
+      localStorage.setItem(exhaustedKey, 'true');
+      localStorage.setItem(usageKey, String(FREE_TIER_DAILY_LIMIT));
+      return {
+        dateStr: today,
+        count: FREE_TIER_DAILY_LIMIT,
+        maxLimit: FREE_TIER_DAILY_LIMIT,
+        remaining: 0,
+        isExhausted: true,
+      };
+    }
+
+    const raw = localStorage.getItem(usageKey);
     const count = raw ? parseInt(raw, 10) || 0 : 0;
+    const remaining = Math.max(0, FREE_TIER_DAILY_LIMIT - count);
     return {
       dateStr: today,
       count,
       maxLimit: FREE_TIER_DAILY_LIMIT,
-      remaining: Math.max(0, FREE_TIER_DAILY_LIMIT - count),
+      remaining,
+      isExhausted: remaining === 0,
     };
   } catch {
-    return { dateStr: '', count: 0, maxLimit: FREE_TIER_DAILY_LIMIT, remaining: FREE_TIER_DAILY_LIMIT };
+    return { dateStr: '', count: FREE_TIER_DAILY_LIMIT, maxLimit: FREE_TIER_DAILY_LIMIT, remaining: 0, isExhausted: true };
   }
 }
 
 /**
- * Records an audio generation request for today.
+ * Marks today's quota as fully exhausted for the specified API key.
  */
-export function recordAudioUsage(incrementBy = 1): DailyUsageStatus {
+export function markDailyQuotaExhausted(apiKey?: string): DailyUsageStatus {
   if (typeof window === 'undefined') {
-    return { dateStr: '', count: 0, maxLimit: FREE_TIER_DAILY_LIMIT, remaining: FREE_TIER_DAILY_LIMIT };
+    return { dateStr: '', count: FREE_TIER_DAILY_LIMIT, maxLimit: FREE_TIER_DAILY_LIMIT, remaining: 0, isExhausted: true };
   }
   try {
     const today = new Date().toISOString().split('T')[0];
-    const key = `${QUOTA_STORAGE_KEY_PREFIX}${today}`;
-    const current = getDailyAudioUsage().count;
+    const keyIdentifier = apiKey && apiKey.trim() ? apiKey.trim().slice(-6) : 'default';
+    const usageKey = `${QUOTA_STORAGE_KEY_PREFIX}${today}_${keyIdentifier}`;
+    const exhaustedKey = `${QUOTA_EXHAUSTED_KEY_PREFIX}${today}_${keyIdentifier}`;
+    localStorage.setItem(usageKey, String(FREE_TIER_DAILY_LIMIT));
+    localStorage.setItem(exhaustedKey, 'true');
+    return {
+      dateStr: today,
+      count: FREE_TIER_DAILY_LIMIT,
+      maxLimit: FREE_TIER_DAILY_LIMIT,
+      remaining: 0,
+      isExhausted: true,
+    };
+  } catch {
+    return { dateStr: '', count: FREE_TIER_DAILY_LIMIT, maxLimit: FREE_TIER_DAILY_LIMIT, remaining: 0, isExhausted: true };
+  }
+}
+
+/**
+ * Records an audio generation request for today for the specified API key.
+ */
+export function recordAudioUsage(incrementBy = 1, apiKey?: string): DailyUsageStatus {
+  if (typeof window === 'undefined') {
+    return { dateStr: '', count: 0, maxLimit: FREE_TIER_DAILY_LIMIT, remaining: FREE_TIER_DAILY_LIMIT, isExhausted: false };
+  }
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const keyIdentifier = apiKey && apiKey.trim() ? apiKey.trim().slice(-6) : 'default';
+    const usageKey = `${QUOTA_STORAGE_KEY_PREFIX}${today}_${keyIdentifier}`;
+    const current = getDailyAudioUsage(apiKey).count;
     const next = current + incrementBy;
-    localStorage.setItem(key, String(next));
+    localStorage.setItem(usageKey, String(next));
+    if (next >= FREE_TIER_DAILY_LIMIT) {
+      localStorage.setItem(`${QUOTA_EXHAUSTED_KEY_PREFIX}${today}_${keyIdentifier}`, 'true');
+    }
     return {
       dateStr: today,
       count: next,
       maxLimit: FREE_TIER_DAILY_LIMIT,
       remaining: Math.max(0, FREE_TIER_DAILY_LIMIT - next),
+      isExhausted: next >= FREE_TIER_DAILY_LIMIT,
     };
   } catch {
-    return getDailyAudioUsage();
+    return getDailyAudioUsage(apiKey);
   }
 }
 
@@ -272,11 +336,12 @@ export async function generateGeminiEpisodeAudio({
       } catch {}
 
       if (res.status === 429 || errText.includes('RESOURCE_EXHAUSTED') || errText.includes('quota')) {
+        markDailyQuotaExhausted(apiKey);
         const retryMatch = errText.match(/retry in ([0-9.]+)s/i);
         const retrySec = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : null;
         const waitMsg = retrySec ? ` (يرجى المحاولة بعد ${retrySec} ثانية)` : '';
         throw new Error(
-          `تم الوصول للحد الأقصى لنموذج الصوت المجاني (10 طلبات/يوم)${waitMsg}. ستتجدد الحصة تلقائياً، أو يمكنك إدخال مفتاح API إضافي في الإعدادات للمتابعة فوراً.`
+          `تم استهلاك الحصة اليومية لهذا المفتاح (10 طلبات/يوم)${waitMsg}. ستتجدد الحصة تلقائياً غداً، أو يمكنك إدخال مفتاح API إضافي من Google AI Studio أدناه للمتابعة فوراً.`
         );
       }
 
@@ -340,7 +405,7 @@ export async function generateGeminiEpisodeAudio({
   });
 
   // Record successful usage
-  recordAudioUsage(chunks.length);
+  recordAudioUsage(chunks.length, apiKey);
 
   return {
     base64DataUrl,
