@@ -39,7 +39,7 @@ export interface FriendlyError {
 /**
  * Translates and formats system, Firebase, and browser errors into helpful, clear Arabic.
  */
-export function formatFriendlyError(err: any, fallbackContext: string = 'حدث خطأ غير متوقع'): FriendlyError {
+export function formatFriendlyError(err: unknown, fallbackContext: string = 'حدث خطأ غير متوقع'): FriendlyError {
   if (!err) {
     return {
       title: 'تنبيه',
@@ -47,8 +47,9 @@ export function formatFriendlyError(err: any, fallbackContext: string = 'حدث 
     };
   }
 
-  const rawMsg = String(err?.message || err || '');
-  const code = String(err?.code || '').toLowerCase();
+  const errObj = typeof err === 'object' && err !== null ? (err as Record<string, unknown>) : null;
+  const rawMsg = String(errObj?.message || err || '');
+  const code = String(errObj?.code || '').toLowerCase();
 
   // 1. Firebase Permission Denied
   if (

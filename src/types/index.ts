@@ -1,11 +1,17 @@
+export interface FirestoreTimestamp {
+  seconds?: number;
+  nanoseconds?: number;
+  toDate?: () => Date;
+}
+
 export interface Series {
   id: string;
   title: string;
   description?: string;
   order: number;
   isPinned: boolean;
-  createdAt?: any;
-  updatedAt?: any;
+  createdAt?: FirestoreTimestamp | any;
+  updatedAt?: FirestoreTimestamp | any;
 }
 
 export interface Episode {
@@ -22,8 +28,8 @@ export interface Episode {
   audioSourceType?: 'ai' | 'upload' | 'url' | null;
   moralLesson?: string | null;
   isPinned?: boolean; // Pinned episode to highlight in index
-  createdAt?: any;
-  updatedAt?: any;
+  createdAt?: FirestoreTimestamp | any;
+  updatedAt?: FirestoreTimestamp | any;
 }
 
 export interface Reflection {
@@ -32,7 +38,7 @@ export interface Reflection {
   text: string;
   author?: string;
   likesCount?: number;
-  createdAt?: any;
+  createdAt?: FirestoreTimestamp | any;
 }
 
 export interface GlobalAudio {
@@ -42,7 +48,7 @@ export interface GlobalAudio {
   originalFileName?: string;
   originalSize?: number;
   compressedSize?: number;
-  updatedAt?: any;
+  updatedAt?: FirestoreTimestamp | any;
 }
 
 export interface SiteSettings {
@@ -51,7 +57,7 @@ export interface SiteSettings {
   dedicationBadge?: string;
   dedicationName?: string;
   dedicationParents?: string;
-  updatedAt?: any;
+  updatedAt?: FirestoreTimestamp | any;
 }
 
 export type ThemeType = 'midnight' | 'obsidian' | 'sepia' | 'light';

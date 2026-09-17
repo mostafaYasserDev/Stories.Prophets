@@ -16,7 +16,6 @@ import {
   Link2,
   X,
   Copy,
-  ExternalLink,
   List,
   Palette,
   ShieldCheck,
@@ -755,7 +754,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Episode Audio Player (Rendered purely if audioUrl is present, coordinated with TTS) */}
+              {/* Episode Audio Player (Rendered purely if audioUrl is present) */}
               <AudioWidget episode={currentEpisode} onPlay={handleOtherAudioPlay} />
 
               {/* Reading Content Body */}

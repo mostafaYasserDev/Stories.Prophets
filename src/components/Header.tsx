@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { Palette, Type, ZoomIn, ZoomOut, Menu, Maximize2, Eye } from 'lucide-react';
-import { ThemeType, FontType, SiteSettings } from '@/types';
+import { Palette, Type, ZoomIn, ZoomOut, Menu, Eye } from 'lucide-react';
+import { SiteSettings } from '@/types';
 
 interface HeaderProps {
-  currentTheme: ThemeType;
+  currentTheme?: string;
   onThemeCycle: () => void;
-  currentFont: FontType;
+  currentFont?: string;
   onFontCycle: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;

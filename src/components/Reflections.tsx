@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Lightbulb, Plus, Trash2, Heart, User, Send, Check, AlertTriangle, X } from 'lucide-react';
+import { Lightbulb, Plus, Trash2, Heart, User, Send, AlertTriangle, X } from 'lucide-react';
 import { Reflection } from '@/types';
 import { db } from '@/lib/firebase';
 import {

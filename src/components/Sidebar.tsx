@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Search,
   X,
@@ -195,50 +195,54 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return result;
   }, [episodes, seriesList, filtered, readEpisodes, currentIndex]);
 
-  // Keep active episode's series expanded
-  useEffect(() => {
-    if (episodes[currentIndex]) {
-      const eraTitle = (episodes[currentIndex].era && episodes[currentIndex].era.trim()) || 'فصول السيرة';
-      const currentKey = normalizeArabicText(eraTitle);
-      setExpandedSeries((prev) => {
-        if (prev.has(currentKey)) return prev;
+  // User collapse/expand manual overrides (Zero useEffect cascading renders)
+  const [collapsedSeries, setCollapsedSeries] = useState<Set<string>>(new Set());
+  const [expandedOverrides, setExpandedOverrides] = useState<Set<string>>(new Set());
+
+  const isSearchOrFilterActive = Boolean(
+    searchQuery.trim() || filterType !== 'all' || activeEra !== 'all'
+  );
+
+  // Derive whether each group is expanded
+  const isGroupExpanded = (key: string, hasActiveEpisode: boolean): boolean => {
+    if (expandedOverrides.has(key)) return true;
+    if (collapsedSeries.has(key)) return false;
+    if (isSearchOrFilterActive) return true;
+    if (hasActiveEpisode) return true;
+    return false;
+  };
+
+  // Toggle single series
+  const toggleSeries = (key: string, currentlyOpen: boolean) => {
+    if (currentlyOpen) {
+      setCollapsedSeries((prev) => new Set([...prev, key]));
+      setExpandedOverrides((prev) => {
         const next = new Set(prev);
-        next.add(currentKey);
+        next.delete(key);
+        return next;
+      });
+    } else {
+      setExpandedOverrides((prev) => new Set([...prev, key]));
+      setCollapsedSeries((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
         return next;
       });
     }
-  }, [currentIndex, episodes]);
-
-  // Auto-expand all matching groups when search or filter tab is active
-  useEffect(() => {
-    if (searchQuery.trim() || filterType !== 'all' || activeEra !== 'all') {
-      const matchingKeys = seriesGroups.map((g) => g.key);
-      setExpandedSeries(new Set(matchingKeys));
-    }
-  }, [searchQuery, filterType, activeEra, seriesGroups]);
-
-  // Toggle single series
-  const toggleSeries = (key: string) => {
-    setExpandedSeries((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
   };
 
   // Toggle expand all / collapse all
   const allExpanded =
-    seriesGroups.length > 0 && seriesGroups.every((g) => expandedSeries.has(g.key));
+    seriesGroups.length > 0 &&
+    seriesGroups.every((g) => isGroupExpanded(g.key, g.hasActiveEpisode));
 
   const toggleAllSeries = () => {
     if (allExpanded) {
-      setExpandedSeries(new Set());
+      setCollapsedSeries(new Set(seriesGroups.map((g) => g.key)));
+      setExpandedOverrides(new Set());
     } else {
-      setExpandedSeries(new Set(seriesGroups.map((g) => g.key)));
+      setExpandedOverrides(new Set(seriesGroups.map((g) => g.key)));
+      setCollapsedSeries(new Set());
     }
   };
 
@@ -438,7 +442,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           ) : (
             seriesGroups.map((group) => {
-              const isExpanded = expandedSeries.has(group.key);
+              const isExpanded = isGroupExpanded(group.key, group.hasActiveEpisode);
 
               return (
                 <div
@@ -449,7 +453,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     type="button"
                     className={`sidebar-series-header ${isExpanded ? 'expanded' : ''} ${group.hasActiveEpisode ? 'contains-active' : ''}`}
-                    onClick={() => toggleSeries(group.key)}
+                    onClick={() => toggleSeries(group.key, isExpanded)}
                     aria-expanded={isExpanded}
                     title={`انقر لـ ${isExpanded ? 'طي' : 'فتح'} ${group.title}`}
                   >

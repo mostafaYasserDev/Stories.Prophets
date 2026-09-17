@@ -17,25 +17,39 @@ export interface CompressionResult {
   compressionRatio: number;
 }
 
+interface LameJsGlobal {
+  lamejs?: {
+    Mp3Encoder: new (channels: number, samplerate: number, kbps: number) => {
+      encodeBuffer: (left: Int16Array, right?: Int16Array) => Int8Array;
+      flush: () => Int8Array;
+    };
+  };
+}
+
 /**
  * Dynamically loads the bundled lame.min.js script
  */
-export async function loadLame(): Promise<any> {
+export async function loadLame(): Promise<NonNullable<LameJsGlobal['lamejs']>> {
   if (typeof window === 'undefined') {
     throw new Error('ضغط الصوت متاح فقط في المتصفح');
   }
 
-  if ((window as any).lamejs && (window as any).lamejs.Mp3Encoder) {
-    return (window as any).lamejs;
+  const win = window as unknown as LameJsGlobal;
+
+  if (win.lamejs?.Mp3Encoder) {
+    return win.lamejs;
   }
 
   return new Promise((resolve, reject) => {
     const existing = document.getElementById('lamejs-script');
     if (existing) {
-      if ((window as any).lamejs?.Mp3Encoder) {
-        resolve((window as any).lamejs);
+      if (win.lamejs?.Mp3Encoder) {
+        resolve(win.lamejs);
       } else {
-        existing.addEventListener('load', () => resolve((window as any).lamejs));
+        existing.addEventListener('load', () => {
+          if (win.lamejs?.Mp3Encoder) resolve(win.lamejs);
+          else reject(new Error('تعذّر العثور على محرك Mp3Encoder'));
+        });
         existing.addEventListener('error', () => reject(new Error('تعذّر تحميل مكتبة التشفير')));
       }
       return;
@@ -46,8 +60,8 @@ export async function loadLame(): Promise<any> {
     script.src = '/js/lame.min.js';
     script.async = true;
     script.onload = () => {
-      if ((window as any).lamejs && (window as any).lamejs.Mp3Encoder) {
-        resolve((window as any).lamejs);
+      if (win.lamejs?.Mp3Encoder) {
+        resolve(win.lamejs);
       } else {
         reject(new Error('تم تحميل الملف ولكن لم يتم العثور على Mp3Encoder'));
       }
@@ -89,12 +103,15 @@ export async function compressAudio(
   const arrayBuffer = await file.arrayBuffer();
 
   if (onProgress) onProgress(30, 'جارٍ فك تشفير الصوت واستخراج الموجات...');
-  const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const AudioContextClass =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  const audioCtx = new AudioContextClass();
   let audioBuffer: AudioBuffer;
 
   try {
     audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-  } catch (err: any) {
+  } catch {
     audioCtx.close();
     throw new Error('تعذّر فك تشفير الملف الصوتي. يرجى التأكد من أن صيغة الملف صالحة (MP3, WAV, M4A, AAC, OGG).');
   }
