@@ -6,7 +6,7 @@
 export async function onRequestPost(context: any): Promise<Response> {
   try {
     const body = await context.request.json();
-    const { text, voiceName = 'Charon', apiKey } = body;
+    const { text, voiceName = 'Charon', dialect = 'fusha', apiKey } = body;
 
     const defaultFallbackKey = typeof atob !== 'undefined'
       ? atob('QVEuQWI4Uk42STF3Y180elQ0NjlmVF9aX19Zd1h4QTdGdC1TYmxvWkdPWWlfdEhoQ3ZnQ1E=')
@@ -24,7 +24,12 @@ export async function onRequestPost(context: any): Promise<Response> {
       key.trim()
     )}`;
 
-    const promptText = `اقرأ هذا المقطع من السيرة النبوية الشريفة بصوت راوٍ عربي وقور، نطق فصيح سليم، وهدوء إيماني:\n\n${text}`;
+    let promptText = `اقرأ هذا المقطع من السيرة النبوية الشريفة باللغة العربية الفصحى التامة وبأسلوب إيماني وقور:\n\n${text}`;
+    if (dialect === 'egyptian') {
+      promptText = `اقرأ هذا المقطع من السيرة النبوية بنطق مصري طبيعي وسلس ومتقن، مع قراءة الآيات الكريمة والأحاديث بالفصحى التامة والخشوع:\n\n${text}`;
+    } else if (dialect === 'mixed') {
+      promptText = `اقرأ هذا المقطع من السيرة النبوية بأسلوب سردي رصين ومتوازن؛ السرد بنبرة دافئة حيوية، والآيات والأحاديث بفصاحة وجلال تام:\n\n${text}`;
+    }
 
     const res = await fetch(endpoint, {
       method: 'POST',

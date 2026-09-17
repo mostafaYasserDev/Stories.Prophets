@@ -38,6 +38,8 @@ import {
   BookmarkCheck,
   CheckCircle2,
   Mic,
+  Compass,
+  Languages,
 } from 'lucide-react';
 
 import { Episode, Series, GlobalAudio, SiteSettings, ThemeType } from '@/types';
@@ -72,6 +74,9 @@ import {
   GEMINI_VOICES,
   generateGeminiEpisodeAudio,
   cleanHtmlForSpeech,
+  detectArabicDialect,
+  DialectType,
+  DialectAnalysis,
   GenerationProgress,
   DEFAULT_GEMINI_KEY,
 } from '@/lib/geminiAudio';
@@ -166,6 +171,8 @@ export default function AdminPage() {
   // Audio Compression & AI Generation State
   const [audioUploadTab, setAudioUploadTab] = useState<'ai' | 'upload' | 'url'>('ai');
   const [selectedGeminiVoice, setSelectedGeminiVoice] = useState<string>('Charon');
+  const [selectedDialect, setSelectedDialect] = useState<DialectType>('fusha');
+  const [detectedDialectInfo, setDetectedDialectInfo] = useState<DialectAnalysis | null>(null);
   const [geminiApiKeyInput, setGeminiApiKeyInput] = useState<string>(DEFAULT_GEMINI_KEY);
   const [isGeneratingAiAudio, setIsGeneratingAiAudio] = useState<boolean>(false);
   const [aiGenerationProgress, setAiGenerationProgress] = useState<GenerationProgress | null>(null);
@@ -945,6 +952,12 @@ export default function AdminPage() {
     setAiGeneratedResult(null);
     setAiGenerationProgress(null);
     setIsGeneratingAiAudio(false);
+
+    // Analyze dialect and pronunciation style
+    const dialectAnalysis = detectArabicDialect(ep.html);
+    setDetectedDialectInfo(dialectAnalysis);
+    setSelectedDialect(dialectAnalysis.dialect);
+
     setAudioUploadTab('ai');
     setIsAudioModalOpen(true);
   };
@@ -960,6 +973,7 @@ export default function AdminPage() {
       const result = await generateGeminiEpisodeAudio({
         text: audioTargetEpisode.html,
         voiceName: selectedGeminiVoice,
+        dialect: selectedDialect,
         apiKey: geminiApiKeyInput || DEFAULT_GEMINI_KEY,
         onProgress: setAiGenerationProgress,
       });
@@ -2621,28 +2635,146 @@ export default function AdminPage() {
               <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ background: 'var(--bg-surface)', padding: '14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                    <Sparkles size={18} style={{ color: 'var(--gold)' }} />
+                    <Mic size={18} style={{ color: 'var(--gold)' }} />
                     <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-title)' }}>
-                      توليد صوت بشري فخم بنموذج Gemini
+                      توليد قراءة استوديو بشرية بنموذج Gemini 2.5 TTS
                     </h4>
                   </div>
                   <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-                    يقوم النموذج بقراءة نص الحلقة بأسلوب راوٍ عربي وقور ذي نطق فصيح سليم بمخارج حروف منضبطة وتوقفات طبيعية، ثم يُحفظ في قاعدة البيانات ليسمعه الزوار فورياً في مشغل الاستوديو.
+                    يقوم النموذج بقراءة نص الحلقة بأسلوب راوٍ عربي ذي نطق سليم بمخارج حروف منضبطة وتوقفات طبيعية، ويتم حفظ التسجيل في قاعدة البيانات ليسمعه الزوار في مشغل الاستوديو فوراً.
                   </p>
                 </div>
+
+                {/* Intelligent Dialect & Pronunciation Analysis Card */}
+                {detectedDialectInfo && (
+                  <div
+                    style={{
+                      background: 'rgba(212, 175, 55, 0.07)',
+                      border: '1px solid rgba(212, 175, 55, 0.28)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '12px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Compass size={17} style={{ color: 'var(--gold)' }} />
+                        <strong style={{ fontSize: '0.86rem', color: 'var(--text-title)' }}>
+                          تحليل الأسلوب اللغوي وطريقة النطق
+                        </strong>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          padding: '3px 9px',
+                          borderRadius: '6px',
+                          background: detectedDialectInfo.badgeColor,
+                          color: '#000',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                        }}
+                      >
+                        {detectedDialectInfo.label}
+                      </span>
+                    </div>
+
+                    <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-body)', lineHeight: '1.55' }}>
+                      {detectedDialectInfo.description}
+                    </p>
+
+                    {/* Dialect Selector Buttons */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>تحديد أسلوب النطق:</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDialect('egyptian')}
+                        style={{
+                          padding: '5px 11px',
+                          borderRadius: '6px',
+                          fontSize: '0.76rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: selectedDialect === 'egyptian' ? '1px solid var(--gold)' : '1px solid var(--border-light)',
+                          background: selectedDialect === 'egyptian' ? 'var(--gold)' : 'var(--bg-base)',
+                          color: selectedDialect === 'egyptian' ? '#000' : 'var(--text-body)',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        🇪🇬 لهجة مصرية قصصية
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDialect('fusha')}
+                        style={{
+                          padding: '5px 11px',
+                          borderRadius: '6px',
+                          fontSize: '0.76rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: selectedDialect === 'fusha' ? '1px solid var(--gold)' : '1px solid var(--border-light)',
+                          background: selectedDialect === 'fusha' ? 'var(--gold)' : 'var(--bg-base)',
+                          color: selectedDialect === 'fusha' ? '#000' : 'var(--text-body)',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        📖 عربية فصحى وقورة
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDialect('mixed')}
+                        style={{
+                          padding: '5px 11px',
+                          borderRadius: '6px',
+                          fontSize: '0.76rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: selectedDialect === 'mixed' ? '1px solid var(--gold)' : '1px solid var(--border-light)',
+                          background: selectedDialect === 'mixed' ? 'var(--gold)' : 'var(--bg-base)',
+                          color: selectedDialect === 'mixed' ? '#000' : 'var(--text-body)',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        ⚖️ أسلوب متوازن
+                      </button>
+                    </div>
+
+                    {/* Detected Keyword Badges */}
+                    {detectedDialectInfo.egyptianKeywordsFound.length > 0 && selectedDialect === 'egyptian' && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>مفردات تم رصدها بالنص:</span>
+                        {detectedDialectInfo.egyptianKeywordsFound.slice(0, 8).map((kw, i) => (
+                          <span
+                            key={i}
+                            style={{
+                              fontSize: '0.7rem',
+                              background: 'rgba(234, 179, 8, 0.18)',
+                              color: 'var(--gold)',
+                              padding: '1px 7px',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            {kw}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Voice Selection */}
                 <div>
                   <label className="form-label" style={{ marginBottom: '8px' }}>
-                    اختر شخصية الراوي ونبرة الإلقاء:
+                    اختر شخصية القارئ ونبرة الإلقاء:
                   </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '8px' }}>
                     {GEMINI_VOICES.map((v) => (
                       <div
                         key={v.id}
                         onClick={() => setSelectedGeminiVoice(v.id)}
                         style={{
-                          padding: '10px 12px',
+                          padding: '11px 13px',
                           borderRadius: 'var(--radius-sm)',
                           border: `1px solid ${selectedGeminiVoice === v.id ? 'var(--gold)' : 'var(--border-light)'}`,
                           background: selectedGeminiVoice === v.id ? 'rgba(212, 175, 55, 0.12)' : 'var(--bg-base)',
@@ -2651,12 +2783,19 @@ export default function AdminPage() {
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '0.84rem', color: selectedGeminiVoice === v.id ? 'var(--gold)' : 'var(--text-title)' }}>
-                            {v.name}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: 700, fontSize: '0.86rem', color: selectedGeminiVoice === v.id ? 'var(--gold)' : 'var(--text-title)' }}>
+                              {v.arabicName}
+                            </span>
+                            {v.recommended && (
+                              <span style={{ fontSize: '0.66rem', padding: '1px 5px', borderRadius: '4px', background: 'rgba(212, 175, 55, 0.22)', color: 'var(--gold)', fontWeight: 600 }}>
+                                موصى به 🌟
+                              </span>
+                            )}
+                          </div>
                           {selectedGeminiVoice === v.id && <Check size={14} style={{ color: 'var(--gold)' }} />}
                         </div>
-                        <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                        <p style={{ margin: 0, fontSize: '0.73rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
                           {v.description}
                         </p>
                       </div>
