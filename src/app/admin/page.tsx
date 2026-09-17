@@ -200,6 +200,7 @@ export default function AdminPage() {
   const [aiGenerationProgress, setAiGenerationProgress] = useState<GenerationProgress | null>(null);
   const [aiGeneratedResult, setAiGeneratedResult] = useState<{
     base64DataUrl: string;
+    blobUrl?: string;
     durationSeconds: number;
     sizeBytes: number;
     blob?: Blob;
@@ -2301,7 +2302,7 @@ export default function AdminPage() {
 
                         <div style={{ marginTop: '14px' }}>
                           <CustomAudioPlayer
-                            src={globalCompressionResult.base64DataUrl}
+                            src={globalCompressionResult.blobUrl || globalCompressionResult.base64DataUrl}
                             title="معاينة المقطع الصوتي العام الموحد"
                             downloadFilename="المقطع_الصوتي_العام.mp3"
                           />
@@ -3359,7 +3360,7 @@ export default function AdminPage() {
                       </div>
 
                       <CustomAudioPlayer
-                        src={aiGeneratedResult.base64DataUrl}
+                        src={aiGeneratedResult.blobUrl || aiGeneratedResult.base64DataUrl}
                         title={`معاينة التسجيل: ${audioTargetEpisode?.title || 'حلقة السيرة'}`}
                         durationSeconds={aiGeneratedResult.durationSeconds}
                         sizeBytes={aiGeneratedResult.sizeBytes}
@@ -3474,7 +3475,7 @@ export default function AdminPage() {
 
                       <div style={{ marginTop: '14px' }}>
                         <CustomAudioPlayer
-                          src={compressionResult.base64DataUrl}
+                          src={compressionResult.blobUrl || compressionResult.base64DataUrl}
                           title={`معاينة الصوت المضغوط: ${audioTargetEpisode?.title || 'ملف صوتي'}`}
                           downloadFilename={`${audioTargetEpisode?.title || 'ملف_صوتي'}.mp3`}
                         />

@@ -274,6 +274,7 @@ export async function generateGeminiEpisodeAudio({
   onProgress?: (progress: GenerationProgress) => void;
 }): Promise<{
   base64DataUrl: string;
+  blobUrl: string;
   durationSeconds: number;
   sizeBytes: number;
   blob: Blob;
@@ -395,6 +396,7 @@ export async function generateGeminiEpisodeAudio({
     type: 'audio/wav',
   });
   const durationSeconds = totalPcmLength / 48000; // 24000 samples/s * 2 bytes/sample
+  const blobUrl = typeof window !== 'undefined' ? URL.createObjectURL(blob) : '';
 
   // Convert Blob to Base64 Data URL
   const base64DataUrl = await new Promise<string>((resolve, reject) => {
@@ -409,6 +411,7 @@ export async function generateGeminiEpisodeAudio({
 
   return {
     base64DataUrl,
+    blobUrl,
     durationSeconds,
     sizeBytes: blob.size,
     blob,

@@ -26,6 +26,7 @@ import {
   Eye,
   EyeOff,
   BookOpen,
+  ChevronDown,
 } from 'lucide-react';
 
 import { Episode, ThemeType, FontType, GlobalAudio, SiteSettings } from '@/types';
@@ -77,8 +78,9 @@ export default function HomePage() {
   const [articleScrollProgress, setArticleScrollProgress] = useState<number>(0);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Modals State
+  // Modals & Collapsible State
   const [isGeminiModalOpen, setIsGeminiModalOpen] = useState<boolean>(false);
+  const [isMoralSectionOpen, setIsMoralSectionOpen] = useState<boolean>(false);
 
   // Touch Swipe Gesture State
   const touchStartCoords = useRef<{ x: number; y: number } | null>(null);
@@ -351,6 +353,7 @@ export default function HomePage() {
   // Navigate to Episode with URL sync
   const goToEpisode = (index: number) => {
     if (index < 0 || index >= episodes.length) return;
+    setIsMoralSectionOpen(false);
     setCurrentIndex(index);
     setLastReadIndex(index);
     localStorage.setItem('seerah_last_index', String(index));
@@ -671,7 +674,19 @@ export default function HomePage() {
                   <button
                     type="button"
                     className={`tool-btn ${currentEpisode.moralLesson ? 'accent' : ''}`}
-                    onClick={() => setIsGeminiModalOpen(true)}
+                    onClick={() => {
+                      if (currentEpisode.moralLesson) {
+                        setIsMoralSectionOpen((prev) => !prev);
+                        setTimeout(() => {
+                          const el = document.querySelector('.moral-lessons-accordion');
+                          if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }
+                        }, 50);
+                      } else {
+                        setIsGeminiModalOpen(true);
+                      }
+                    }}
                     title="العبر والفوائد الإيمانية المستخلصة"
                   >
                     <Sparkles size={16} style={{ color: currentEpisode.moralLesson ? 'var(--gold)' : undefined }} />
@@ -728,6 +743,88 @@ export default function HomePage() {
                   dangerouslySetInnerHTML={{ __html: formattedHtml }}
                 />
               </div>
+
+              {/* Collapsible Moral Lessons Accordion Section */}
+              {currentEpisode.moralLesson && (
+                <section className={`moral-lessons-accordion ${isMoralSectionOpen ? 'is-open' : ''}`}>
+                  <button
+                    type="button"
+                    className="moral-accordion-trigger"
+                    onClick={() => setIsMoralSectionOpen(!isMoralSectionOpen)}
+                    aria-expanded={isMoralSectionOpen}
+                  >
+                    <div className="moral-accordion-left">
+                      <div className="moral-lessons-icon">
+                        <Sparkles size={20} />
+                      </div>
+                      <div className="moral-accordion-titles">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <h3 className="moral-lessons-title">العبر والفوائد الإيمانية المستخلصة</h3>
+                          <span className="moral-ai-badge">✨ بالذكاء الاصطناعي (AI)</span>
+                        </div>
+                        <p className="moral-lessons-subtitle">
+                          {isMoralSectionOpen
+                            ? 'تأملات تربوية وعملية مستنبطة لمساعدتك على التدبر والعمل بهدي النبي ﷺ'
+                            : 'اضغط هنا لفتح وقراءة الدروس والعبر التربوية المستخلصة من هذه الحلقة ▾'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="moral-accordion-right">
+                      <span className="moral-toggle-btn-pill">
+                        <span>{isMoralSectionOpen ? 'طي وإخفاء' : 'فتح وتأمل العبر'}</span>
+                        <ChevronDown
+                          size={18}
+                          className={`moral-chevron ${isMoralSectionOpen ? 'rotated' : ''}`}
+                        />
+                      </span>
+                    </div>
+                  </button>
+
+                  {isMoralSectionOpen && (
+                    <div className="moral-accordion-content">
+                      <div className="moral-accordion-actions-bar">
+                        <span style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>
+                          تأملات إيمانية مستخلصة لحياتنا المعاصرة:
+                        </span>
+                        <button
+                          type="button"
+                          className="tool-btn"
+                          style={{ fontSize: '0.8rem', padding: '6px 14px' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(currentEpisode.moralLesson!).then(() => {
+                              triggerToast('تم نسخ العبر والفوائد للحافظة بنجاح! 📜', 'success');
+                            });
+                          }}
+                          title="نسخ العبر والفوائد"
+                        >
+                          <Copy size={15} />
+                          <span>نسخ العبر</span>
+                        </button>
+                      </div>
+
+                      <div className="moral-lessons-body">
+                        {currentEpisode.moralLesson
+                          .split('\n')
+                          .filter((l) => l.trim())
+                          .map((line, lIdx) => {
+                            const isPoint = /^(\d+[\.\-\)]|\*|\-)\s*/.test(line);
+                            return (
+                              <p key={lIdx} className={`moral-lesson-line ${isPoint ? 'moral-point' : ''}`}>
+                                {line}
+                              </p>
+                            );
+                          })}
+                      </div>
+
+                      <div className="moral-ai-footer-note">
+                        <span>💡 <strong>تنبيه للمتدبر:</strong> تم استنباط هذه الدروس والعبر وصياغتها استناداً لأحداث ومواقف الحلقة بواسطة الذكاء الاصطناعي (AI) لمساعدة القارئ على الاستفادة والتطبيق العملي.</span>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )}
 
               {/* Reflections Section */}
               <Reflections

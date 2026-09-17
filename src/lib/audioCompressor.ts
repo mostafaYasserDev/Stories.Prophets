@@ -9,6 +9,7 @@
 
 export interface CompressionResult {
   blob: Blob;
+  blobUrl?: string;
   base64DataUrl: string;
   originalSize: number;
   compressedSize: number;
@@ -144,6 +145,7 @@ export async function compressAudio(
 
   if (onProgress) onProgress(90, 'جارٍ تحويل الصوت المضغوط إلى Base64...');
   const mp3Blob = new Blob(mp3Chunks as unknown as BlobPart[], { type: 'audio/mp3' });
+  const blobUrl = typeof window !== 'undefined' ? URL.createObjectURL(mp3Blob) : '';
   const base64DataUrl = await blobToDataUrl(mp3Blob);
 
   const originalSize = file.size;
@@ -154,6 +156,7 @@ export async function compressAudio(
 
   return {
     blob: mp3Blob,
+    blobUrl,
     base64DataUrl,
     originalSize,
     compressedSize,

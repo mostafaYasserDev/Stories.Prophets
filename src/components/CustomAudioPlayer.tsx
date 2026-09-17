@@ -41,6 +41,38 @@ export const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isSeekingRef = useRef<boolean>(false);
 
+  const [safeSrc, setSafeSrc] = useState<string>('');
+
+  useEffect(() => {
+    if (!src) {
+      setSafeSrc('');
+      return;
+    }
+    // If src is a massive Base64 data URL, convert it to a lightweight native Blob URL
+    if (src.startsWith('data:audio') && src.length > 20000) {
+      try {
+        const parts = src.split(',');
+        const mime = parts[0].match(/:(.*?);/)?.[1] || 'audio/mp3';
+        const bstr = atob(parts[1] || parts[0]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const b = new Blob([u8arr], { type: mime });
+        const objUrl = URL.createObjectURL(b);
+        setSafeSrc(objUrl);
+        return () => {
+          URL.revokeObjectURL(objUrl);
+        };
+      } catch (e) {
+        setSafeSrc(src);
+      }
+    } else {
+      setSafeSrc(src);
+    }
+  }, [src]);
+
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -51,7 +83,7 @@ export const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({
         setDuration(durationSeconds);
       }
     }
-  }, [src, durationSeconds]);
+  }, [safeSrc, durationSeconds]);
 
   const formatTime = (secs: number) => {
     if (isNaN(secs) || secs < 0) return '00:00';
@@ -61,7 +93,7 @@ export const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({
   };
 
   const togglePlay = useCallback(() => {
-    if (!audioRef.current || !src) return;
+    if (!audioRef.current || !safeSrc) return;
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
@@ -71,7 +103,7 @@ export const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({
         .then(() => setIsPlaying(true))
         .catch((err) => console.warn('Playback failed:', err));
     }
-  }, [isPlaying, src]);
+  }, [isPlaying, safeSrc]);
 
   const skipTime = useCallback(
     (delta: number) => {
@@ -127,7 +159,7 @@ export const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({
       {/* Hidden Native Audio Element */}
       <audio
         ref={audioRef}
-        src={src}
+        src={safeSrc}
         preload="metadata"
         onTimeUpdate={() => {
           if (!isSeekingRef.current && audioRef.current) {
@@ -317,9 +349,9 @@ export const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({
             {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
           </button>
 
-          {src && (
+          {safeSrc && (
             <a
-              href={src}
+              href={safeSrc}
               download={downloadFilename}
               className="studio-aux-btn"
               title="تحميل الملف الصوتي للجهاز"
