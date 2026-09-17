@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Lightbulb, Plus, Trash2, Heart, User, Send, Check } from 'lucide-react';
+import { Lightbulb, Plus, Trash2, Heart, User, Send, Check, AlertTriangle, X } from 'lucide-react';
 import { Reflection } from '@/types';
 import { db } from '@/lib/firebase';
 import {
@@ -125,13 +125,17 @@ export const Reflections: React.FC<ReflectionsProps> = ({ episodeId, onToast }) 
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('هل تريد بالتأكيد حذف هذا التأمل؟')) return;
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const confirmDelete = async () => {
+    if (!confirmDeleteId) return;
     try {
-      await deleteDoc(doc(db, 'reflections', id));
+      await deleteDoc(doc(db, 'reflections', confirmDeleteId));
       onToast('تم حذف التأمل بنجاح', 'info');
     } catch (e: any) {
       onToast('تعذّر الحذف: ' + e.message, 'error');
+    } finally {
+      setConfirmDeleteId(null);
     }
   };
 
@@ -248,7 +252,7 @@ export const Reflections: React.FC<ReflectionsProps> = ({ episodeId, onToast }) 
                   <button
                     type="button"
                     className="reflection-del-btn"
-                    onClick={() => handleDelete(r.id)}
+                    onClick={() => setConfirmDeleteId(r.id)}
                     title="حذف التأمل"
                   >
                     <Trash2 size={13} />
@@ -258,6 +262,55 @@ export const Reflections: React.FC<ReflectionsProps> = ({ episodeId, onToast }) 
             </div>
           );
         })
+      )}
+
+      {/* Luxury Confirmation Modal for Reflections Delete */}
+      {confirmDeleteId && (
+        <div
+          className="modal-overlay"
+          style={{ zIndex: 160 }}
+          onClick={() => setConfirmDeleteId(null)}
+        >
+          <div className="modal-card confirm-modal-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="modal-close-btn"
+              onClick={() => setConfirmDeleteId(null)}
+              style={{ position: 'absolute', top: '16px', left: '16px' }}
+              title="إغلاق"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="confirm-icon-box">
+              <AlertTriangle size={30} />
+            </div>
+
+            <h3>تأكيد حذف التأمل</h3>
+            <p style={{ lineHeight: '1.7', marginTop: '8px' }}>
+              هل تريد بالتأكيد حذف هذا التأمل والمشاركة؟ لا يمكن التراجع عن هذا الإجراء بعد الحذف.
+            </p>
+
+            <div className="modal-actions" style={{ justifyContent: 'center', marginTop: '24px', gap: '14px' }}>
+              <button
+                type="button"
+                className="tool-btn"
+                onClick={() => setConfirmDeleteId(null)}
+              >
+                <X size={16} />
+                <span>تراجع وإلغاء</span>
+              </button>
+              <button
+                type="button"
+                className="confirm-danger-btn"
+                onClick={confirmDelete}
+              >
+                <Trash2 size={16} />
+                <span>نعم، تأكيد الحذف</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

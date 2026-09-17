@@ -10,6 +10,7 @@ import {
   Bot,
   Bookmark,
   Share2,
+  Sparkles,
   ArrowRight,
   ArrowLeft,
   Forward,
@@ -750,15 +751,15 @@ export default function HomePage() {
                     </button>
                   )}
 
-                  {/* Gemini Prompt Modal */}
+                  {/* Moral Lessons Toolbar Button */}
                   <button
                     type="button"
                     className="tool-btn"
                     onClick={() => setIsGeminiModalOpen(true)}
-                    title="استخراج الدروس والعبر بالذكاء الاصطناعي"
+                    title="العبر والفوائد الإيمانية المستخلصة"
                   >
-                    <Bot size={16} />
-                    <span>استخراج العبر (Gemini)</span>
+                    <Sparkles size={16} style={{ color: currentEpisode.moralLesson ? 'var(--gold)' : undefined }} />
+                    <span>العبر والفوائد {currentEpisode.moralLesson ? '✨' : ''}</span>
                   </button>
 
                   {/* Bookmark Button */}
@@ -811,6 +812,49 @@ export default function HomePage() {
                   dangerouslySetInnerHTML={{ __html: formattedHtml }}
                 />
               </div>
+
+              {/* Moral Lessons & Reflections Section (Rendered directly when available) */}
+              {currentEpisode.moralLesson && (
+                <section className="moral-lessons-container">
+                  <div className="moral-lessons-header">
+                    <div className="moral-lessons-icon">
+                      <Sparkles size={20} />
+                    </div>
+                    <div>
+                      <h3 className="moral-lessons-title">العبر والفوائد الإيمانية المستخلصة</h3>
+                      <p className="moral-lessons-subtitle">وقفات تربوية وتأملات في هدي النبي ﷺ ومواقف الحلقة</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="tool-btn"
+                      style={{ marginRight: 'auto', fontSize: '0.8rem', padding: '6px 14px' }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(currentEpisode.moralLesson!).then(() => {
+                          triggerToast('تم نسخ العبر والفوائد للحافظة بنجاح! 📜', 'success');
+                        });
+                      }}
+                      title="نسخ العبر والفوائد"
+                    >
+                      <Copy size={15} />
+                      <span>نسخ العبر</span>
+                    </button>
+                  </div>
+
+                  <div className="moral-lessons-body">
+                    {currentEpisode.moralLesson
+                      .split('\n')
+                      .filter((l) => l.trim())
+                      .map((line, lIdx) => {
+                        const isPoint = /^(\d+[\.\-\)]|\*|\-)\s*/.test(line);
+                        return (
+                          <p key={lIdx} className={`moral-lesson-line ${isPoint ? 'moral-point' : ''}`}>
+                            {line}
+                          </p>
+                        );
+                      })}
+                  </div>
+                </section>
+              )}
 
               {/* Reflections Section */}
               <Reflections
@@ -1049,12 +1093,40 @@ export default function HomePage() {
         </button>
       </nav>
 
-      {/* Gemini Voice Prompt Modal */}
+      {/* Moral Lessons & Reflections Modal */}
       {isGeminiModalOpen && currentEpisode && (
         <div className="modal-overlay" onClick={() => setIsGeminiModalOpen(false)}>
-          <div className="modal-card" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal-card"
+            style={{ maxWidth: '620px', width: '92%' }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
-              <h3>استخراج الدروس والعبر عبر Gemini</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px',
+                    background: 'rgba(200, 155, 60, 0.15)',
+                    border: '1px solid rgba(200, 155, 60, 0.3)',
+                    color: 'var(--gold)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Sparkles size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-title)' }}>
+                    العبر والفوائد الإيمانية المستخلصة
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    حلقة: {currentEpisode.title}
+                  </span>
+                </div>
+              </div>
               <button
                 type="button"
                 className="modal-close-btn"
@@ -1063,45 +1135,97 @@ export default function HomePage() {
                 <X size={20} />
               </button>
             </div>
-            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: '1.7' }}>
-              تم تجهيز الأمر الذكي لنص هذه الحلقة. اضغط على «نسخ الأمر والنص» ثم «فتح Gemini» والصق النص هناك ليقوم الذكاء الاصطناعي باستخراج الفوائد الإيمانية والدروس والعبر التربوية.
-            </p>
-            <textarea
-              className="form-textarea"
-              style={{ minHeight: '120px', fontSize: '0.85rem' }}
-              readOnly
-              value={`أنا أقرأ هذه الحلقة من السيرة النبوية الشريفة: «${currentEpisode.title}»:\n\n${currentEpisode.html.replace(/<[^>]+>/g, '').trim()}\n\nالمطلوب:\n1. استخرج أهم 3 دروس وعبر تربوية وعملية لحياتنا المعاصرة من هذا الموقف.\n2. بين أهم الفوائد الإيمانية.\n3. صغ ذلك بأسلوب مؤثر وجميل ومختصر.`}
-            />
-            <div className="modal-actions">
-              <button
-                type="button"
-                className="btn-gold"
-                onClick={() => {
-                  const text = `أنا أقرأ هذه الحلقة من السيرة النبوية الشريفة: «${currentEpisode.title}»:\n\n${currentEpisode.html.replace(/<[^>]+>/g, '').trim()}\n\nالمطلوب:\n1. استخرج أهم 3 دروس وعبر تربوية وعملية لحياتنا المعاصرة من هذا الموقف.\n2. بين أهم الفوائد الإيمانية.\n3. صغ ذلك بأسلوب مؤثر وجميل ومختصر.`;
-                  navigator.clipboard.writeText(text).then(() => {
-                    triggerToast('تم نسخ الأمر والنص للحافظة بنجاح!', 'success');
-                  });
-                }}
-              >
-                <Copy size={16} />
-                <span>نسخ الأمر والنص</span>
-              </button>
-              <button
-                type="button"
-                className="tool-btn"
-                onClick={() => window.open('https://gemini.google.com/app', '_blank')}
-              >
-                <ExternalLink size={16} />
-                <span>فتح Gemini</span>
-              </button>
-              <button
-                type="button"
-                className="tool-btn"
-                onClick={() => setIsGeminiModalOpen(false)}
-              >
-                إغلاق
-              </button>
-            </div>
+
+            {currentEpisode.moralLesson ? (
+              <>
+                <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: '1.7' }}>
+                  تأملات تربوية وعبر إيمانية تم استخلاصها بعناية في هدي النبي ﷺ ومواقف هذه الحلقة المباركة:
+                </p>
+
+                <div className="moral-modal-quote-box">
+                  {currentEpisode.moralLesson
+                    .split('\n')
+                    .filter((l) => l.trim())
+                    .map((line, idx) => {
+                      const isPoint = /^(\d+[\.\-\)]|\*|\-)\s*/.test(line);
+                      return (
+                        <p
+                          key={idx}
+                          className={`moral-modal-line ${isPoint ? 'is-point' : ''}`}
+                        >
+                          {line}
+                        </p>
+                      );
+                    })}
+                </div>
+
+                <div className="modal-actions" style={{ marginTop: '20px' }}>
+                  <button
+                    type="button"
+                    className="btn-gold"
+                    onClick={() => {
+                      navigator.clipboard.writeText(currentEpisode.moralLesson!).then(() => {
+                        triggerToast('تم نسخ العبر والفوائد للحافظة بنجاح! 📜', 'success');
+                      });
+                    }}
+                  >
+                    <Copy size={16} />
+                    <span>نسخ العبر والفوائد</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="tool-btn"
+                    onClick={() => setIsGeminiModalOpen(false)}
+                  >
+                    إغلاق
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '24px 16px',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px dashed rgba(200, 155, 60, 0.25)',
+                    margin: '12px 0 16px',
+                  }}
+                >
+                  <Sparkles size={36} style={{ color: 'var(--gold)', opacity: 0.8, marginBottom: '12px' }} />
+                  <h4 style={{ color: 'var(--text-title)', fontSize: '1.05rem', marginBottom: '8px' }}>
+                    لم يتم استخلاص العبر لهذه الحلقة بعد
+                  </h4>
+                  <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', maxWidth: '420px', margin: '0 auto 16px', lineHeight: '1.7' }}>
+                    يتم استخلاص وتجهيز العبر الإيمانية والتربوية لكل حلقة من خلال لوحة التحكم لتظهر لجميع القراء هنا مباشرة دون مغادرة الموقع.
+                  </p>
+                </div>
+
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="tool-btn"
+                    onClick={() => {
+                      const text = `أنا أقرأ هذه الحلقة من السيرة النبوية الشريفة: «${currentEpisode.title}»:\n\n${currentEpisode.html.replace(/<[^>]+>/g, '').trim()}\n\nالمطلوب:\n1. استخرج أهم 3 دروس وعبر تربوية وعملية لحياتنا المعاصرة من هذا الموقف.\n2. بين أهم الفوائد الإيمانية.\n3. صغ ذلك بأسلوب مؤثر وجميل ومختصر.`;
+                      navigator.clipboard.writeText(text).then(() => {
+                        triggerToast('تم نسخ نص الحلقة والأمر للحافظة!', 'success');
+                      });
+                    }}
+                  >
+                    <Copy size={16} />
+                    <span>نسخ نص الحلقة والأمر</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-gold"
+                    onClick={() => setIsGeminiModalOpen(false)}
+                  >
+                    حسناً
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

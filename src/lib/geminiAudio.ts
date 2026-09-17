@@ -414,3 +414,100 @@ export async function generateGeminiEpisodeAudio({
     blob,
   };
 }
+
+/**
+ * Generates profound, eloquent faith and moral lessons for a Seerah episode using Gemini AI.
+ * Focuses on practical contemporary life lessons and spiritual reflections.
+ */
+export async function generateEpisodeMoralLessons({
+  title,
+  htmlContent,
+  apiKey = DEFAULT_GEMINI_KEY,
+}: {
+  title: string;
+  htmlContent: string;
+  apiKey?: string;
+}): Promise<string> {
+  const effectiveKey = apiKey && apiKey.trim() ? apiKey.trim() : DEFAULT_GEMINI_KEY;
+  if (!effectiveKey) {
+    throw new Error('يرجى توفير مفتاح Google Gemini API لاستخلاص العبر.');
+  }
+
+  const plainText = cleanHtmlForSpeech(htmlContent).slice(0, 8000);
+
+  const prompt = `أنت عالم ومربٍّ إسلامي متخصص في فقه السيرة النبوية الشريفة واستنباط العبر الإيمانية والتربوية.
+اقرأ نص هذه الحلقة من السيرة النبوية الشريفة: «${title}»
+
+نص الحلقة:
+${plainText}
+
+المطلوب بدقة:
+استخرج من هذا الحدث والمواقف النبوية الشريفة أهم 3 إلى 5 دروس وعبر إيمانية وتربوية وعملية تفيد المسلم في حياته المعاصرة.
+
+شروط الصياغة:
+1. ابدأ مباشرة بالدروس والعبر دون أي مقدمات أو تمهيد إنشائي.
+2. نسق كل درس بنقطة مرقمة تبدأ بعنوان بارز بين نجمتين **عنوان العبرة** متبوع بنقطتين وشرح بليغ وموجز ومؤثر يلامس القلوب.
+3. التزم باللغة العربية الفصحى الراقية والأسلوب الإيماني الرصين.
+4. ركز على الجوانب العملية والتربوية التي يمكن تطبيقها في حياتنا اليومية (مثل: التوكل، الثبات، حسن الخلق، التخطيط، الرحمة، الصبر).`;
+
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(
+    effectiveKey
+  )}`;
+
+  const body = {
+    contents: [
+      {
+        parts: [{ text: prompt }],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.4,
+      maxOutputTokens: 1200,
+    },
+  };
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    let parsedErr: any = null;
+    try {
+      parsedErr = JSON.parse(errText);
+    } catch {}
+
+    // Fallback to gemini-1.5-flash if 2.5 is temporarily not available
+    if (res.status === 404 || res.status === 400) {
+      const fallbackEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(
+        effectiveKey
+      )}`;
+      const fallbackRes = await fetch(fallbackEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (fallbackRes.ok) {
+        const fallbackData = await fallbackRes.json();
+        const text = fallbackData.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) return text.trim();
+      }
+    }
+
+    throw new Error(
+      `خطأ من Gemini (${res.status}): ${parsedErr?.error?.message || errText || 'تعذّر استخلاص العبر'}`
+    );
+  }
+
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    throw new Error('لم يتم استلام نص العبر من نموذج Gemini');
+  }
+
+  return text.trim();
+}

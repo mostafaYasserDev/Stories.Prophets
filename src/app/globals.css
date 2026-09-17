@@ -2824,36 +2824,90 @@ body {
   color: var(--gold-light);
 }
 
-/* Custom Confirmation Modal */
+/* Custom Confirmation Luxury Modal */
 .confirm-modal-card {
-  max-width: 440px !important;
+  max-width: 460px !important;
   text-align: center;
-  padding: 28px !important;
+  padding: 32px 28px !important;
+  position: relative;
+  background: linear-gradient(160deg, rgba(28, 25, 23, 0.98), rgba(15, 14, 12, 0.98)) !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 35px rgba(239, 68, 68, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  border-radius: 20px !important;
+  animation: luxuryConfirmPop 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes luxuryConfirmPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .confirm-icon-box {
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #ef4444;
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.22) 0%, rgba(239, 68, 68, 0.08) 100%);
+  border: 1.5px solid rgba(239, 68, 68, 0.45);
+  color: #f87171;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 16px;
+  margin: 0 auto 18px;
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.25);
+  animation: pulseGlow 2.5s infinite alternate;
+}
+
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+    transform: scale(1);
+  }
+  100% {
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.35);
+    transform: scale(1.03);
+  }
 }
 
 .confirm-modal-card h3 {
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   color: var(--text-title);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .confirm-modal-card p {
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   color: var(--text-muted);
-  line-height: 1.6;
+  line-height: 1.7;
+  padding: 0 8px;
+}
+
+.confirm-danger-btn {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  border: 1px solid #ef4444 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  padding: 10px 22px !important;
+  border-radius: var(--radius-sm) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.35) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.confirm-danger-btn:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.5) !important;
+  transform: translateY(-1px);
 }
 
 /* ==================== DUPLICATE SERIES BANNER ==================== */
@@ -3670,3 +3724,119 @@ body.focus-mode .reading-card {
   background: rgba(239, 68, 68, 0.12);
   color: #ef4444;
 }
+
+/* ==================== MORAL LESSONS (العبر والفوائد الإيمانية) ==================== */
+.moral-lessons-container {
+  margin: 32px 0 24px;
+  background: linear-gradient(135deg, rgba(200, 155, 60, 0.08) 0%, rgba(15, 17, 23, 0.95) 100%);
+  border: 1px solid rgba(200, 155, 60, 0.35);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  animation: fadeIn 0.3s ease;
+}
+
+.moral-lessons-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.moral-lessons-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(200, 155, 60, 0.2);
+  flex-wrap: wrap;
+}
+
+.moral-lessons-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(200, 155, 60, 0.25), rgba(200, 155, 60, 0.08));
+  border: 1px solid rgba(200, 155, 60, 0.45);
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 16px rgba(200, 155, 60, 0.2);
+}
+
+.moral-lessons-title {
+  font-family: var(--font-amiri), serif;
+  font-size: 1.25rem;
+  color: var(--gold);
+  margin: 0 0 3px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.moral-lessons-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.moral-lessons-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.moral-lesson-line {
+  font-size: 1.05rem;
+  line-height: 1.9;
+  color: var(--text-body);
+  margin: 0;
+}
+
+.moral-lesson-line.moral-point {
+  background: rgba(255, 255, 255, 0.02);
+  border-right: 3px solid var(--gold);
+  padding: 10px 16px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  transition: all 0.2s ease;
+}
+
+.moral-lesson-line.moral-point:hover {
+  background: rgba(200, 155, 60, 0.05);
+  transform: translateX(-2px);
+}
+
+/* Moral Lessons Modal Details */
+.moral-modal-quote-box {
+  background: rgba(200, 155, 60, 0.06);
+  border: 1px solid rgba(200, 155, 60, 0.25);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  max-height: 55vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.moral-modal-line {
+  font-size: 1.02rem;
+  line-height: 1.85;
+  color: var(--text-title);
+  margin: 0;
+}
+
+.moral-modal-line.is-point {
+  background: rgba(0, 0, 0, 0.2);
+  border-right: 3px solid var(--gold);
+  padding: 8px 14px;
+  border-radius: 0 6px 6px 0;
+}
+

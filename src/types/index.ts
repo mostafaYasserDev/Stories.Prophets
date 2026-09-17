@@ -19,6 +19,8 @@ export interface Episode {
   audioUrl?: string | null;
   audioType?: 'direct' | 'chunked' | null;
   audioChunksCount?: number;
+  audioSourceType?: 'ai' | 'upload' | 'url' | null;
+  moralLesson?: string | null;
   isPinned?: boolean; // Pinned episode to highlight in index
   createdAt?: any;
   updatedAt?: any;

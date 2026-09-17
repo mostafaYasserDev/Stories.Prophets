@@ -67,11 +67,13 @@ import {
   saveGlobalAudio,
   removeGlobalAudio,
   resolveGlobalAudioUrl,
+  getAudioSourceInfo,
 } from '@/lib/audioStorage';
 import { compressAudio, formatBytes, CompressionResult } from '@/lib/audioCompressor';
 import { normalizeArabicText, formatFriendlyError } from '@/lib/errorHandler';
 import {
   generateGeminiEpisodeAudio,
+  generateEpisodeMoralLessons,
   cleanHtmlForSpeech,
   GenerationProgress,
   DEFAULT_GEMINI_KEY,
@@ -128,6 +130,16 @@ export default function AdminPage() {
 
   const [isAudioModalOpen, setIsAudioModalOpen] = useState<boolean>(false);
   const [audioTargetEpisode, setAudioTargetEpisode] = useState<Episode | null>(null);
+  const [existingAudioBlobUrl, setExistingAudioBlobUrl] = useState<string | null>(null);
+  const [isLoadingExistingAudio, setIsLoadingExistingAudio] = useState<boolean>(false);
+
+  // Moral Lessons State (Gemini AI)
+  const [isMoralModalOpen, setIsMoralModalOpen] = useState<boolean>(false);
+  const [moralTargetEpisode, setMoralTargetEpisode] = useState<Episode | null>(null);
+  const [moralLessonInput, setMoralLessonInput] = useState<string>('');
+  const [isGeneratingMoral, setIsGeneratingMoral] = useState<boolean>(false);
+  const [isSavingMoral, setIsSavingMoral] = useState<boolean>(false);
+  const [formMoralLesson, setFormMoralLesson] = useState<string>('');
 
   const [isPinModalOpen, setIsPinModalOpen] = useState<boolean>(false);
   const [newPin, setNewPin] = useState<string>('');
@@ -138,11 +150,15 @@ export default function AdminPage() {
     isOpen: boolean;
     title: string;
     message: string;
+    confirmText?: string;
+    cancelText?: string;
     onConfirm: () => void;
   }>({
     isOpen: false,
     title: '',
     message: '',
+    confirmText: 'نعم، تأكيد الحذف',
+    cancelText: 'تراجع وإلغاء',
     onConfirm: () => {},
   });
 
@@ -615,6 +631,7 @@ export default function AdminPage() {
     setFormTitle('');
     setFormSubtitle(`الحلقة ${String(episodes.length + 1).padStart(3, '0')}`);
     setFormContent('');
+    setFormMoralLesson('');
     setFormIsPinned(false);
     setIsEpisodeModalOpen(true);
   };
@@ -628,6 +645,7 @@ export default function AdminPage() {
     setFormSubtitle(ep.subtitle || '');
     const plain = (ep.html || '').replace(/<p>/gi, '').replace(/<\/p>/gi, '\n\n').trim();
     setFormContent(plain);
+    setFormMoralLesson(ep.moralLesson || '');
     setFormIsPinned(!!ep.isPinned);
     setIsEpisodeModalOpen(true);
   };
@@ -667,6 +685,7 @@ export default function AdminPage() {
           title: formTitle.trim(),
           subtitle: formSubtitle.trim(),
           html: formattedHtml,
+          moralLesson: formMoralLesson.trim() || null,
           isPinned: formIsPinned,
           updatedAt: serverTimestamp(),
         });
@@ -679,6 +698,7 @@ export default function AdminPage() {
           title: formTitle.trim(),
           subtitle: formSubtitle.trim(),
           html: formattedHtml,
+          moralLesson: formMoralLesson.trim() || null,
           audioUrl: null,
           isPinned: formIsPinned,
           createdAt: serverTimestamp(),
@@ -970,8 +990,34 @@ export default function AdminPage() {
     setSimulatedPhrase('');
     setDailyQuotaStatus(getDailyAudioUsage(geminiApiKeyInput));
 
-    setAudioUploadTab('ai');
+    const sourceInfo = getAudioSourceInfo(ep);
+    if (sourceInfo.type === 'ai') {
+      setAudioUploadTab('ai');
+    } else if (sourceInfo.type === 'upload') {
+      setAudioUploadTab('upload');
+    } else if (sourceInfo.type === 'url') {
+      setAudioUploadTab('url');
+    } else {
+      setAudioUploadTab('ai');
+    }
+
+    setExistingAudioBlobUrl(null);
     setIsAudioModalOpen(true);
+
+    // Resolve audio preview using lightweight Blob URL
+    if (ep.audioUrl) {
+      setIsLoadingExistingAudio(true);
+      resolveAudioUrl(ep)
+        .then((url) => {
+          setExistingAudioBlobUrl(url);
+        })
+        .catch((err) => {
+          console.error('Failed to resolve episode audio in modal:', err);
+        })
+        .finally(() => {
+          setIsLoadingExistingAudio(false);
+        });
+    }
   };
 
   // Gemini AI Audio Generation Handler
@@ -1069,13 +1115,13 @@ export default function AdminPage() {
       // Compress generated raw WAV into high-efficiency 32kbps mono MP3
       const compressed = await compressAudio(audioBlob, 32);
 
-      await saveAudioToEpisode(audioTargetEpisode.docId, compressed.base64DataUrl);
+      await saveAudioToEpisode(audioTargetEpisode.docId, compressed.base64DataUrl, 'ai');
 
       // Update local state with the compressed lightweight audio
       setEpisodes((prev) =>
         prev.map((ep) =>
           ep.docId === audioTargetEpisode.docId
-            ? { ...ep, audioUrl: compressed.base64DataUrl, audioType: 'direct' }
+            ? { ...ep, audioUrl: compressed.base64DataUrl, audioType: 'direct', audioSourceType: 'ai' }
             : ep
         )
       );
@@ -1141,7 +1187,14 @@ export default function AdminPage() {
     if (!audioTargetEpisode || !compressionResult) return;
     setIsSavingAudio(true);
     try {
-      await saveAudioToEpisode(audioTargetEpisode.docId, compressionResult.base64DataUrl);
+      await saveAudioToEpisode(audioTargetEpisode.docId, compressionResult.base64DataUrl, 'upload');
+      setEpisodes((prev) =>
+        prev.map((ep) =>
+          ep.docId === audioTargetEpisode.docId
+            ? { ...ep, audioUrl: compressionResult.base64DataUrl, audioType: 'direct', audioSourceType: 'upload' }
+            : ep
+        )
+      );
       triggerToast('تم حفظ التسجيل الصوتي المضغوط في السحابة بنجاح! 🎵', 'success', 'تم حفظ الصوت');
       setIsAudioModalOpen(false);
     } catch (err: any) {
@@ -1161,7 +1214,14 @@ export default function AdminPage() {
     }
     setIsSavingAudio(true);
     try {
-      await saveAudioToEpisode(audioTargetEpisode.docId, url);
+      await saveAudioToEpisode(audioTargetEpisode.docId, url, 'url');
+      setEpisodes((prev) =>
+        prev.map((ep) =>
+          ep.docId === audioTargetEpisode.docId
+            ? { ...ep, audioUrl: url, audioType: 'direct', audioSourceType: 'url' }
+            : ep
+        )
+      );
       triggerToast('تم حفظ الرابط الصوتي بنجاح! 🎵', 'success', 'تم الحفظ');
       setIsAudioModalOpen(false);
     } catch (err: any) {
@@ -1172,19 +1232,126 @@ export default function AdminPage() {
     }
   };
 
-  const handleRemoveAudioPrompt = () => {
-    if (!audioTargetEpisode) return;
+  const handleRemoveAudioPrompt = (targetEp?: Episode | null) => {
+    const ep = targetEp || audioTargetEpisode;
+    if (!ep) return;
+    const sourceInfo = getAudioSourceInfo(ep);
+
     setConfirmDialog({
       isOpen: true,
-      title: 'تأكيد إزالة الصوت',
-      message: `هل تريد بالتأكيد إزالة المقطع الصوتي لحلقة: «${audioTargetEpisode.title}»؟`,
+      title: 'حذف التسجيل الصوتي للحلقة',
+      message: `هل أنت متأكد من رغبتك في حذف التسجيل الصوتي الحالي (${sourceInfo.label}) لحلقة: «${ep.title}»؟ سيتم حذف المقطع نهائياً من السحابة ليتسنى لك اختيار أو توليد تسجيل جديد بحرية.`,
       onConfirm: async () => {
         try {
-          await removeAudioFromEpisode(audioTargetEpisode.docId);
-          triggerToast('تمت إزالة المقطع الصوتي للحلقة', 'info', 'إزالة الصوت');
-          setIsAudioModalOpen(false);
+          await removeAudioFromEpisode(ep.docId);
+          // Update local state
+          setEpisodes((prev) =>
+            prev.map((item) =>
+              item.docId === ep.docId
+                ? { ...item, audioUrl: null, audioType: null, audioChunksCount: 0, audioSourceType: null }
+                : item
+            )
+          );
+          if (audioTargetEpisode?.docId === ep.docId) {
+            setAudioTargetEpisode((prev) =>
+              prev
+                ? { ...prev, audioUrl: null, audioType: null, audioChunksCount: 0, audioSourceType: null }
+                : null
+            );
+            setExistingAudioBlobUrl(null);
+          }
+          if (editingEpisode?.docId === ep.docId) {
+            setEditingEpisode((prev) =>
+              prev
+                ? { ...prev, audioUrl: null, audioType: null, audioChunksCount: 0, audioSourceType: null }
+                : null
+            );
+          }
+          triggerToast('تمت إزالة المقطع الصوتي للحلقة بنجاح؛ أصبحت خيارات التسجيل الأخرى متاحة الآن 🎵', 'success', 'إزالة الصوت');
         } catch (err: any) {
           const friendly = formatFriendlyError(err, 'تعذّر إزالة المقطع الصوتي');
+          triggerToast(friendly.message, 'error', friendly.title);
+        } finally {
+          setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+        }
+      },
+    });
+  };
+
+  // ==================== MORAL LESSONS (GEMINI AI) ====================
+  const handleOpenMoralModal = (ep: Episode) => {
+    setMoralTargetEpisode(ep);
+    setMoralLessonInput(ep.moralLesson || '');
+    setIsMoralModalOpen(true);
+  };
+
+  const handleGenerateMoralLesson = async () => {
+    if (!moralTargetEpisode) return;
+    setIsGeneratingMoral(true);
+    try {
+      const effectiveKey = geminiApiKeyInput && geminiApiKeyInput.trim() ? geminiApiKeyInput.trim() : DEFAULT_GEMINI_KEY;
+      const lesson = await generateEpisodeMoralLessons({
+        title: moralTargetEpisode.title,
+        htmlContent: moralTargetEpisode.html,
+        apiKey: effectiveKey,
+      });
+      setMoralLessonInput(lesson);
+      triggerToast('تم استخلاص العبر والفوائد الإيمانية للحلقة بنجاح! ✨', 'success', 'تم الاستنباط بنجاح');
+    } catch (err: any) {
+      console.error('Failed to generate moral lesson:', err);
+      const friendly = formatFriendlyError(err, 'تعذّر استخلاص العبر والفوائد بالذكاء الاصطناعي');
+      triggerToast(friendly.message, 'error', friendly.title);
+    } finally {
+      setIsGeneratingMoral(false);
+    }
+  };
+
+  const handleSaveMoralLesson = async () => {
+    if (!moralTargetEpisode) return;
+    setIsSavingMoral(true);
+    try {
+      const trimmed = moralLessonInput.trim();
+      await updateDoc(doc(db, 'episodes', moralTargetEpisode.docId), {
+        moralLesson: trimmed || null,
+        updatedAt: serverTimestamp(),
+      });
+      setEpisodes((prev) =>
+        prev.map((ep) =>
+          ep.docId === moralTargetEpisode.docId ? { ...ep, moralLesson: trimmed || null } : ep
+        )
+      );
+      triggerToast('تم حفظ واعتماد العبر والفوائد الإيمانية للحلقة بنجاح! 📜', 'success', 'تم الحفظ');
+      setIsMoralModalOpen(false);
+    } catch (err: any) {
+      const friendly = formatFriendlyError(err, 'فشل حفظ العبر والفوائد');
+      triggerToast(friendly.message, 'error', friendly.title);
+    } finally {
+      setIsSavingMoral(false);
+    }
+  };
+
+  const handleDeleteMoralLessonPrompt = () => {
+    if (!moralTargetEpisode) return;
+    setConfirmDialog({
+      isOpen: true,
+      title: 'حذف العبر والفوائد الإيمانية',
+      message: `هل أنت متأكد من حذف العبر والفوائد المستخلصة لحلقة: «${moralTargetEpisode.title}»؟`,
+      onConfirm: async () => {
+        try {
+          await updateDoc(doc(db, 'episodes', moralTargetEpisode.docId), {
+            moralLesson: null,
+            updatedAt: serverTimestamp(),
+          });
+          setEpisodes((prev) =>
+            prev.map((ep) =>
+              ep.docId === moralTargetEpisode.docId ? { ...ep, moralLesson: null } : ep
+            )
+          );
+          setMoralLessonInput('');
+          triggerToast('تم حذف العبر والفوائد للحلقة', 'info');
+          setIsMoralModalOpen(false);
+        } catch (err: any) {
+          const friendly = formatFriendlyError(err, 'تعذّر حذف العبر والفوائد');
           triggerToast(friendly.message, 'error', friendly.title);
         } finally {
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
@@ -1669,24 +1836,36 @@ export default function AdminPage() {
                             </td>
                             <td>
                               {hasAudio ? (
-                                <div className="audio-cell-active" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <button
-                                    className={`audio-play-mini-btn ${isAudioPlaying ? 'playing' : ''}`}
-                                    onClick={() => togglePlayPreview(ep)}
-                                    title={isAudioPlaying ? 'إيقاف المعاينة' : 'معاينة واستماع'}
-                                  >
-                                    {isAudioPlaying ? <Pause size={13} /> : <Play size={13} />}
-                                  </button>
-                                  <button
-                                    className="audio-link-tag"
-                                    onClick={() => handleOpenAudioModal(ep)}
-                                    title="إدارة أو إعادة توليد الصوت"
-                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                  >
-                                    <Mic size={12} style={{ color: 'var(--gold)' }} />
-                                    <span>{isBase64 ? 'صوت استوديو ✓' : 'رابط خارجي ✓'}</span>
-                                  </button>
-                                </div>
+                                (() => {
+                                  const sInfo = getAudioSourceInfo(ep);
+                                  return (
+                                    <div className="audio-cell-active" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <button
+                                        className={`audio-play-mini-btn ${isAudioPlaying ? 'playing' : ''}`}
+                                        onClick={() => togglePlayPreview(ep)}
+                                        title={isAudioPlaying ? 'إيقاف المعاينة' : 'معاينة واستماع'}
+                                      >
+                                        {isAudioPlaying ? <Pause size={13} /> : <Play size={13} />}
+                                      </button>
+                                      <button
+                                        className="audio-link-tag"
+                                        onClick={() => handleOpenAudioModal(ep)}
+                                        title={`المصدر: ${sInfo.label} - انقر للإدارة`}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '5px',
+                                          background: sInfo.bg,
+                                          border: `1px solid ${sInfo.color}40`,
+                                          color: sInfo.color,
+                                        }}
+                                      >
+                                        <span>{sInfo.icon}</span>
+                                        <span>{sInfo.badgeText} ✓</span>
+                                      </button>
+                                    </div>
+                                  );
+                                })()
                               ) : (
                                 <button
                                   className="audio-add-prompt-btn"
@@ -1739,8 +1918,20 @@ export default function AdminPage() {
                               <div className="actions-cell">
                                 <button
                                   className="action-icon-btn"
+                                  onClick={() => handleOpenMoralModal(ep)}
+                                  title={
+                                    ep.moralLesson
+                                      ? 'العبر والفوائد الإيمانية (معتمدة ✓)'
+                                      : 'استخلاص العبر والفوائد الإيمانية بالذكاء الاصطناعي ✨'
+                                  }
+                                  style={{ color: ep.moralLesson ? '#22c55e' : 'var(--gold)' }}
+                                >
+                                  <Sparkles size={16} />
+                                </button>
+                                <button
+                                  className="action-icon-btn"
                                   onClick={() => handleOpenAudioModal(ep)}
-                                  title="🎙️ توليد تسجيل صوتي بالذكاء الاصطناعي (Gemini) أو إدارة الصوت"
+                                  title="🎙️ إدارة أو توليد تسجيل صوتي"
                                   style={{ color: hasAudio ? 'var(--gold)' : 'var(--text-muted)' }}
                                 >
                                   <Mic size={16} />
@@ -2480,6 +2671,84 @@ export default function AdminPage() {
                 )}
               </div>
 
+              {/* Moral Lessons Section inside Episode Modal */}
+              <div
+                style={{
+                  background: 'rgba(200, 155, 60, 0.06)',
+                  border: '1px solid rgba(200, 155, 60, 0.25)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '16px',
+                  marginBottom: '16px',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '10px',
+                    flexWrap: 'wrap',
+                    gap: '8px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Sparkles size={18} style={{ color: 'var(--gold)' }} />
+                    <label className="form-label" style={{ margin: 0, fontSize: '0.88rem', fontWeight: 600 }}>
+                      العبر والفوائد الإيمانية المستخلصة (تظهر للقارئ بالموقع):
+                    </label>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="inline-text-btn"
+                    style={{
+                      fontSize: '0.78rem',
+                      color: 'var(--gold)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      background: 'rgba(200, 155, 60, 0.12)',
+                      padding: '5px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(200, 155, 60, 0.35)',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                    }}
+                    onClick={async () => {
+                      if (!formContent.trim()) {
+                        triggerToast('يرجى كتابة نص الحلقة أولاً لاستخلاص العبر', 'warning');
+                        return;
+                      }
+                      triggerToast('جارٍ استخلاص العبر والفوائد الإيمانية بالذكاء الاصطناعي...', 'info');
+                      try {
+                        const lesson = await generateEpisodeMoralLessons({
+                          title: formTitle || 'حلقة السيرة',
+                          htmlContent: formContent,
+                          apiKey: geminiApiKeyInput,
+                        });
+                        setFormMoralLesson(lesson);
+                        triggerToast('تم استخلاص العبر والفوائد بنجاح! ✨', 'success');
+                      } catch (err: any) {
+                        const friendly = formatFriendlyError(err, 'فشل استخلاص العبر');
+                        triggerToast(friendly.message, 'error', friendly.title);
+                      }
+                    }}
+                  >
+                    <Sparkles size={13} />
+                    <span>استخلاص بالذكاء الاصطناعي ✨</span>
+                  </button>
+                </div>
+
+                <textarea
+                  className="form-textarea"
+                  rows={4}
+                  style={{ minHeight: '110px', fontSize: '0.88rem', lineHeight: '1.7' }}
+                  placeholder="يمكنك استخلاصها تلقائياً بالضغط على الزر أعلاه، أو كتابة وتعديل العبر والفوائد الإيمانية هنا..."
+                  value={formMoralLesson}
+                  onChange={(e) => setFormMoralLesson(e.target.value)}
+                />
+              </div>
+
               <div className="modal-actions">
                 <button
                   type="button"
@@ -2662,503 +2931,762 @@ export default function AdminPage() {
       )}
 
       {/* ==================== MODAL: AUDIO COMPRESSOR & BASE64 UPLOAD ==================== */}
-      {isAudioModalOpen && audioTargetEpisode && (
-        <div className="modal-overlay" onClick={() => setIsAudioModalOpen(false)}>
+      {isAudioModalOpen && audioTargetEpisode && (() => {
+        const currentSourceInfo = getAudioSourceInfo(audioTargetEpisode);
+        const hasActiveAudio = !!audioTargetEpisode.audioUrl;
+
+        return (
+          <div className="modal-overlay" onClick={() => setIsAudioModalOpen(false)}>
+            <div
+              className="modal-card"
+              style={{ maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Mic size={22} style={{ color: 'var(--gold)' }} />
+                  <h3>🎙️ إدارة وتسجيل صوت الحلقة: {audioTargetEpisode.title}</h3>
+                </div>
+                <button
+                  className="modal-close-btn"
+                  onClick={() => setIsAudioModalOpen(false)}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* ACTIVE AUDIO BADGE & PREVIEW BANNER */}
+              {hasActiveAudio && (
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(20, 22, 28, 0.95), rgba(28, 25, 20, 0.95))',
+                    border: `1px solid ${currentSourceInfo.color}40`,
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '14px',
+                    marginTop: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span
+                        style={{
+                          background: currentSourceInfo.bg,
+                          color: currentSourceInfo.color,
+                          border: `1px solid ${currentSourceInfo.color}50`,
+                          padding: '4px 10px',
+                          borderRadius: '20px',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <span>{currentSourceInfo.icon}</span>
+                        <span>نوع التسجيل المعتمد: {currentSourceInfo.label}</span>
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="tool-btn danger-action"
+                      onClick={() => handleRemoveAudioPrompt(audioTargetEpisode)}
+                      disabled={isSavingAudio}
+                      style={{ fontSize: '0.78rem', padding: '6px 12px' }}
+                    >
+                      <Trash2 size={14} />
+                      <span>حذف التسجيل الحالي لتغيير المصدر</span>
+                    </button>
+                  </div>
+
+                  {/* Instant Blob URL CustomAudioPlayer */}
+                  {isLoadingExistingAudio ? (
+                    <div style={{ textAlign: 'center', padding: '14px', color: 'var(--text-muted)', fontSize: '0.84rem' }}>
+                      <RefreshCw className="animate-spin" size={16} style={{ display: 'inline', marginLeft: '6px' }} />
+                      جارٍ تجهيز مشغل المعاينة الفوري الخفيف...
+                    </div>
+                  ) : existingAudioBlobUrl ? (
+                    <CustomAudioPlayer
+                      src={existingAudioBlobUrl}
+                      title={`التسجيل المعتمد: ${audioTargetEpisode.title}`}
+                      downloadFilename={`${audioTargetEpisode.title}.mp3`}
+                    />
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '10px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                      ملف الصوت مسجل ومتاح في السحابة
+                    </div>
+                  )}
+
+                  {/* Mutual Exclusivity Lock Notice */}
+                  <div
+                    style={{
+                      background: 'rgba(234, 179, 8, 0.08)',
+                      border: '1px solid rgba(234, 179, 8, 0.25)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '9px 12px',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                      fontSize: '0.78rem',
+                      lineHeight: '1.6',
+                      color: '#fbbf24',
+                    }}
+                  >
+                    <Lock size={15} style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <div>
+                      <strong>حظر تداخل المصادر:</strong> هذه الحلقة مرتبطة بالفعل بتسجيل صوتي معتمد. تم قفل خيارات رفع أو توليد تسجيل آخر منعاً للاستبدال غير المقصود. إذا رغبت في تغيير المصدر أو إعادة التوليد، يرجى الضغط على زر <strong>«حذف التسجيل الحالي لتغيير المصدر»</strong> أعلاه أولاً.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Audio Mode Tabs */}
+              <div className="audio-tabs-bar" style={{ marginTop: hasActiveAudio ? '14px' : '6px' }}>
+                <button
+                  className={`audio-tab-btn ${audioUploadTab === 'ai' ? 'active' : ''}`}
+                  onClick={() => setAudioUploadTab('ai')}
+                >
+                  <Mic size={16} />
+                  <span>🎙️ توليد بالـ AI {hasActiveAudio && currentSourceInfo.type !== 'ai' ? '🔒' : ''}</span>
+                </button>
+                <button
+                  className={`audio-tab-btn ${audioUploadTab === 'upload' ? 'active' : ''}`}
+                  onClick={() => setAudioUploadTab('upload')}
+                >
+                  <UploadCloud size={16} />
+                  <span>رفع ملف وضغطه {hasActiveAudio && currentSourceInfo.type !== 'upload' ? '🔒' : ''}</span>
+                </button>
+                <button
+                  className={`audio-tab-btn ${audioUploadTab === 'url' ? 'active' : ''}`}
+                  onClick={() => setAudioUploadTab('url')}
+                >
+                  <Link2 size={16} />
+                  <span>رابط مباشر {hasActiveAudio && currentSourceInfo.type !== 'url' ? '🔒' : ''}</span>
+                </button>
+              </div>
+
+              {/* TAB 0: Gemini AI Studio Audio */}
+              {audioUploadTab === 'ai' && (
+                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {/* Daily Quota Status Banner */}
+                  <div
+                    style={{
+                      background: dailyQuotaStatus.isExhausted
+                        ? 'rgba(239, 68, 68, 0.08)'
+                        : 'rgba(212, 175, 55, 0.08)',
+                      border: dailyQuotaStatus.isExhausted
+                        ? '1px solid rgba(239, 68, 68, 0.35)'
+                        : '1px solid rgba(212, 175, 55, 0.28)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '12px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '10px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div
+                        style={{
+                          width: '34px',
+                          height: '34px',
+                          borderRadius: '50%',
+                          background: !dailyQuotaStatus.isExhausted ? 'rgba(34, 197, 94, 0.16)' : 'rgba(239, 68, 68, 0.16)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: !dailyQuotaStatus.isExhausted ? '#22c55e' : '#ef4444',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {dailyQuotaStatus.isExhausted ? <AlertTriangle size={17} /> : <Mic size={17} />}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-title)' }}>
+                          {dailyQuotaStatus.isExhausted
+                            ? '⛔ تم استهلاك الحصة اليومية لهذا المفتاح (10 من 10)'
+                            : `الحصة اليومية المجانية: ${dailyQuotaStatus.maxLimit} طلبات يومياً`}
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                          {dailyQuotaStatus.isExhausted ? (
+                            <span style={{ color: '#ef4444' }}>
+                              المتبقي اليوم: <strong>0 طلبات</strong> (ستتجدد الحصة تلقائياً غداً، أو أدخل مفتاح API إضافي بالأسفل)
+                            </span>
+                          ) : (
+                            <>
+                              المستخدم اليوم:{' '}
+                              <strong style={{ color: 'var(--gold)' }}>{dailyQuotaStatus.count}</strong> من{' '}
+                              {dailyQuotaStatus.maxLimit} | المتبقي اليوم:{' '}
+                              <strong style={{ color: '#22c55e' }}>{dailyQuotaStatus.remaining} طلبات</strong>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKeySettings(!showApiKeySettings)}
+                      className="inline-text-btn"
+                      style={{ fontSize: '0.75rem', color: 'var(--gold)', textDecoration: 'underline' }}
+                    >
+                      {showApiKeySettings ? 'إخفاء إعداد المفتاح' : 'مفتاح API إضافي ⚙️'}
+                    </button>
+                  </div>
+
+                  {/* Optional API Key Input */}
+                  {(showApiKeySettings || dailyQuotaStatus.isExhausted) && (
+                    <div
+                      style={{
+                        background: 'var(--bg-base)',
+                        padding: '12px 14px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: dailyQuotaStatus.isExhausted
+                          ? '1px solid rgba(239, 68, 68, 0.3)'
+                          : '1px solid var(--border-light)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <label className="form-label" style={{ fontSize: '0.78rem', margin: 0, fontWeight: 600 }}>
+                          مفتاح Google Gemini API مخصص (للمتابعة عند نفاد الحصة):
+                        </label>
+                        <a
+                          href="https://aistudio.google.com/app/apikey"
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ fontSize: '0.72rem', color: 'var(--gold)', textDecoration: 'underline' }}
+                        >
+                          إنشاء مفتاح مجاني من AI Studio ↗
+                        </a>
+                      </div>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="أدخل مفتاح Google AI Studio الخاص بك هنا..."
+                        value={geminiApiKeyInput}
+                        onChange={(e) => setGeminiApiKeyInput(e.target.value)}
+                        style={{ fontSize: '0.82rem', padding: '7px 10px' }}
+                      />
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        {geminiApiKeyInput.trim()
+                          ? '✓ تم تفعيل المفتاح المخصص؛ ستحصل على حصة كاملة جديدة خاصة به (10 طلبات).'
+                          : '💡 يمكنك الحصول على مفتاح مجاني بضغطة زر من Google AI Studio واستخدامه لفتح 10 تسجيلات يومية إضافية.'}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Optional Custom Instructions */}
+                  {!isGeneratingAiAudio && !aiGeneratedResult && !hasActiveAudio && (
+                    <>
+                      {!showCustomInstructionsField ? (
+                        <div style={{ textAlign: 'center', margin: '2px 0' }}>
+                          <button
+                            type="button"
+                            onClick={() => setShowCustomInstructionsField(true)}
+                            className="inline-text-btn"
+                            style={{
+                              fontSize: '0.77rem',
+                              color: 'var(--text-muted)',
+                              textDecoration: 'underline',
+                              textUnderlineOffset: '3px',
+                              cursor: 'pointer',
+                              background: 'none',
+                              border: 'none',
+                              padding: '4px 8px',
+                              transition: 'color 0.2s ease',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                          >
+                            اضغط هنا لو أردت كتابة ملاحظات أثناء التسجيل للـ AI (يُفضّل عدم الكتابة)
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            background: 'var(--bg-base)',
+                            border: '1px dashed rgba(212, 175, 55, 0.4)',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '12px 14px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <label
+                              className="form-label"
+                              style={{ margin: 0, fontSize: '0.8rem', color: 'var(--gold)', fontWeight: 600 }}
+                            >
+                              ملاحظات وتوجيهات خاصة للأداء (اختياري):
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowCustomInstructionsField(false);
+                                setCustomAudioInstructions('');
+                              }}
+                              className="inline-text-btn"
+                              style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textDecoration: 'underline' }}
+                            >
+                              إلغاء وإخفاء الملاحظات
+                            </button>
+                          </div>
+                          <div
+                            style={{
+                              fontSize: '0.75rem',
+                              color: '#eab308',
+                              background: 'rgba(234, 179, 8, 0.09)',
+                              padding: '7px 10px',
+                              borderRadius: '4px',
+                              lineHeight: '1.5',
+                              border: '1px solid rgba(234, 179, 8, 0.2)',
+                            }}
+                          >
+                            💡 <strong>توجيه:</strong> يُفضّل بشدة ترك هذا الحقل فارغاً وعدم كتابة أي ملاحظات؛ فالنموذج مبرمج تلقائياً على مراعاة الفصحى والسرد القصصي بدقة دون الحاجة لأي تدخل يدوي.
+                          </div>
+                          <textarea
+                            className="form-textarea"
+                            rows={2}
+                            style={{ minHeight: '60px', fontSize: '0.82rem', padding: '8px 12px' }}
+                            placeholder="اكتب ملاحظتك فقط إذا دعت الحاجة لتوجيه صوتي محدد..."
+                            value={customAudioInstructions}
+                            onChange={(e) => setCustomAudioInstructions(e.target.value)}
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Text Excerpt Preview */}
+                  {!isGeneratingAiAudio && !aiGeneratedResult && (
+                    <div
+                      style={{
+                        background: 'var(--bg-base)',
+                        padding: '10px 14px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--border-light)',
+                      }}
+                    >
+                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>مقتطف نص الحلقة:</span>
+                      <p
+                        style={{
+                          margin: '4px 0 0',
+                          fontSize: '0.82rem',
+                          color: 'var(--text-body)',
+                          maxHeight: '65px',
+                          overflowY: 'auto',
+                          lineHeight: '1.6',
+                        }}
+                      >
+                        {cleanHtmlForSpeech(audioTargetEpisode.html).slice(0, 240)}...
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Action Button: AI Generation */}
+                  {!isGeneratingAiAudio && !aiGeneratedResult && (
+                    <button
+                      type="button"
+                      className="btn-gold"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        fontSize: '0.92rem',
+                        fontWeight: 700,
+                        opacity: hasActiveAudio || (dailyQuotaStatus.isExhausted && !geminiApiKeyInput.trim()) ? 0.7 : 1,
+                        cursor: hasActiveAudio ? 'not-allowed' : 'pointer',
+                      }}
+                      onClick={handleGenerateAiAudio}
+                      disabled={hasActiveAudio}
+                    >
+                      <Sparkles size={18} />
+                      <span>
+                        {hasActiveAudio
+                          ? '🔒 يوجد تسجيل صوتي معتمد بالفعل (احذفه أولاً للتوليد مجدداً)'
+                          : dailyQuotaStatus.isExhausted && !geminiApiKeyInput.trim()
+                          ? 'الحصة اليومية منتهية (أدخل مفتاح API إضافي للمتابعة)'
+                          : 'توليد التسجيل الصوتي للحلقة الآن'}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Modern Dynamic Studio Loading & Progress Bar */}
+                  {isGeneratingAiAudio && (
+                    <div className="studio-ai-progress-card">
+                      <div className="studio-pulse-icon-wrap">
+                        <div className="studio-pulse-ring"></div>
+                        <Mic size={28} style={{ color: 'var(--gold)' }} />
+                      </div>
+
+                      <div className="studio-progress-pct">{simulatedProgress}%</div>
+
+                      <div className="studio-progress-phrase">
+                        {simulatedPhrase || '🎙️ جارٍ استدعاء الراوي وضبط النبرة...'}
+                      </div>
+
+                      <div className="studio-progress-track">
+                        <div
+                          className="studio-progress-bar"
+                          style={{ width: `${simulatedProgress}%` }}
+                        />
+                      </div>
+
+                      <div className="studio-progress-hint">
+                        يستغرق التوليد الاستوديو حوالي 15-25 ثانية لإنتاج مقطع صوتي نقي متصل.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Result Preview & Save */}
+                  {aiGeneratedResult && !isGeneratingAiAudio && (
+                    <div className="compression-result-card" style={{ border: '1px solid rgba(212, 175, 55, 0.4)', padding: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        <span style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--gold)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <CheckCircle2 size={17} style={{ color: '#22c55e' }} />
+                          <span>تم التوليد الصوتي بنجاح!</span>
+                        </span>
+                        <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', background: 'var(--bg-base)', padding: '3px 8px', borderRadius: '4px', border: '1px solid var(--border-light)' }}>
+                          المدة: {Math.round(aiGeneratedResult.durationSeconds)} ثانية | الحجم: {formatBytes(aiGeneratedResult.sizeBytes)}
+                        </span>
+                      </div>
+
+                      <CustomAudioPlayer
+                        src={aiGeneratedResult.base64DataUrl}
+                        title={`معاينة التسجيل: ${audioTargetEpisode?.title || 'حلقة السيرة'}`}
+                        durationSeconds={aiGeneratedResult.durationSeconds}
+                        sizeBytes={aiGeneratedResult.sizeBytes}
+                        downloadFilename={`${audioTargetEpisode?.title || 'تسجيل_السيرة'}.wav`}
+                      />
+
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+                        <button
+                          type="button"
+                          className="btn-gold"
+                          style={{ flex: 1, padding: '12px' }}
+                          onClick={handleSaveAiAudio}
+                          disabled={isSavingAudio}
+                        >
+                          <Check size={18} />
+                          <span>{isSavingAudio ? 'جارٍ الحفظ في السحابة...' : 'اعتماد وحفظ الصوت في الحلقة'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="tool-btn"
+                          onClick={handleGenerateAiAudio}
+                          disabled={isSavingAudio}
+                          title="إعادة التوليد"
+                        >
+                          <RefreshCw size={16} />
+                          <span>إعادة</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 1: Upload & Compress */}
+              {audioUploadTab === 'upload' && (
+                <div style={{ marginTop: '16px' }}>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac,.webm,.flac"
+                    style={{ display: 'none' }}
+                    onChange={handleFileSelect}
+                    disabled={hasActiveAudio}
+                  />
+
+                  <div
+                    className="audio-upload-dropzone"
+                    onClick={() => {
+                      if (hasActiveAudio) {
+                        triggerToast('يرجى حذف التسجيل الحالي أولاً لاختيار ملف بديل', 'warning');
+                        return;
+                      }
+                      fileInputRef.current?.click();
+                    }}
+                    style={{
+                      opacity: hasActiveAudio ? 0.6 : 1,
+                      cursor: hasActiveAudio ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    <div className="dropzone-icon">
+                      {hasActiveAudio ? <Lock size={36} style={{ color: 'var(--gold)' }} /> : <FileAudio size={36} />}
+                    </div>
+                    <h4>
+                      {hasActiveAudio
+                        ? '🔒 رفع الملفات مقفل لوجود تسجيل صوتي معتمد بالفعل'
+                        : 'اختر ملفاً صوتياً من جهازك للضغط والرفع'}
+                    </h4>
+                    <p>
+                      {hasActiveAudio
+                        ? 'اضغط على «حذف التسجيل الحالي» بالأعلى إذا أردت استبدال الصوت بملف جديد'
+                        : 'يدعم جميع الصيغ: MP3, M4A, WAV, OGG, AAC, WebM'}
+                    </p>
+                    <span className="dropzone-badge">
+                      يتم تقليص الحجم تلقائياً حتى 90% وحفظه Base64 في السحابة مجاناً
+                    </span>
+                  </div>
+
+                  {/* Compression Progress */}
+                  {isCompressing && (
+                    <div className="compression-progress-box">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '0.82rem', color: 'var(--gold)' }}>
+                          {compressionMessage}
+                        </span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-title)' }}>
+                          {compressionProgress}%
+                        </span>
+                      </div>
+                      <div className="progress-track">
+                        <div className="progress-fill" style={{ width: `${compressionProgress}%` }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Compression Result Preview */}
+                  {compressionResult && !isCompressing && (
+                    <div className="compression-result-card">
+                      <div className="result-stats-row">
+                        <div className="result-stat-item">
+                          <span className="res-label">الحجم الأصلي:</span>
+                          <span className="res-val original">{formatBytes(compressionResult.originalSize)}</span>
+                        </div>
+                        <div className="result-stat-item">
+                          <span className="res-label">الحجم بعد الضغط:</span>
+                          <span className="res-val compressed">{formatBytes(compressionResult.compressedSize)}</span>
+                        </div>
+                        <div className="result-stat-item">
+                          <span className="res-label">نسبة التخفيض:</span>
+                          <span className="res-badge-ratio">-{compressionResult.compressionRatio}%</span>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: '14px' }}>
+                        <CustomAudioPlayer
+                          src={compressionResult.base64DataUrl}
+                          title={`معاينة الصوت المضغوط: ${audioTargetEpisode?.title || 'ملف صوتي'}`}
+                          downloadFilename={`${audioTargetEpisode?.title || 'ملف_صوتي'}.mp3`}
+                        />
+                      </div>
+
+                      <button
+                        className="btn-gold"
+                        style={{ width: '100%', marginTop: '14px', padding: '12px' }}
+                        onClick={handleSaveCompressedAudio}
+                        disabled={isSavingAudio || hasActiveAudio}
+                      >
+                        <Check size={18} />
+                        <span>
+                          {isSavingAudio ? 'جارٍ الحفظ في السحابة...' : 'اعتماد وحفظ الصوت في قاعدة البيانات (Base64)'}
+                        </span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 2: External URL */}
+              {audioUploadTab === 'url' && (
+                <div style={{ marginTop: '16px' }}>
+                  <label className="form-label">رابط المقطع الصوتي المباشر (MP3 خارجي)</label>
+                  <input
+                    type="url"
+                    className="form-input"
+                    placeholder="https://archive.org/download/.../audio.mp3"
+                    value={audioUrlInput}
+                    onChange={(e) => setAudioUrlInput(e.target.value)}
+                    disabled={hasActiveAudio}
+                  />
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '6px', lineHeight: '1.6' }}>
+                    {hasActiveAudio
+                      ? '🔒 لا يمكن تعديل الرابط لأن الحلقة تمتلك تسجيلاً معتمداً بالفعل. احذفه أولاً لإدخال رابط جديد.'
+                      : 'يمكنك وضع رابط MP3 مباشر إذا كان لديك رابط جاهز من موقع خارجي مثل Archive.org.'}
+                  </p>
+                  <button
+                    className="btn-gold"
+                    style={{ width: '100%', marginTop: '14px', opacity: hasActiveAudio ? 0.7 : 1 }}
+                    onClick={handleSaveUrlAudio}
+                    disabled={isSavingAudio || hasActiveAudio}
+                  >
+                    <Check size={18} />
+                    <span>
+                      {hasActiveAudio
+                        ? '🔒 يوجد تسجيل صوتي معتمد بالفعل (احذفه أولاً لحفظ رابط جديد)'
+                        : isSavingAudio
+                        ? 'جارٍ الحفظ...'
+                        : 'حفظ الرابط الخارجي'}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {/* Modal Actions Footer */}
+              <div className="modal-actions" style={{ marginTop: '24px', borderTop: '1px solid var(--border-light)', paddingTop: '14px' }}>
+                {hasActiveAudio && (
+                  <button
+                    type="button"
+                    className="tool-btn danger-action"
+                    style={{ marginLeft: 'auto' }}
+                    onClick={() => handleRemoveAudioPrompt(audioTargetEpisode)}
+                    disabled={isSavingAudio}
+                  >
+                    <Trash2 size={15} />
+                    <span>إزالة الصوت الحالي</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="tool-btn"
+                  onClick={() => setIsAudioModalOpen(false)}
+                >
+                  إغلاق
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ==================== MODAL: MORAL LESSONS (GEMINI AI) ==================== */}
+      {isMoralModalOpen && moralTargetEpisode && (
+        <div className="modal-overlay" style={{ zIndex: 130 }} onClick={() => setIsMoralModalOpen(false)}>
           <div
             className="modal-card"
-            style={{ maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto' }}
+            style={{ maxWidth: '620px', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Mic size={22} style={{ color: 'var(--gold)' }} />
-                <h3>🎙️ تسجيل استوديو بالذكاء الاصطناعي (Gemini): {audioTargetEpisode.title}</h3>
+                <Sparkles size={22} style={{ color: 'var(--gold)' }} />
+                <h3>العبر والفوائد الإيمانية: {moralTargetEpisode.title}</h3>
               </div>
               <button
                 className="modal-close-btn"
-                onClick={() => setIsAudioModalOpen(false)}
+                onClick={() => setIsMoralModalOpen(false)}
               >
                 <X size={20} />
               </button>
             </div>
 
-            {/* Audio Mode Tabs */}
-            <div className="audio-tabs-bar">
-              <button
-                className={`audio-tab-btn ${audioUploadTab === 'ai' ? 'active' : ''}`}
-                onClick={() => setAudioUploadTab('ai')}
-              >
-                <Mic size={16} />
-                <span>🎙️ توليد صوت بشري (Gemini AI)</span>
-              </button>
-              <button
-                className={`audio-tab-btn ${audioUploadTab === 'upload' ? 'active' : ''}`}
-                onClick={() => setAudioUploadTab('upload')}
-              >
-                <UploadCloud size={16} />
-                <span>رفع ملف وضغطه (Base64)</span>
-              </button>
-              <button
-                className={`audio-tab-btn ${audioUploadTab === 'url' ? 'active' : ''}`}
-                onClick={() => setAudioUploadTab('url')}
-              >
-                <Link2 size={16} />
-                <span>رابط مباشر</span>
-              </button>
-            </div>
+            <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: '1.7', margin: 0 }}>
+                استخلص أهم العبر التربوية والفوائد الإيمانية لحياة المسلم المعاصرة باستخدام الذكاء الاصطناعي (Gemini). يتم حفظها في الحلقة وتظهر لزوار الموقع الأساسي فوراً دون مغادرة الموقع.
+              </p>
 
-            {/* TAB 0: Gemini AI Studio Audio */}
-            {audioUploadTab === 'ai' && (
-              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {/* Daily Quota Status Banner */}
-                <div
-                  style={{
-                    background: dailyQuotaStatus.isExhausted
-                      ? 'rgba(239, 68, 68, 0.08)'
-                      : 'rgba(212, 175, 55, 0.08)',
-                    border: dailyQuotaStatus.isExhausted
-                      ? '1px solid rgba(239, 68, 68, 0.35)'
-                      : '1px solid rgba(212, 175, 55, 0.28)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '12px 14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: '10px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div
-                      style={{
-                        width: '34px',
-                        height: '34px',
-                        borderRadius: '50%',
-                        background: !dailyQuotaStatus.isExhausted ? 'rgba(34, 197, 94, 0.16)' : 'rgba(239, 68, 68, 0.16)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: !dailyQuotaStatus.isExhausted ? '#22c55e' : '#ef4444',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {dailyQuotaStatus.isExhausted ? <AlertTriangle size={17} /> : <Mic size={17} />}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-title)' }}>
-                        {dailyQuotaStatus.isExhausted
-                          ? '⛔ تم استهلاك الحصة اليومية لهذا المفتاح (10 من 10)'
-                          : `الحصة اليومية المجانية: ${dailyQuotaStatus.maxLimit} طلبات يومياً`}
-                      </div>
-                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                        {dailyQuotaStatus.isExhausted ? (
-                          <span style={{ color: '#ef4444' }}>
-                            المتبقي اليوم: <strong>0 طلبات</strong> (ستتجدد الحصة تلقائياً غداً، أو أدخل مفتاح API إضافي بالأسفل)
-                          </span>
-                        ) : (
-                          <>
-                            المستخدم اليوم:{' '}
-                            <strong style={{ color: 'var(--gold)' }}>{dailyQuotaStatus.count}</strong> من{' '}
-                            {dailyQuotaStatus.maxLimit} | المتبقي اليوم:{' '}
-                            <strong style={{ color: '#22c55e' }}>{dailyQuotaStatus.remaining} طلبات</strong>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowApiKeySettings(!showApiKeySettings)}
-                    className="inline-text-btn"
-                    style={{ fontSize: '0.75rem', color: 'var(--gold)', textDecoration: 'underline' }}
-                  >
-                    {showApiKeySettings ? 'إخفاء إعداد المفتاح' : 'مفتاح API إضافي ⚙️'}
-                  </button>
-                </div>
-
-                {/* Optional API Key Input */}
-                {(showApiKeySettings || dailyQuotaStatus.isExhausted) && (
-                  <div
-                    style={{
-                      background: 'var(--bg-base)',
-                      padding: '12px 14px',
-                      borderRadius: 'var(--radius-sm)',
-                      border: dailyQuotaStatus.isExhausted
-                        ? '1px solid rgba(239, 68, 68, 0.3)'
-                        : '1px solid var(--border-light)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '6px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <label className="form-label" style={{ fontSize: '0.78rem', margin: 0, fontWeight: 600 }}>
-                        مفتاح Google Gemini API مخصص (للمتابعة عند نفاد الحصة):
-                      </label>
-                      <a
-                        href="https://aistudio.google.com/app/apikey"
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ fontSize: '0.72rem', color: 'var(--gold)', textDecoration: 'underline' }}
-                      >
-                        إنشاء مفتاح مجاني من AI Studio ↗
-                      </a>
-                    </div>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="أدخل مفتاح Google AI Studio الخاص بك هنا..."
-                      value={geminiApiKeyInput}
-                      onChange={(e) => setGeminiApiKeyInput(e.target.value)}
-                      style={{ fontSize: '0.82rem', padding: '7px 10px' }}
-                    />
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                      {geminiApiKeyInput.trim()
-                        ? '✓ تم تفعيل المفتاح المخصص؛ ستحصل على حصة كاملة جديدة خاصة به (10 طلبات).'
-                        : '💡 يمكنك الحصول على مفتاح مجاني بضغطة زر من Google AI Studio واستخدامه لفتح 10 تسجيلات يومية إضافية.'}
-                    </div>
-                  </div>
-                )}
-
-                {/* Optional Custom Instructions: Hidden by default, toggled via small text */}
-                {!isGeneratingAiAudio && !aiGeneratedResult && (
-                  <>
-                    {!showCustomInstructionsField ? (
-                      <div style={{ textAlign: 'center', margin: '2px 0' }}>
-                        <button
-                          type="button"
-                          onClick={() => setShowCustomInstructionsField(true)}
-                          className="inline-text-btn"
-                          style={{
-                            fontSize: '0.77rem',
-                            color: 'var(--text-muted)',
-                            textDecoration: 'underline',
-                            textUnderlineOffset: '3px',
-                            cursor: 'pointer',
-                            background: 'none',
-                            border: 'none',
-                            padding: '4px 8px',
-                            transition: 'color 0.2s ease',
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
-                        >
-                          اضغط هنا لو أردت كتابة ملاحظات أثناء التسجيل للـ AI (يُفضّل عدم الكتابة)
-                        </button>
-                      </div>
-                    ) : (
-                      <div
-                        style={{
-                          background: 'var(--bg-base)',
-                          border: '1px dashed rgba(212, 175, 55, 0.4)',
-                          borderRadius: 'var(--radius-sm)',
-                          padding: '12px 14px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '8px',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <label
-                            className="form-label"
-                            style={{ margin: 0, fontSize: '0.8rem', color: 'var(--gold)', fontWeight: 600 }}
-                          >
-                            ملاحظات وتوجيهات خاصة للأداء (اختياري):
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowCustomInstructionsField(false);
-                              setCustomAudioInstructions('');
-                            }}
-                            className="inline-text-btn"
-                            style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textDecoration: 'underline' }}
-                          >
-                            إلغاء وإخفاء الملاحظات
-                          </button>
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '0.75rem',
-                            color: '#eab308',
-                            background: 'rgba(234, 179, 8, 0.09)',
-                            padding: '7px 10px',
-                            borderRadius: '4px',
-                            lineHeight: '1.5',
-                            border: '1px solid rgba(234, 179, 8, 0.2)',
-                          }}
-                        >
-                          💡 <strong>توجيه:</strong> يُفضّل بشدة ترك هذا الحقل فارغاً وعدم كتابة أي ملاحظات؛ فالنموذج مبرمج تلقائياً على مراعاة الفصحى والسرد القصصي بدقة دون الحاجة لأي تدخل يدوي.
-                        </div>
-                        <textarea
-                          className="form-textarea"
-                          rows={2}
-                          style={{ minHeight: '60px', fontSize: '0.82rem', padding: '8px 12px' }}
-                          placeholder="اكتب ملاحظتك فقط إذا دعت الحاجة لتوجيه صوتي محدد..."
-                          value={customAudioInstructions}
-                          onChange={(e) => setCustomAudioInstructions(e.target.value)}
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {/* Text Excerpt Preview */}
-                {!isGeneratingAiAudio && !aiGeneratedResult && (
-                  <div
-                    style={{
-                      background: 'var(--bg-base)',
-                      padding: '10px 14px',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--border-light)',
-                    }}
-                  >
-                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>مقتطف نص الحلقة:</span>
-                    <p
-                      style={{
-                        margin: '4px 0 0',
-                        fontSize: '0.82rem',
-                        color: 'var(--text-body)',
-                        maxHeight: '65px',
-                        overflowY: 'auto',
-                        lineHeight: '1.6',
-                      }}
-                    >
-                      {cleanHtmlForSpeech(audioTargetEpisode.html).slice(0, 240)}...
-                    </p>
-                  </div>
-                )}
-
-                {/* Action Button */}
-                {!isGeneratingAiAudio && !aiGeneratedResult && (
-                  <button
-                    type="button"
-                    className="btn-gold"
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      fontSize: '0.92rem',
-                      fontWeight: 700,
-                      opacity: dailyQuotaStatus.isExhausted && !geminiApiKeyInput.trim() ? 0.75 : 1,
-                    }}
-                    onClick={handleGenerateAiAudio}
-                  >
-                    <Sparkles size={18} />
-                    <span>
-                      {dailyQuotaStatus.isExhausted && !geminiApiKeyInput.trim()
-                        ? 'الحصة اليومية منتهية (أدخل مفتاح API إضافي للمتابعة)'
-                        : 'توليد التسجيل الصوتي للحلقة الآن'}
-                    </span>
-                  </button>
-                )}
-
-                {/* Modern Dynamic Studio Loading & Progress Bar */}
-                {isGeneratingAiAudio && (
-                  <div className="studio-ai-progress-card">
-                    <div className="studio-pulse-icon-wrap">
-                      <div className="studio-pulse-ring"></div>
-                      <Mic size={28} style={{ color: 'var(--gold)' }} />
-                    </div>
-
-                    <div className="studio-progress-pct">{simulatedProgress}%</div>
-
-                    <div className="studio-progress-phrase">
-                      {simulatedPhrase || '🎙️ جارٍ استدعاء الراوي وضبط النبرة...'}
-                    </div>
-
-                    <div className="studio-progress-track">
-                      <div
-                        className="studio-progress-bar"
-                        style={{ width: `${simulatedProgress}%` }}
-                      />
-                    </div>
-
-                    <div className="studio-progress-hint">
-                      يستغرق التوليد الاستوديو حوالي 15-25 ثانية لإنتاج مقطع صوتي نقي متصل.
-                    </div>
-                  </div>
-                )}
-
-                {/* Result Preview & Save */}
-                {aiGeneratedResult && !isGeneratingAiAudio && (
-                  <div className="compression-result-card" style={{ border: '1px solid rgba(212, 175, 55, 0.4)', padding: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                      <span style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--gold)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <CheckCircle2 size={17} style={{ color: '#22c55e' }} />
-                        <span>تم التوليد الصوتي بنجاح!</span>
-                      </span>
-                      <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', background: 'var(--bg-base)', padding: '3px 8px', borderRadius: '4px', border: '1px solid var(--border-light)' }}>
-                        المدة: {Math.round(aiGeneratedResult.durationSeconds)} ثانية | الحجم: {formatBytes(aiGeneratedResult.sizeBytes)}
-                      </span>
-                    </div>
-
-                    <CustomAudioPlayer
-                      src={aiGeneratedResult.base64DataUrl}
-                      title={`معاينة التسجيل: ${audioTargetEpisode?.title || 'حلقة السيرة'}`}
-                      durationSeconds={aiGeneratedResult.durationSeconds}
-                      sizeBytes={aiGeneratedResult.sizeBytes}
-                      downloadFilename={`${audioTargetEpisode?.title || 'تسجيل_السيرة'}.wav`}
-                    />
-
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
-                      <button
-                        type="button"
-                        className="btn-gold"
-                        style={{ flex: 1, padding: '12px' }}
-                        onClick={handleSaveAiAudio}
-                        disabled={isSavingAudio}
-                      >
-                        <Check size={18} />
-                        <span>{isSavingAudio ? 'جارٍ الحفظ في السحابة...' : 'اعتماد وحفظ الصوت في الحلقة'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="tool-btn"
-                        onClick={handleGenerateAiAudio}
-                        disabled={isSavingAudio}
-                        title="إعادة التوليد"
-                      >
-                        <RefreshCw size={16} />
-                        <span>إعادة</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* TAB 1: Upload & Compress */}
-            {audioUploadTab === 'upload' && (
-              <div style={{ marginTop: '16px' }}>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac,.webm,.flac"
-                  style={{ display: 'none' }}
-                  onChange={handleFileSelect}
-                />
-
-                <div
-                  className="audio-upload-dropzone"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <div className="dropzone-icon">
-                    <FileAudio size={36} />
-                  </div>
-                  <h4>اختر ملفاً صوتياً من جهازك للضغط والرفع</h4>
-                  <p>يدعم جميع الصيغ: MP3, M4A, WAV, OGG, AAC, WebM</p>
-                  <span className="dropzone-badge">
-                    يتم تقليص الحجم تلقائياً حتى 90% وحفظه Base64 في السحابة مجاناً
-                  </span>
-                </div>
-
-                {/* Compression Progress */}
-                {isCompressing && (
-                  <div className="compression-progress-box">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '0.82rem', color: 'var(--gold)' }}>
-                        {compressionMessage}
-                      </span>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-title)' }}>
-                        {compressionProgress}%
-                      </span>
-                    </div>
-                    <div className="progress-track">
-                      <div className="progress-fill" style={{ width: `${compressionProgress}%` }} />
-                    </div>
-                  </div>
-                )}
-
-                {/* Compression Result Preview */}
-                {compressionResult && !isCompressing && (
-                  <div className="compression-result-card">
-                    <div className="result-stats-row">
-                      <div className="result-stat-item">
-                        <span className="res-label">الحجم الأصلي:</span>
-                        <span className="res-val original">{formatBytes(compressionResult.originalSize)}</span>
-                      </div>
-                      <div className="result-stat-item">
-                        <span className="res-label">الحجم بعد الضغط:</span>
-                        <span className="res-val compressed">{formatBytes(compressionResult.compressedSize)}</span>
-                      </div>
-                      <div className="result-stat-item">
-                        <span className="res-label">نسبة التخفيض:</span>
-                        <span className="res-badge-ratio">-{compressionResult.compressionRatio}%</span>
-                      </div>
-                    </div>
-
-                    <div style={{ marginTop: '14px' }}>
-                      <CustomAudioPlayer
-                        src={compressionResult.base64DataUrl}
-                        title={`معاينة الصوت المضغوط: ${audioTargetEpisode?.title || 'ملف صوتي'}`}
-                        downloadFilename={`${audioTargetEpisode?.title || 'ملف_صوتي'}.mp3`}
-                      />
-                    </div>
-
-                    <button
-                      className="btn-gold"
-                      style={{ width: '100%', marginTop: '14px', padding: '12px' }}
-                      onClick={handleSaveCompressedAudio}
-                      disabled={isSavingAudio}
-                    >
-                      <Check size={18} />
-                      <span>
-                        {isSavingAudio ? 'جارٍ الحفظ في السحابة...' : 'اعتماد وحفظ الصوت في قاعدة البيانات (Base64)'}
-                      </span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* TAB 2: External URL */}
-            {audioUploadTab === 'url' && (
-              <div style={{ marginTop: '16px' }}>
-                <label className="form-label">رابط المقطع الصوتي المباشر (MP3 خارجي)</label>
-                <input
-                  type="url"
-                  className="form-input"
-                  placeholder="https://archive.org/download/.../audio.mp3"
-                  value={audioUrlInput}
-                  onChange={(e) => setAudioUrlInput(e.target.value)}
-                />
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '6px', lineHeight: '1.6' }}>
-                  يمكنك وضع رابط MP3 مباشر إذا كان لديك رابط جاهز من موقع خارجي مثل Archive.org.
-                </p>
-                <button
-                  className="btn-gold"
-                  style={{ width: '100%', marginTop: '14px' }}
-                  onClick={handleSaveUrlAudio}
-                  disabled={isSavingAudio}
-                >
-                  <Check size={18} />
-                  <span>{isSavingAudio ? 'جارٍ الحفظ...' : 'حفظ الرابط الخارجي'}</span>
-                </button>
-              </div>
-            )}
-
-            {/* Modal Actions Footer */}
-            <div className="modal-actions" style={{ marginTop: '24px', borderTop: '1px solid var(--border-light)', paddingTop: '14px' }}>
-              {audioTargetEpisode.audioUrl && (
-                <button
-                  type="button"
-                  className="tool-btn danger-action"
-                  style={{ marginLeft: 'auto' }}
-                  onClick={handleRemoveAudioPrompt}
-                  disabled={isSavingAudio}
-                >
-                  <Trash2 size={15} />
-                  <span>إزالة الصوت الحالي</span>
-                </button>
-              )}
+              {/* Generate / Re-generate Button */}
               <button
                 type="button"
-                className="tool-btn"
-                onClick={() => setIsAudioModalOpen(false)}
+                className="btn-gold"
+                style={{ width: '100%', padding: '12px', fontSize: '0.92rem', fontWeight: 700 }}
+                onClick={handleGenerateMoralLesson}
+                disabled={isGeneratingMoral || isSavingMoral}
               >
-                إغلاق
+                <Sparkles size={18} />
+                <span>
+                  {isGeneratingMoral
+                    ? 'جارٍ الاستنباط والتوليد من Gemini...'
+                    : moralLessonInput
+                    ? 'إعادة استخلاص العبر بالذكاء الاصطناعي 🔄'
+                    : '✨ استخلاص العبر والفوائد الإيمانية بالـ AI الآن'}
+                </span>
               </button>
+
+              {/* Loading Pulse */}
+              {isGeneratingMoral && (
+                <div className="studio-ai-progress-card" style={{ padding: '20px' }}>
+                  <div className="studio-pulse-icon-wrap" style={{ width: '54px', height: '54px' }}>
+                    <div className="studio-pulse-ring"></div>
+                    <Sparkles size={24} style={{ color: 'var(--gold)' }} />
+                  </div>
+                  <div className="studio-progress-phrase" style={{ fontSize: '0.9rem' }}>
+                    ✨ جارٍ قراءة أحداث الحلقة واستنباط أعمق العبر التربوية والروحية...
+                  </div>
+                </div>
+              )}
+
+              {/* Moral Lesson Textarea Editor */}
+              <div className="form-group" style={{ margin: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label className="form-label" style={{ margin: 0, fontSize: '0.84rem' }}>
+                    نص العبر والفوائد الإيمانية (يمكنك تعديله وصياغته بحرية قبل الحفظ):
+                  </label>
+                  {moralLessonInput && (
+                    <span style={{ fontSize: '0.74rem', color: 'var(--gold)' }}>
+                      {moralLessonInput.length} حرف
+                    </span>
+                  )}
+                </div>
+                <textarea
+                  className="form-textarea"
+                  rows={8}
+                  style={{ minHeight: '190px', fontSize: '0.92rem', lineHeight: '1.8' }}
+                  placeholder="اضغط على زر الاستخلاص بالأعلى، أو اكتب العبر والفوائد الإيمانية الخاصة بالحلقة هنا..."
+                  value={moralLessonInput}
+                  onChange={(e) => setMoralLessonInput(e.target.value)}
+                />
+              </div>
+
+              {/* Excerpt of Episode */}
+              <div
+                style={{
+                  background: 'var(--bg-base)',
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-light)',
+                  fontSize: '0.78rem',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                <span>مقتطف من نص الحلقة: </span>
+                <span style={{ color: 'var(--text-body)' }}>
+                  {cleanHtmlForSpeech(moralTargetEpisode.html).slice(0, 180)}...
+                </span>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="modal-actions" style={{ borderTop: '1px solid var(--border-light)', paddingTop: '14px', marginTop: '6px' }}>
+                {moralTargetEpisode.moralLesson && (
+                  <button
+                    type="button"
+                    className="tool-btn danger-action"
+                    style={{ marginLeft: 'auto' }}
+                    onClick={handleDeleteMoralLessonPrompt}
+                    disabled={isSavingMoral || isGeneratingMoral}
+                  >
+                    <Trash2 size={15} />
+                    <span>حذف العبرة</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  className="btn-gold"
+                  onClick={handleSaveMoralLesson}
+                  disabled={isSavingMoral || isGeneratingMoral || !moralLessonInput.trim()}
+                >
+                  <Check size={16} />
+                  <span>{isSavingMoral ? 'جارٍ الحفظ...' : 'اعتماد وحفظ في الحلقة'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="tool-btn"
+                  onClick={() => setIsMoralModalOpen(false)}
+                >
+                  إلغاء
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -3217,31 +3745,50 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ==================== CUSTOM CONFIRM DIALOG ==================== */}
+      {/* ==================== CUSTOM LUXURY CONFIRM DIALOG ==================== */}
       {confirmDialog.isOpen && (
-        <div className="modal-overlay" onClick={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}>
+        <div
+          className="modal-overlay"
+          style={{ zIndex: 160 }}
+          onClick={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+        >
           <div className="modal-card confirm-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="confirm-icon-box">
-              <AlertTriangle size={32} />
-            </div>
-            <h3>{confirmDialog.title}</h3>
-            <p>{confirmDialog.message}</p>
+            <button
+              type="button"
+              className="modal-close-btn"
+              onClick={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+              style={{ position: 'absolute', top: '16px', left: '16px' }}
+              title="إغلاق"
+            >
+              <X size={18} />
+            </button>
 
-            <div className="modal-actions" style={{ justifyContent: 'center', marginTop: '20px' }}>
+            <div className="confirm-icon-box">
+              <AlertTriangle size={30} />
+            </div>
+
+            <h3>{confirmDialog.title}</h3>
+
+            <p style={{ whiteSpace: 'pre-line', lineHeight: '1.7', marginTop: '8px' }}>
+              {confirmDialog.message}
+            </p>
+
+            <div className="modal-actions" style={{ justifyContent: 'center', marginTop: '24px', gap: '14px' }}>
               <button
                 type="button"
                 className="tool-btn"
                 onClick={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
               >
-                إلغاء
+                <X size={16} />
+                <span>{confirmDialog.cancelText || 'تراجع وإلغاء'}</span>
               </button>
               <button
                 type="button"
-                className="btn-gold"
-                style={{ background: '#ef4444', borderColor: '#ef4444', color: '#fff' }}
+                className="confirm-danger-btn"
                 onClick={confirmDialog.onConfirm}
               >
-                تأكيد الحذف
+                <Trash2 size={16} />
+                <span>{confirmDialog.confirmText || 'نعم، تأكيد الحذف'}</span>
               </button>
             </div>
           </div>

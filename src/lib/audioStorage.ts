@@ -19,13 +19,23 @@ const CHUNK_SIZE = 500000; // 500KB per Firestore document chunk (well below 1MB
 const DIRECT_LIMIT = 800000; // 800KB max for single document field
 
 /**
- * Saves base64 audio data to Firestore for an episode.
+ * Saves audio data to Firestore for an episode.
+ * Supports 'ai', 'upload', or 'url' source types.
  * Automatically chunks large files into a subcollection to bypass 1MB document limit.
  */
 export async function saveAudioToEpisode(
   episodeId: string,
-  base64DataUrl: string
+  audioData: string,
+  sourceType: 'ai' | 'upload' | 'url' = 'upload'
 ): Promise<void> {
+  // Invalidate any previously cached Blob URL for this episode
+  if (blobUrlCache.has(episodeId)) {
+    try {
+      URL.revokeObjectURL(blobUrlCache.get(episodeId)!);
+    } catch {}
+    blobUrlCache.delete(episodeId);
+  }
+
   const chunksCol = collection(db, 'episodes', episodeId, 'audioChunks');
 
   // Clean up any existing chunks first
@@ -40,26 +50,39 @@ export async function saveAudioToEpisode(
     console.warn('Could not clean old audio chunks:', e);
   }
 
-  // If fits in single document:
-  if (base64DataUrl.length < DIRECT_LIMIT) {
+  // Direct External URL
+  if (sourceType === 'url' || audioData.startsWith('http://') || audioData.startsWith('https://')) {
     await updateDoc(doc(db, 'episodes', episodeId), {
-      audioUrl: base64DataUrl,
+      audioUrl: audioData,
       audioType: 'direct',
       audioChunksCount: 0,
+      audioSourceType: 'url',
+      updatedAt: serverTimestamp(),
+    });
+    return;
+  }
+
+  // If fits in single document:
+  if (audioData.length < DIRECT_LIMIT) {
+    await updateDoc(doc(db, 'episodes', episodeId), {
+      audioUrl: audioData,
+      audioType: 'direct',
+      audioChunksCount: 0,
+      audioSourceType: sourceType,
       updatedAt: serverTimestamp(),
     });
     return;
   }
 
   // If larger than direct limit: chunk into subcollection
-  const totalLength = base64DataUrl.length;
+  const totalLength = audioData.length;
   const chunkCount = Math.ceil(totalLength / CHUNK_SIZE);
   const batch = writeBatch(db);
 
   for (let i = 0; i < chunkCount; i++) {
     const start = i * CHUNK_SIZE;
     const end = Math.min(start + CHUNK_SIZE, totalLength);
-    const chunkData = base64DataUrl.substring(start, end);
+    const chunkData = audioData.substring(start, end);
     const chunkDocRef = doc(chunksCol, String(i).padStart(4, '0'));
     batch.set(chunkDocRef, {
       index: i,
@@ -74,6 +97,7 @@ export async function saveAudioToEpisode(
     audioUrl: '__CHUNKS__',
     audioType: 'chunked',
     audioChunksCount: chunkCount,
+    audioSourceType: sourceType,
     updatedAt: serverTimestamp(),
   });
 
@@ -81,9 +105,17 @@ export async function saveAudioToEpisode(
 }
 
 /**
- * Deletes audio from an episode including any subcollection chunks
+ * Deletes audio from an episode including any subcollection chunks and invalidates cache
  */
 export async function removeAudioFromEpisode(episodeId: string): Promise<void> {
+  // Invalidate cache
+  if (blobUrlCache.has(episodeId)) {
+    try {
+      URL.revokeObjectURL(blobUrlCache.get(episodeId)!);
+    } catch {}
+    blobUrlCache.delete(episodeId);
+  }
+
   // Delete subcollection chunks if any
   try {
     const chunksCol = collection(db, 'episodes', episodeId, 'audioChunks');
@@ -97,13 +129,71 @@ export async function removeAudioFromEpisode(episodeId: string): Promise<void> {
     console.warn('Could not clean audio chunks:', e);
   }
 
-  // Clear audioUrl on episode doc
+  // Clear audioUrl and audioSourceType on episode doc
   await updateDoc(doc(db, 'episodes', episodeId), {
     audioUrl: null,
     audioType: null,
     audioChunksCount: 0,
+    audioSourceType: null,
     updatedAt: serverTimestamp(),
   });
+}
+
+export interface AudioSourceInfo {
+  type: 'ai' | 'upload' | 'url' | 'none';
+  label: string;
+  badgeText: string;
+  icon: string;
+  color: string;
+  bg: string;
+}
+
+export function getAudioSourceInfo(episode?: Episode | null): AudioSourceInfo {
+  if (!episode || !episode.audioUrl) {
+    return {
+      type: 'none',
+      label: 'لا يوجد تسجيل صوتي',
+      badgeText: 'غير متوفر',
+      icon: '🎙️',
+      color: 'var(--text-muted)',
+      bg: 'rgba(255, 255, 255, 0.05)',
+    };
+  }
+
+  if (episode.audioSourceType === 'ai') {
+    return {
+      type: 'ai',
+      label: 'تسجيل استوديو بالذكاء الاصطناعي (Gemini AI)',
+      badgeText: 'توليد بالذكاء الاصطناعي',
+      icon: '✨',
+      color: 'var(--gold)',
+      bg: 'rgba(212, 175, 55, 0.12)',
+    };
+  }
+
+  if (
+    episode.audioSourceType === 'url' ||
+    episode.audioUrl.startsWith('http://') ||
+    episode.audioUrl.startsWith('https://')
+  ) {
+    return {
+      type: 'url',
+      label: 'رابط صوتي خارجي مباشر (MP3)',
+      badgeText: 'رابط خارجي',
+      icon: '🔗',
+      color: '#a855f7',
+      bg: 'rgba(168, 85, 247, 0.12)',
+    };
+  }
+
+  return {
+    type: 'upload',
+    label: 'ملف صوتي مرفوع ومضغوط (Base64)',
+    badgeText: 'ملف مرفوع',
+    icon: '📁',
+    color: '#38bdf8',
+    bg: 'rgba(56, 189, 248, 0.12)',
+  };
 }
 
 // In-memory cache for resolved native Blob URLs (eliminates DOM string overhead)
