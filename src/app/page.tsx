@@ -670,7 +670,7 @@ export default function HomePage() {
                   {/* Moral Lessons Toolbar Button */}
                   <button
                     type="button"
-                    className="tool-btn"
+                    className={`tool-btn ${currentEpisode.moralLesson ? 'accent' : ''}`}
                     onClick={() => setIsGeminiModalOpen(true)}
                     title="العبر والفوائد الإيمانية المستخلصة"
                   >
@@ -728,56 +728,6 @@ export default function HomePage() {
                   dangerouslySetInnerHTML={{ __html: formattedHtml }}
                 />
               </div>
-
-              {/* Moral Lessons & Reflections Section (Extracted via AI) */}
-              {currentEpisode.moralLesson && (
-                <section className="moral-lessons-container">
-                  <div className="moral-lessons-header">
-                    <div className="moral-lessons-icon">
-                      <Sparkles size={20} />
-                    </div>
-                    <div>
-                      <div className="moral-ai-badge">✨ مستخلصة بواسطة الذكاء الاصطناعي (AI)</div>
-                      <h3 className="moral-lessons-title">العبر والفوائد الإيمانية المستخلصة</h3>
-                      <p className="moral-lessons-subtitle">
-                        وقفات تربوية وتأملات استخلصها الذكاء الاصطناعي من أحداث الحلقة للتدبر والعمل بهدي النبي ﷺ
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="tool-btn"
-                      style={{ marginRight: 'auto', fontSize: '0.8rem', padding: '6px 14px' }}
-                      onClick={() => {
-                        navigator.clipboard.writeText(currentEpisode.moralLesson!).then(() => {
-                          triggerToast('تم نسخ العبر والفوائد للحافظة بنجاح! 📜', 'success');
-                        });
-                      }}
-                      title="نسخ العبر والفوائد"
-                    >
-                      <Copy size={15} />
-                      <span>نسخ العبر</span>
-                    </button>
-                  </div>
-
-                  <div className="moral-lessons-body">
-                    {currentEpisode.moralLesson
-                      .split('\n')
-                      .filter((l) => l.trim())
-                      .map((line, lIdx) => {
-                        const isPoint = /^(\d+[\.\-\)]|\*|\-)\s*/.test(line);
-                        return (
-                          <p key={lIdx} className={`moral-lesson-line ${isPoint ? 'moral-point' : ''}`}>
-                            {line}
-                          </p>
-                        );
-                      })}
-                  </div>
-
-                  <div className="moral-ai-footer-note">
-                    <span>💡 <strong>تنبيه للمتدبر:</strong> تم استنباط هذه الدروس والعبر وصياغتها استناداً لأحداث ومواقف الحلقة بواسطة الذكاء الاصطناعي (AI) لمساعدة القارئ على الاستفادة والتطبيق العملي.</span>
-                  </div>
-                </section>
-              )}
 
               {/* Reflections Section */}
               <Reflections
