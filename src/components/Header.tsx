@@ -35,7 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span style={{ fontSize: '24px' }}>🕌</span>
           </div>
           <div className="brand-info">
-            <h1>{siteSettings?.siteTitle || 'قصص الأنبياء وسير الرسول'}</h1>
+            <h1>{siteSettings?.siteTitle || 'قصص الأنبياء وسيرة الرسول'}</h1>
             <p>{siteSettings?.siteSubtitle || 'رحلة إيمانية مباركة في قصص الأنبياء وسيرة خير الأنام ﷺ'}</p>
           </div>
         </a>
@@ -45,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
           {onToggleFocusMode && (
             <button
               type="button"
-              className={`btn-icon ${isFocusMode ? 'active' : ''}`}
+              className={`btn-icon header-btn-focus ${isFocusMode ? 'active' : ''}`}
               onClick={onToggleFocusMode}
               title="وضع القراءة الهادئة بدون تشتيت (Focus Mode)"
             >
@@ -56,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Theme Switcher */}
           <button
             type="button"
-            className="btn-icon"
+            className="btn-icon header-btn-theme"
             onClick={onThemeCycle}
             title="تغيير المظهر / الثيم"
           >
@@ -66,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Font Family Switcher */}
           <button
             type="button"
-            className="btn-icon"
+            className="btn-icon header-btn-font"
             onClick={onFontCycle}
             title="نوع الخط"
           >
@@ -76,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Font Zoom Controls */}
           <button
             type="button"
-            className="btn-icon"
+            className="btn-icon header-btn-zoom header-btn-zoom-in"
             onClick={onZoomIn}
             title="تكبير الخط"
           >
@@ -84,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
           <button
             type="button"
-            className="btn-icon"
+            className="btn-icon header-btn-zoom header-btn-zoom-out"
             onClick={onZoomOut}
             title="تصغير الخط"
           >

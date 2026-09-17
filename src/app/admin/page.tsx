@@ -101,7 +101,7 @@ export default function AdminPage() {
   const [seriesList, setSeriesList] = useState<Series[]>([]);
   const [globalAudio, setGlobalAudio] = useState<GlobalAudio | null>(null);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>({
-    siteTitle: 'قصص الأنبياء وسير الرسول',
+    siteTitle: 'قصص الأنبياء وسيرة الرسول',
     siteSubtitle: 'رحلة إيمانية مباركة في قصص الأنبياء وسيرة خير الأنام ﷺ',
     dedicationBadge: 'صَدَقَةٌ جَارِيَةٌ عَنّي',
     dedicationName: 'محمد هاشم ضيف الله',
@@ -285,7 +285,7 @@ export default function AdminPage() {
       setIsAuthenticated(true);
       sessionStorage.setItem('seerah_admin_authenticated', 'true');
       setPinError('');
-      triggerToast('مرحباً بك في لوحة تحكم قصص الأنبياء وسير الرسول! 🌟', 'success');
+      triggerToast('مرحباً بك في لوحة تحكم قصص الأنبياء وسيرة الرسول! 🌟', 'success');
     } else {
       setPinError('رمز المرور غير صحيح. حاول مجدداً.');
     }
@@ -1557,7 +1557,7 @@ export default function AdminPage() {
           <div className="admin-lock-icon">
             <Lock size={32} />
           </div>
-          <h2>لوحة إدارة قصص الأنبياء وسير الرسول</h2>
+          <h2>لوحة إدارة قصص الأنبياء وسيرة الرسول</h2>
           <p>أدخل رمز المرور المخصص للإدارة لتعديل الحلقات وإدارة السلاسل والصوتيات</p>
 
           <form onSubmit={handleLogin} style={{ marginTop: '20px' }}>
@@ -1615,7 +1615,7 @@ export default function AdminPage() {
               <span className="admin-badge-icon">🕌</span>
               <div>
                 <h1 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-title)' }}>
-                  لوحة إدارة قصص الأنبياء وسير الرسول
+                  لوحة إدارة قصص الأنبياء وسيرة الرسول
                 </h1>
                 <span style={{ fontSize: '0.75rem', color: 'var(--gold)' }}>لوحة تحكم المشرف</span>
               </div>
@@ -2142,7 +2142,7 @@ export default function AdminPage() {
               <div className="section-card-header">
                 <Headphones size={20} className="gold-text" />
                 <div>
-                  <h4>المقطع الصوتي العام لقصص الأنبياء وسير الرسول</h4>
+                  <h4>المقطع الصوتي العام لقصص الأنبياء وسيرة الرسول</h4>
                   <p>مقطع صوتي رئيسي يظهر لجميع الزوار في أسفل صفحة القراءة كمقدمة وتلاوة عامة</p>
                 </div>
               </div>

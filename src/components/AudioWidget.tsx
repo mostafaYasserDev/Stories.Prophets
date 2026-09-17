@@ -176,8 +176,8 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
     if (resolvedUrl && episode) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: episode.title,
-        artist: 'قصص الأنبياء وسير الرسول',
-        album: episode.era || 'قصص الأنبياء وسير الرسول',
+        artist: 'قصص الأنبياء وسيرة الرسول',
+        album: episode.era || 'قصص الأنبياء وسيرة الرسول',
         artwork: [
           { src: '/icon.svg', sizes: '512x512', type: 'image/svg+xml' },
         ],
@@ -379,7 +379,7 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
               {resolvedUrl && (
                 <a
                   href={resolvedUrl}
-                  download={`${episode.title || 'قصص_الأنبياء_وسير_الرسول'}.wav`}
+                  download={`${episode.title || 'قصص_الأنبياء_وسيرة_الرسول'}.wav`}
                   className="studio-aux-btn"
                   title="تحميل المقطع الصوتي للجهاز"
                 >

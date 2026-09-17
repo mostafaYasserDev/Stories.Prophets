@@ -28,7 +28,7 @@ export const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({
   title = 'تسجيل استوديو نقي (Gemini AI)',
   durationSeconds,
   sizeBytes,
-  downloadFilename = 'تسجيل_قصص_الأنبياء_وسير_الرسول.wav',
+  downloadFilename = 'تسجيل_قصص_الأنبياء_وسيرة_الرسول.wav',
   className = '',
   style = {},
 }) => {
