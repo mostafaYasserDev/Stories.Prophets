@@ -176,8 +176,8 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
     if (resolvedUrl && episode) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: episode.title,
-        artist: 'السيرة النبوية الشريفة',
-        album: episode.era || 'سيرة خير الأنام ﷺ',
+        artist: 'قصص الأنبياء وسير الرسول',
+        album: episode.era || 'قصص الأنبياء وسير الرسول',
         artwork: [
           { src: '/icon.svg', sizes: '512x512', type: 'image/svg+xml' },
         ],

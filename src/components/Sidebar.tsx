@@ -146,7 +146,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
     // Populate total counts from all episodes
     episodes.forEach((ep, originalIndex) => {
-      const eraTitle = (ep.era && ep.era.trim()) || 'فصول السيرة';
+      const eraTitle = (ep.era && ep.era.trim()) || 'قصص الأنبياء وسير الرسول';
       const key = normalizeArabicText(eraTitle);
 
       if (!groupsMap.has(key)) {
@@ -174,7 +174,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
     // Populate filtered episodes into the groups
     filtered.forEach((item) => {
-      const eraTitle = (item.ep.era && item.ep.era.trim()) || 'فصول السيرة';
+      const eraTitle = (item.ep.era && item.ep.era.trim()) || 'قصص الأنبياء وسير الرسول';
       const key = normalizeArabicText(eraTitle);
       const grp = groupsMap.get(key);
       if (grp) {
@@ -286,7 +286,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="sidebar-mobile-title-bar">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <BookOpen size={18} style={{ color: 'var(--gold)' }} />
-            <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>فهرس السيرة النبوية</span>
+            <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>فهرس قصص الأنبياء وسير الرسول</span>
           </div>
           <button
             type="button"
@@ -309,7 +309,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className="search-input"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="ابحث في عناوين ونصوص السيرة..."
+              placeholder="ابحث في قصص الأنبياء وسير الرسول..."
             />
             {searchQuery && (
               <button

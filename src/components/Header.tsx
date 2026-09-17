@@ -35,8 +35,8 @@ export const Header: React.FC<HeaderProps> = ({
             <span style={{ fontSize: '24px' }}>🕌</span>
           </div>
           <div className="brand-info">
-            <h1>{siteSettings?.siteTitle || 'السيرة النبوية الشريفة'}</h1>
-            <p>{siteSettings?.siteSubtitle || 'رحلة تفاعلية مباركة في سيرة خير الأنام ﷺ'}</p>
+            <h1>{siteSettings?.siteTitle || 'قصص الأنبياء وسير الرسول'}</h1>
+            <p>{siteSettings?.siteSubtitle || 'رحلة إيمانية مباركة في قصص الأنبياء وسيرة خير الأنام ﷺ'}</p>
           </div>
         </a>
 

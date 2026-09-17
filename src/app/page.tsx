@@ -60,8 +60,8 @@ export default function HomePage() {
   const [resolvedGlobalAudioUrl, setResolvedGlobalAudioUrl] = useState<string | null>(null);
   const [isLoadingGlobalAudio, setIsLoadingGlobalAudio] = useState<boolean>(false);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>({
-    siteTitle: 'السيرة النبوية الشريفة',
-    siteSubtitle: 'رحلة تفاعلية مباركة في سيرة خير الأنام ﷺ',
+    siteTitle: 'قصص الأنبياء وسير الرسول',
+    siteSubtitle: 'رحلة إيمانية مباركة في قصص الأنبياء وسيرة خير الأنام ﷺ',
     dedicationBadge: 'صَدَقَةٌ جَارِيَةٌ عَنّي',
     dedicationName: 'محمد هاشم ضيف الله',
     dedicationParents: 'وعن أبي وأمي رحمهم الله',
@@ -545,7 +545,7 @@ export default function HomePage() {
 
   const shareText = useMemo(() => {
     if (!currentEpisode) return '';
-    return `«${currentEpisode.title}» - ${currentEpisode.subtitle || currentEpisode.era}\nمن السيرة النبوية الشريفة ﷺ\n${episodeDirectUrl}`;
+    return `«${currentEpisode.title}» - ${currentEpisode.subtitle || currentEpisode.era}\nمن قصص الأنبياء وسير الرسول ﷺ\n${episodeDirectUrl}`;
   }, [currentEpisode, episodeDirectUrl]);
 
   const handleNativeShare = async () => {
@@ -897,8 +897,8 @@ export default function HomePage() {
                   اللَّهُمَّ صَلِّ وَسَلِّمْ وَبَارِكْ عَلَى سَيِّدِنَا مُحَمَّدٍ ﷺ
                 </div>
 
-                <h3 className="loader-title">جارٍ فتح صحائف السيرة النبوية الشريفة...</h3>
-                <p className="loader-sub">رحلة تفاعلية مباركة في سيرة خير الأنام ﷺ</p>
+                <h3 className="loader-title">جارٍ فتح صحائف قصص الأنبياء وسير الرسول...</h3>
+                <p className="loader-sub">رحلة إيمانية مباركة في قصص الأنبياء وسيرة خير الأنام ﷺ</p>
 
                 {/* Shimmer Skeleton Reader Representation */}
                 <div className="skeleton-header-row">
@@ -1168,7 +1168,7 @@ export default function HomePage() {
                     type="button"
                     className="tool-btn"
                     onClick={() => {
-                      const text = `أنا أقرأ هذه الحلقة من السيرة النبوية الشريفة: «${currentEpisode.title}»:\n\n${currentEpisode.html.replace(/<[^>]+>/g, '').trim()}\n\nالمطلوب:\n1. استخرج أهم 3 دروس وعبر تربوية وعملية لحياتنا المعاصرة من هذا الموقف.\n2. بين أهم الفوائد الإيمانية.\n3. صغ ذلك بأسلوب مؤثر وجميل ومختصر.`;
+                      const text = `أنا أقرأ هذه الحلقة من قصص الأنبياء وسير الرسول ﷺ: «${currentEpisode.title}»:\n\n${currentEpisode.html.replace(/<[^>]+>/g, '').trim()}\n\nالمطلوب:\n1. استخرج أهم 3 دروس وعبر تربوية وعملية لحياتنا المعاصرة من هذا الموقف.\n2. بين أهم الفوائد الإيمانية.\n3. صغ ذلك بأسلوب مؤثر وجميل ومختصر.`;
                       navigator.clipboard.writeText(text).then(() => {
                         triggerToast('تم نسخ نص الحلقة والأمر للحافظة!', 'success');
                       });

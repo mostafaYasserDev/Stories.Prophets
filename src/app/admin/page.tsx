@@ -100,8 +100,8 @@ export default function AdminPage() {
   const [seriesList, setSeriesList] = useState<Series[]>([]);
   const [globalAudio, setGlobalAudio] = useState<GlobalAudio | null>(null);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>({
-    siteTitle: 'السيرة النبوية الشريفة',
-    siteSubtitle: 'رحلة تفاعلية مباركة في سيرة خير الأنام ﷺ',
+    siteTitle: 'قصص الأنبياء وسير الرسول',
+    siteSubtitle: 'رحلة إيمانية مباركة في قصص الأنبياء وسيرة خير الأنام ﷺ',
     dedicationBadge: 'صَدَقَةٌ جَارِيَةٌ عَنّي',
     dedicationName: 'محمد هاشم ضيف الله',
     dedicationParents: 'وعن أبي وأمي رحمهم الله',
@@ -283,7 +283,7 @@ export default function AdminPage() {
       setIsAuthenticated(true);
       sessionStorage.setItem('seerah_admin_authenticated', 'true');
       setPinError('');
-      triggerToast('مرحباً بك في لوحة تحكم السيرة النبوية الشريفة! 🌟', 'success');
+      triggerToast('مرحباً بك في لوحة تحكم قصص الأنبياء وسير الرسول! 🌟', 'success');
     } else {
       setPinError('رمز المرور غير صحيح. حاول مجدداً.');
     }
@@ -1543,7 +1543,7 @@ export default function AdminPage() {
           <div className="admin-lock-icon">
             <Lock size={32} />
           </div>
-          <h2>لوحة إدارة السيرة النبوية</h2>
+          <h2>لوحة إدارة قصص الأنبياء وسير الرسول</h2>
           <p>أدخل رمز المرور المخصص للإدارة لتعديل الحلقات وإدارة السلاسل والصوتيات</p>
 
           <form onSubmit={handleLogin} style={{ marginTop: '20px' }}>
@@ -1601,7 +1601,7 @@ export default function AdminPage() {
               <span className="admin-badge-icon">🕌</span>
               <div>
                 <h1 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-title)' }}>
-                  لوحة إدارة السيرة النبوية
+                  لوحة إدارة قصص الأنبياء وسير الرسول
                 </h1>
                 <span style={{ fontSize: '0.75rem', color: 'var(--gold)' }}>لوحة تحكم المشرف</span>
               </div>
@@ -2440,7 +2440,7 @@ export default function AdminPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
-              <h3>{editingEpisode ? 'تعديل حلقة في السيرة' : 'إضافة حلقة جديدة للسيرة'}</h3>
+              <h3>{editingEpisode ? 'تعديل الحلقة' : 'إضافة حلقة جديدة'}</h3>
               <button
                 className="modal-close-btn"
                 onClick={() => setIsEpisodeModalOpen(false)}
@@ -2723,7 +2723,7 @@ export default function AdminPage() {
                       triggerToast('جارٍ استخلاص العبر والفوائد الإيمانية بالذكاء الاصطناعي...', 'info');
                       try {
                         const lesson = await generateEpisodeMoralLessons({
-                          title: formTitle || 'حلقة السيرة',
+                          title: formTitle || 'حلقة جديدة',
                           htmlContent: formContent,
                           apiKey: geminiApiKeyInput,
                         });
@@ -3361,10 +3361,10 @@ export default function AdminPage() {
 
                       <CustomAudioPlayer
                         src={aiGeneratedResult.blobUrl || aiGeneratedResult.base64DataUrl}
-                        title={`معاينة التسجيل: ${audioTargetEpisode?.title || 'حلقة السيرة'}`}
+                        title={`معاينة التسجيل: ${audioTargetEpisode?.title || 'تسجيل صوتي'}`}
                         durationSeconds={aiGeneratedResult.durationSeconds}
                         sizeBytes={aiGeneratedResult.sizeBytes}
-                        downloadFilename={`${audioTargetEpisode?.title || 'تسجيل_السيرة'}.wav`}
+                        downloadFilename={`${audioTargetEpisode?.title || 'تسجيل_صوتي'}.wav`}
                       />
 
                       <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
