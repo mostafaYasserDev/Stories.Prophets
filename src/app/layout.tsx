@@ -38,10 +38,41 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'قصص الأنبياء وسيرة الرسول | رحلة مباركة في هدايات الوحي وسيرة خير الأنام ﷺ',
-  description: 'تطبيق سحابي تفاعلي لقصص الأنبياء وسيرة الرسول ﷺ، بحلقات إيمانية وتأملات وتسجيلات صوتية مباشرة.',
-  keywords: ['قصص الأنبياء', 'سيرة الرسول', 'السيرة النبوية', 'الأنبياء والرسل', 'سيرة خير الأنام', 'العصر الجاهلي'],
+  metadataBase: new URL('https://mostafayasserdev.github.io/Stories.Prophets/'),
+  title: {
+    default: 'قصص الأنبياء وسيرة الرسول ﷺ | رحلة مباركة في هدايات الوحي وسيرة خير الأنام',
+    template: '%s | قصص الأنبياء وسيرة الرسول ﷺ',
+  },
+  description:
+    'موسوعة إسلامية تفاعلية شاملة لقصص الأنبياء والمرسلين وسيرة النبي محمد ﷺ، مقالات موثقة بالمراجع، تسجيلات صوتية نقية، عِبر وفوائد إيمانية، وتطبيق يعمل بدون إنترنت.',
+  keywords: [
+    'قصص الأنبياء',
+    'قصص الأنبياء كاملة',
+    'سيرة الرسول',
+    'سيرة الرسول محمد صلى الله عليه وسلم',
+    'السيرة النبوية الشريفة',
+    'الأنبياء والرسل',
+    'هدايات الوحي',
+    'معجزات الأنبياء',
+    'حياة النبي محمد',
+    'العصر الجاهلي قبل الإسلام',
+    'صوتيات السيرة النبوية',
+    'تأملات إيمانية',
+    'عبر وفوائد من السيرة',
+    'أحاديث نبوية شريفة',
+    'مراجع السيرة النبوية',
+    'تطبيق قصص الأنبياء',
+    'محمد هاشم ضيف الله',
+    'مصطفى ياسر',
+  ],
   authors: [{ name: 'محمد هاشم ضيف الله' }],
+  creator: 'محمد هاشم ضيف الله',
+  publisher: 'مصطفى ياسر',
+  applicationName: 'قصص الأنبياء وسيرة الرسول',
+  category: 'Islamic Studies & Education',
+  alternates: {
+    canonical: 'https://mostafayasserdev.github.io/Stories.Prophets/',
+  },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -60,11 +91,100 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: 'قصص الأنبياء وسيرة الرسول ﷺ',
-    description: 'رحلة مباركة في قصص الأنبياء وسيرة خير الأنام ﷺ',
-    type: 'website',
+    title: 'قصص الأنبياء وسيرة الرسول ﷺ | رحلة إيمانية مباركة',
+    description:
+      'موسوعة إسلامية تفاعلية لقصص الأنبياء وسيرة خير الأنام ﷺ، تسجيلات صوتية نقية، عِبر وفوائد إيمانية، ومراجع موثقة تعمل بدون إنترنت.',
+    url: 'https://mostafayasserdev.github.io/Stories.Prophets/',
+    siteName: 'قصص الأنبياء وسيرة الرسول ﷺ',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'غلاف وشعار منصة قصص الأنبياء وسيرة الرسول ﷺ',
+        type: 'image/png',
+      },
+    ],
     locale: 'ar_AR',
+    type: 'website',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'قصص الأنبياء وسيرة الرسول ﷺ',
+    description:
+      'موسوعة إسلامية تفاعلية شاملة لقصص الأنبياء وسيرة خير الأنام ﷺ بتسجيلات صوتية وعبر وتأملات.',
+    images: ['/og-image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+};
+
+const jsonLdSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': 'https://mostafayasserdev.github.io/Stories.Prophets/#website',
+      url: 'https://mostafayasserdev.github.io/Stories.Prophets/',
+      name: 'قصص الأنبياء وسيرة الرسول ﷺ',
+      alternateName: ['قصص الأنبياء', 'السيرة النبوية', 'Stories of the Prophets'],
+      description:
+        'موسوعة إسلامية تفاعلية شاملة لقصص الأنبياء والمرسلين وسيرة النبي محمد ﷺ، مقالات موثقة بالمراجع، تسجيلات صوتية نقية، وعِبر إيمانية.',
+      inLanguage: 'ar',
+      publisher: {
+        '@type': 'Person',
+        name: 'محمد هاشم ضيف الله',
+        jobTitle: 'معد وكاتب المحتوى الإيماني',
+      },
+    },
+    {
+      '@type': 'CreativeWorkSeries',
+      '@id': 'https://mostafayasserdev.github.io/Stories.Prophets/#series',
+      name: 'قصص الأنبياء وسيرة الرسول ﷺ',
+      headline: 'رحلة مباركة في هدايات الوحي وسيرة خير الأنام ﷺ',
+      author: {
+        '@type': 'Person',
+        name: 'محمد هاشم ضيف الله',
+      },
+      genre: ['Islamic Studies', 'Prophetic Biography', 'Spiritual Reflections'],
+      inLanguage: 'ar',
+      isAccessibleForFree: true,
+      image: 'https://mostafayasserdev.github.io/Stories.Prophets/og-image.png',
+    },
+    {
+      '@type': 'BreadcrumbList',
+      '@id': 'https://mostafayasserdev.github.io/Stories.Prophets/#breadcrumbs',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'الرئيسية',
+          item: 'https://mostafayasserdev.github.io/Stories.Prophets/',
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'السلاسل الإيمانية',
+          item: 'https://mostafayasserdev.github.io/Stories.Prophets/#series',
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: 'الجزيرة العربية في العصر الجاهلي',
+          item: 'https://mostafayasserdev.github.io/Stories.Prophets/',
+        },
+      ],
+    },
+  ],
 };
 
 export default function RootLayout({
@@ -83,6 +203,11 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="قصص الأنبياء" />
+        {/* Schema.org Structured Data (JSON-LD) for Search Engine Rich Snippets */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSchema) }}
+        />
       </head>
       <body className={cairo.className}>
         {children}

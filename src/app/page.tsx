@@ -49,9 +49,20 @@ import { Reflections } from '@/components/Reflections';
 import { Toast, ToastMessage } from '@/components/Toast';
 import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 
+const DEFAULT_INITIAL_EPISODES: Episode[] = INITIAL_SEED_EPISODES.map((ep: any, idx: number) => ({
+  docId: `seed-${idx + 1}`,
+  order: idx + 1,
+  era: ep.era,
+  title: ep.title,
+  subtitle: ep.subtitle || `الحلقة ${String(idx + 1).padStart(3, '0')}`,
+  html: ep.html,
+  audioUrl: null,
+  createdAt: null,
+}));
+
 export default function HomePage() {
-  // App Data State
-  const [episodes, setEpisodes] = useState<Episode[]>([]);
+  // App Data State (Initialized with default seed so static pre-rendering contains full content for SEO crawlers)
+  const [episodes, setEpisodes] = useState<Episode[]>(DEFAULT_INITIAL_EPISODES);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [lastReadIndex, setLastReadIndex] = useState<number>(0);
   const [activeEra, setActiveEra] = useState<string>('all');
@@ -633,7 +644,17 @@ export default function HomePage() {
         {/* Main Reader View */}
         <main className="reader-main">
           {currentEpisode ? (
-            <article className="reading-card" id="mainReadingCard">
+            <article
+              className="reading-card"
+              id="mainReadingCard"
+              itemScope
+              itemType="https://schema.org/Article"
+            >
+              <meta itemProp="inLanguage" content="ar" />
+              <meta itemProp="author" content="محمد هاشم ضيف الله" />
+              <meta itemProp="publisher" content="قصص الأنبياء وسيرة الرسول ﷺ" />
+              <meta itemProp="headline" content={currentEpisode.title} />
+
               {/* Overall Series Progress Bar */}
               <div className="progress-bar-container" title={`إنجاز السلسلة: ${progressPercent}%`}>
                 <div
@@ -778,7 +799,7 @@ export default function HomePage() {
               <AudioWidget episode={currentEpisode} onPlay={handleOtherAudioPlay} />
 
               {/* Reading Content Body */}
-              <div className="reading-content-body">
+              <div className="reading-content-body" itemProp="articleBody">
                 <div
                   className="reading-text"
                   dangerouslySetInnerHTML={{ __html: formattedHtml }}

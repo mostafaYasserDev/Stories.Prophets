@@ -1,0 +1,10 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Disallow private admin dashboard from search engine indexing
+Disallow: /admin
+Disallow: /admin/
+
+# Sitemap location
+Sitemap: https://mostafayasserdev.github.io/Stories.Prophets/sitemap.xml

@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#070a10" />
+      <stop offset="50%" stop-color="#0f1523" />
+      <stop offset="100%" stop-color="#06080d" />
+    </linearGradient>
+    <radialGradient id="goldGlow" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#d4af37" stop-opacity="0.22" />
+      <stop offset="70%" stop-color="#d4af37" stop-opacity="0.02" />
+      <stop offset="100%" stop-color="#d4af37" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="goldBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f6e27a" />
+      <stop offset="50%" stop-color="#cb9b3c" />
+      <stop offset="100%" stop-color="#f6e27a" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGrad)" />
+  <circle cx="600" cy="240" r="420" fill="url(#goldGlow)" />
+
+  <!-- Outer Decorative Border -->
+  <rect x="32" y="32" width="1136" height="566" rx="20" fill="none" stroke="url(#goldBorder)" stroke-width="2" opacity="0.65" />
+  <rect x="44" y="44" width="1112" height="542" rx="14" fill="none" stroke="#d4af37" stroke-width="1" stroke-dasharray="8,6" opacity="0.4" />
+
+  <!-- Islamic Corner Ornaments -->
+  <g fill="#f6e27a" opacity="0.85">
+    <!-- Top Left -->
+    <path d="M52,52 L80,52 L80,57 L57,57 L57,80 L52,80 Z" />
+    <circle cx="70" cy="70" r="4" />
+    <!-- Top Right -->
+    <path d="M1148,52 L1120,52 L1120,57 L1143,57 L1143,80 L1148,80 Z" />
+    <circle cx="1130" cy="70" r="4" />
+    <!-- Bottom Left -->
+    <path d="M52,578 L80,578 L80,573 L57,573 L57,550 L52,550 Z" />
+    <circle cx="70" cy="560" r="4" />
+    <!-- Bottom Right -->
+    <path d="M1148,578 L1120,578 L1120,573 L1143,573 L1143,550 L1148,550 Z" />
+    <circle cx="1130" cy="560" r="4" />
+  </g>
+
+  <!-- Top Badge -->
+  <g transform="translate(600, 115)">
+    <rect x="-190" y="-20" width="380" height="40" rx="20" fill="#141c2c" stroke="#d4af37" stroke-width="1.5" />
+    <text x="0" y="6" font-family="'Noto Naskh Arabic', 'Traditional Arabic', sans-serif" font-size="18" font-weight="bold" fill="#f6e27a" text-anchor="middle">
+      ✨ مَنَصَّةٌ إِسْلَامِيَّةٌ تَفَاعُلِيَّةٌ شَامِلَةٌ ✨
+    </text>
+  </g>
+
+  <!-- Main Title -->
+  <g transform="translate(600, 240)">
+    <text x="0" y="0" font-family="'Noto Naskh Arabic', 'Traditional Arabic', serif" font-size="64" font-weight="bold" fill="#fce484" text-anchor="middle">
+      قصص الأنبياء وسيرة الرسول ﷺ
+    </text>
+  </g>
+
+  <!-- Subtitle -->
+  <g transform="translate(600, 315)">
+    <text x="0" y="0" font-family="'Noto Sans Arabic', sans-serif" font-size="25" font-weight="bold" fill="#e2e8f0" text-anchor="middle">
+      رحلة إيمانية مباركة في هدايات الوحي وسيرة خير الأنام ﷺ
+    </text>
+  </g>
+
+  <!-- Feature Pills Row -->
+  <g transform="translate(600, 420)">
+    <!-- Pill 1 -->
+    <g transform="translate(-375, 0)">
+      <rect x="-110" y="-24" width="220" height="48" rx="14" fill="#131a28" stroke="#d4af37" stroke-width="1" />
+      <text x="0" y="7" font-family="'Noto Sans Arabic', sans-serif" font-size="17" font-weight="bold" fill="#f1f5f9" text-anchor="middle">
+        📖 حلقات موثقة بالمراجع
+      </text>
+    </g>
+    <!-- Pill 2 -->
+    <g transform="translate(-125, 0)">
+      <rect x="-110" y="-24" width="220" height="48" rx="14" fill="#131a28" stroke="#d4af37" stroke-width="1" />
+      <text x="0" y="7" font-family="'Noto Sans Arabic', sans-serif" font-size="17" font-weight="bold" fill="#f1f5f9" text-anchor="middle">
+        🎙️ تسجيلات صوتية نقية
+      </text>
+    </g>
+    <!-- Pill 3 -->
+    <g transform="translate(125, 0)">
+      <rect x="-110" y="-24" width="220" height="48" rx="14" fill="#131a28" stroke="#d4af37" stroke-width="1" />
+      <text x="0" y="7" font-family="'Noto Sans Arabic', sans-serif" font-size="17" font-weight="bold" fill="#f1f5f9" text-anchor="middle">
+        ✨ عِبر وفوائد إيمانية
+      </text>
+    </g>
+    <!-- Pill 4 -->
+    <g transform="translate(375, 0)">
+      <rect x="-110" y="-24" width="220" height="48" rx="14" fill="#131a28" stroke="#d4af37" stroke-width="1" />
+      <text x="0" y="7" font-family="'Noto Sans Arabic', sans-serif" font-size="17" font-weight="bold" fill="#f1f5f9" text-anchor="middle">
+        📲 تطبيق يعمل بدون نت
+      </text>
+    </g>
+  </g>
+
+  <!-- Bottom Divider Line -->
+  <line x1="280" y1="505" x2="920" y2="505" stroke="rgba(212, 175, 55, 0.35)" stroke-width="1" />
+
+  <!-- Author and Developer Credits -->
+  <g transform="translate(600, 545)">
+    <text x="0" y="0" font-family="'Noto Sans Arabic', sans-serif" font-size="18" fill="#94a3b8" text-anchor="middle">
+      إعداد: محمد هاشم ضيف الله   •   تطوير: مصطفى ياسر   •   mostafayasserdev.github.io/Stories.Prophets
+    </text>
+  </g>
+</svg>
