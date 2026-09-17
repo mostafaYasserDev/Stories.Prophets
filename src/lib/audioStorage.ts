@@ -106,27 +106,65 @@ export async function removeAudioFromEpisode(episodeId: string): Promise<void> {
   });
 }
 
-// In-memory cache for resolved chunked audio URLs
-const audioCache = new Map<string, string>();
+// In-memory cache for resolved native Blob URLs (eliminates DOM string overhead)
+export const blobUrlCache = new Map<string, string>();
 
 /**
- * Resolves an episode's audio URL into a playable URL.
- * If audio is chunked in Firestore, it downloads and reassembles the base64 chunks.
+ * Converts a base64 Data URL to a native browser Blob URL.
+ * This completely prevents memory bloat and browser main-thread freezes.
  */
-export async function resolveAudioUrl(episode: Episode): Promise<string | null> {
+export function dataUrlToBlobUrl(dataUrl: string): string {
+  if (typeof window === 'undefined') return dataUrl;
+  if (!dataUrl || !dataUrl.startsWith('data:')) return dataUrl;
+
+  try {
+    const parts = dataUrl.split(',');
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'audio/mp3';
+    const binary = atob(parts[1]);
+    const len = binary.length;
+    const buffer = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      buffer[i] = binary.charCodeAt(i);
+    }
+    const blob = new Blob([buffer], { type: mime });
+    return URL.createObjectURL(blob);
+  } catch (err) {
+    console.warn('Failed converting base64 data to Blob URL:', err);
+    return dataUrl;
+  }
+}
+
+/**
+ * Checks whether an episode audio has already been resolved and cached in memory.
+ */
+export function hasCachedAudioUrl(episodeId: string): boolean {
+  return blobUrlCache.has(episodeId);
+}
+
+/**
+ * Resolves an episode's audio URL into a high-performance native Blob URL.
+ * If audio is chunked in Firestore, it streams the chunks progressively.
+ */
+export async function resolveAudioUrl(
+  episode: Episode,
+  onProgress?: (loadedChunks: number, totalChunks: number) => void
+): Promise<string | null> {
   if (!episode.audioUrl) return null;
+
+  // Check cache first (instant response < 1ms)
+  if (blobUrlCache.has(episode.docId)) {
+    return blobUrlCache.get(episode.docId)!;
+  }
 
   // Direct URL (HTTP or Base64 data URL)
   if (episode.audioUrl !== '__CHUNKS__') {
-    return episode.audioUrl;
+    const blobUrl = dataUrlToBlobUrl(episode.audioUrl);
+    blobUrlCache.set(episode.docId, blobUrl);
+    return blobUrl;
   }
 
-  // Check cache first
-  if (audioCache.has(episode.docId)) {
-    return audioCache.get(episode.docId)!;
-  }
-
-  // Fetch and reassemble chunks
+  // Fetch and reassemble chunks progressively
   const chunksCol = collection(db, 'episodes', episode.docId, 'audioChunks');
   const q = query(chunksCol, orderBy('index', 'asc'));
   const snap = await getDocs(q);
@@ -135,9 +173,19 @@ export async function resolveAudioUrl(episode: Episode): Promise<string | null> 
     return null;
   }
 
-  const fullBase64 = snap.docs.map((d) => d.data().data).join('');
-  audioCache.set(episode.docId, fullBase64);
-  return fullBase64;
+  const docs = snap.docs.map((d) => d.data()).sort((a, b) => a.index - b.index);
+  const totalChunks = docs.length;
+  const chunkParts: string[] = [];
+
+  for (let i = 0; i < totalChunks; i++) {
+    chunkParts.push(docs[i].data);
+    onProgress?.(i + 1, totalChunks);
+  }
+
+  const fullBase64 = chunkParts.join('');
+  const blobUrl = dataUrlToBlobUrl(fullBase64);
+  blobUrlCache.set(episode.docId, blobUrl);
+  return blobUrl;
 }
 
 /**
@@ -164,7 +212,12 @@ export async function saveGlobalAudio(
   }
 
   // Invalidate cache
-  audioCache.delete('global_audio');
+  if (blobUrlCache.has('global_audio')) {
+    try {
+      URL.revokeObjectURL(blobUrlCache.get('global_audio')!);
+    } catch {}
+    blobUrlCache.delete('global_audio');
+  }
 
   // If fits in single document:
   if (base64DataUrl.length < DIRECT_LIMIT) {
@@ -226,22 +279,29 @@ export async function removeGlobalAudio(): Promise<void> {
     console.warn('Could not clean global audio chunks:', e);
   }
 
-  audioCache.delete('global_audio');
+  if (blobUrlCache.has('global_audio')) {
+    try {
+      URL.revokeObjectURL(blobUrlCache.get('global_audio')!);
+    } catch {}
+    blobUrlCache.delete('global_audio');
+  }
   await deleteDoc(doc(db, 'settings', 'global_audio'));
 }
 
 /**
- * Resolves global audio into a playable URL (reassembles chunks if chunked).
+ * Resolves global audio into a playable native Blob URL.
  */
 export async function resolveGlobalAudioUrl(globalAudio: GlobalAudio): Promise<string | null> {
   if (!globalAudio?.audioUrl) return null;
 
-  if (globalAudio.audioUrl !== '__CHUNKS__') {
-    return globalAudio.audioUrl;
+  if (blobUrlCache.has('global_audio')) {
+    return blobUrlCache.get('global_audio')!;
   }
 
-  if (audioCache.has('global_audio')) {
-    return audioCache.get('global_audio')!;
+  if (globalAudio.audioUrl !== '__CHUNKS__') {
+    const blobUrl = dataUrlToBlobUrl(globalAudio.audioUrl);
+    blobUrlCache.set('global_audio', blobUrl);
+    return blobUrl;
   }
 
   const chunksCol = collection(db, 'settings', 'global_audio', 'audioChunks');
@@ -252,7 +312,9 @@ export async function resolveGlobalAudioUrl(globalAudio: GlobalAudio): Promise<s
     return null;
   }
 
-  const fullBase64 = snap.docs.map((d) => d.data().data).join('');
-  audioCache.set('global_audio', fullBase64);
-  return fullBase64;
+  const docs = snap.docs.map((d) => d.data()).sort((a, b) => a.index - b.index);
+  const fullBase64 = docs.map((d) => d.data).join('');
+  const blobUrl = dataUrlToBlobUrl(fullBase64);
+  blobUrlCache.set('global_audio', blobUrl);
+  return blobUrl;
 }

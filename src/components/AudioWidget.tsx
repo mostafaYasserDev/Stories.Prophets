@@ -24,48 +24,43 @@ interface AudioWidgetProps {
 export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => {
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
   const [isLoadingAudio, setIsLoadingAudio] = useState<boolean>(false);
+  const [streamProgress, setStreamProgress] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
   const [isMuted, setIsMuted] = useState<boolean>(false);
-  const [volume, setVolume] = useState<number>(1.0);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isSeekingRef = useRef<boolean>(false);
+  const shouldAutoPlayRef = useRef<boolean>(false);
 
-  // 1. Resolve Audio URL from Firestore (direct base64 or subcollection chunks)
+  // 1. Episode switch handler: LAZY loading (Do not fetch heavy audio on initial page render!)
   useEffect(() => {
-    let isMounted = true;
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setStreamProgress(0);
+    setIsLoadingAudio(false);
+    shouldAutoPlayRef.current = false;
+
     if (!episode.audioUrl) {
       setResolvedUrl(null);
-      setIsPlaying(false);
-      setCurrentTime(0);
-      setDuration(0);
       return;
     }
 
-    if (episode.audioUrl !== '__CHUNKS__') {
-      setResolvedUrl(episode.audioUrl);
-      return;
-    }
-
-    setIsLoadingAudio(true);
-    resolveAudioUrl(episode)
-      .then((url) => {
-        if (isMounted) {
-          setResolvedUrl(url);
-          setIsLoadingAudio(false);
+    // If already cached in memory, resolve instantly without any network overhead
+    if (episode.docId && typeof window !== 'undefined') {
+      import('@/lib/audioStorage').then(({ blobUrlCache }) => {
+        if (blobUrlCache.has(episode.docId)) {
+          setResolvedUrl(blobUrlCache.get(episode.docId)!);
+        } else {
+          setResolvedUrl(null);
         }
-      })
-      .catch((err) => {
-        console.error('Error resolving chunked audio:', err);
-        if (isMounted) setIsLoadingAudio(false);
       });
-
-    return () => {
-      isMounted = false;
-    };
+    } else {
+      setResolvedUrl(null);
+    }
   }, [episode.docId, episode.audioUrl]);
 
   // 2. Format Seconds -> MM:SS
@@ -76,13 +71,44 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
     return `${String(mins).padStart(2, '0')}:${String(remainingSecs).padStart(2, '0')}`;
   };
 
-  // 3. Play / Pause Handlers
-  const togglePlay = useCallback(() => {
-    if (!audioRef.current || !resolvedUrl) return;
+  // 3. Play / Pause Handlers with Lazy Progressive Streaming
+  const togglePlay = useCallback(async () => {
+    if (!episode.audioUrl) return;
+
     if (isPlaying) {
-      audioRef.current.pause();
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
       setIsPlaying(false);
-    } else {
+      return;
+    }
+
+    // If audio is not yet resolved, stream & buffer it on demand!
+    if (!resolvedUrl) {
+      setIsLoadingAudio(true);
+      setStreamProgress(10);
+      shouldAutoPlayRef.current = true;
+
+      try {
+        const url = await resolveAudioUrl(episode, (loaded, total) => {
+          setStreamProgress(Math.round((loaded / total) * 100));
+        });
+
+        if (url) {
+          setResolvedUrl(url);
+          setIsLoadingAudio(false);
+        } else {
+          setIsLoadingAudio(false);
+        }
+      } catch (err) {
+        console.error('Streaming audio error:', err);
+        setIsLoadingAudio(false);
+      }
+      return;
+    }
+
+    // If audio is already loaded and ready:
+    if (audioRef.current) {
       audioRef.current
         .play()
         .then(() => {
@@ -91,7 +117,21 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
         })
         .catch((e) => console.warn('Audio play error:', e));
     }
-  }, [isPlaying, resolvedUrl, onPlay]);
+  }, [episode, isPlaying, resolvedUrl, onPlay]);
+
+  // When audio becomes resolved after user clicked play, auto-trigger play
+  useEffect(() => {
+    if (resolvedUrl && shouldAutoPlayRef.current && audioRef.current) {
+      shouldAutoPlayRef.current = false;
+      audioRef.current
+        .play()
+        .then(() => {
+          setIsPlaying(true);
+          onPlay?.();
+        })
+        .catch((e) => console.warn('Autoplay error:', e));
+    }
+  }, [resolvedUrl, onPlay]);
 
   // 4. Skip Backward / Forward 10s
   const skipTime = useCallback(
@@ -212,10 +252,19 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
           <Sparkles size={14} className="sparkle-gold" />
           <span className="badge-text">تسجيل صوتي استوديو نقي (AI)</span>
           {isPlaying && (
-            <span className="playing-pulse-tag">
-              <Radio size={12} className="pulse-radio-icon" />
-              <span>جاري الاستماع</span>
-            </span>
+            <>
+              <div className="studio-wave-bars is-playing" style={{ marginRight: '6px' }}>
+                <span className="studio-wave-bar"></span>
+                <span className="studio-wave-bar"></span>
+                <span className="studio-wave-bar"></span>
+                <span className="studio-wave-bar"></span>
+                <span className="studio-wave-bar"></span>
+              </div>
+              <span className="playing-pulse-tag">
+                <Radio size={12} className="pulse-radio-icon" />
+                <span>جاري الاستماع</span>
+              </span>
+            </>
           )}
         </div>
 
@@ -237,8 +286,8 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
 
       {isLoadingAudio ? (
         <div className="studio-player-loading">
-          <RefreshCw className="animate-spin" size={20} />
-          <span>جارٍ تجهيز التسجيل الصوتي من السحابة...</span>
+          <RefreshCw className="animate-spin" size={18} />
+          <span>جارٍ تدفق وبث الصوت السحابي {streamProgress > 0 ? `(${streamProgress}%)` : ''}...</span>
         </div>
       ) : (
         <>

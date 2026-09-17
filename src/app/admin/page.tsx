@@ -186,6 +186,7 @@ export default function AdminPage() {
     base64DataUrl: string;
     durationSeconds: number;
     sizeBytes: number;
+    blob?: Blob;
   } | null>(null);
 
   const [isCompressing, setIsCompressing] = useState<boolean>(false);
@@ -1050,18 +1051,40 @@ export default function AdminPage() {
     if (!audioTargetEpisode || !aiGeneratedResult) return;
     setIsSavingAudio(true);
     try {
-      await saveAudioToEpisode(audioTargetEpisode.docId, aiGeneratedResult.base64DataUrl);
+      triggerToast('جارٍ ضغط التسجيل الصوتي وتجهيزه للبث السريع...', 'info');
 
-      // Update local state
+      // Use blob or convert base64 to blob if needed
+      let audioBlob = aiGeneratedResult.blob;
+      if (!audioBlob) {
+        const parts = aiGeneratedResult.base64DataUrl.split(',');
+        const bstr = atob(parts[1] || parts[0]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        audioBlob = new Blob([u8arr], { type: 'audio/wav' });
+      }
+
+      // Compress generated raw WAV into high-efficiency 32kbps mono MP3
+      const compressed = await compressAudio(audioBlob, 32);
+
+      await saveAudioToEpisode(audioTargetEpisode.docId, compressed.base64DataUrl);
+
+      // Update local state with the compressed lightweight audio
       setEpisodes((prev) =>
         prev.map((ep) =>
           ep.docId === audioTargetEpisode.docId
-            ? { ...ep, audioUrl: aiGeneratedResult.base64DataUrl, audioType: 'direct' }
+            ? { ...ep, audioUrl: compressed.base64DataUrl, audioType: 'direct' }
             : ep
         )
       );
 
-      triggerToast('تم حفظ التسجيل الصوتي الاستوديو للحلقة بنجاح! 🎵', 'success', 'تم حفظ الصوت');
+      triggerToast(
+        `تم ضغط وحفظ التسجيل بنجاح! تقلص الحجم بنسبة ${compressed.compressionRatio}% (${formatBytes(compressed.compressedSize)}) 🎵`,
+        'success',
+        'تم حفظ وبث الصوت'
+      );
       setIsAudioModalOpen(false);
     } catch (err: any) {
       console.error('Save AI audio failed:', err);
