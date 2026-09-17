@@ -47,6 +47,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { AudioWidget } from '@/components/AudioWidget';
 import { Reflections } from '@/components/Reflections';
 import { Toast, ToastMessage } from '@/components/Toast';
+import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 
 export default function HomePage() {
   // App Data State
@@ -592,8 +593,9 @@ export default function HomePage() {
         </button>
       )}
 
-      {/* Toast Notifications */}
+      {/* Toast Notifications & PWA Prompt */}
       <Toast toasts={toasts} />
+      <PwaInstallPrompt />
 
       {/* Header with dynamic site title and Focus Mode trigger */}
       <Header

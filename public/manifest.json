@@ -1,0 +1,48 @@
+{
+  "name": "قصص الأنبياء وسيرة الرسول",
+  "short_name": "قصص الأنبياء",
+  "description": "رحلة إيمانية مباركة في قصص الأنبياء وسيرة خير الأنام ﷺ، بحلقات إيمانية وتأملات وتسجيلات صوتية مباشرة.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#090c12",
+  "theme_color": "#101520",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["books", "education", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "فهرس الحلقات",
+      "short_name": "الفهرس",
+      "description": "تصفح سلاسل وحلقات قصص الأنبياء وسيرة الرسول",
+      "url": "/",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}

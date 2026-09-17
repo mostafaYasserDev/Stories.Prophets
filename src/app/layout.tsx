@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Amiri, Aref_Ruqaa, Cairo, Noto_Naskh_Arabic } from 'next/font/google';
 import './globals.css';
 
@@ -30,17 +30,34 @@ const notoNaskh = Noto_Naskh_Arabic({
   display: 'swap',
 });
 
+export const viewport: Viewport = {
+  themeColor: '#101520',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 export const metadata: Metadata = {
   title: 'قصص الأنبياء وسيرة الرسول | رحلة مباركة في هدايات الوحي وسيرة خير الأنام ﷺ',
   description: 'تطبيق سحابي تفاعلي لقصص الأنبياء وسيرة الرسول ﷺ، بحلقات إيمانية وتأملات وتسجيلات صوتية مباشرة.',
   keywords: ['قصص الأنبياء', 'سيرة الرسول', 'السيرة النبوية', 'الأنبياء والرسل', 'سيرة خير الأنام', 'العصر الجاهلي'],
   authors: [{ name: 'محمد هاشم ضيف الله' }],
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'قصص الأنبياء',
+  },
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
     shortcut: '/favicon.svg',
-    apple: '/favicon.svg',
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
   openGraph: {
     title: 'قصص الأنبياء وسيرة الرسول ﷺ',
@@ -59,10 +76,32 @@ export default function RootLayout({
     <html lang="ar" dir="rtl" className={`${amiri.variable} ${arefRuqaa.variable} ${cairo.variable} ${notoNaskh.variable}`} data-theme="midnight" data-font="amiri">
       <head>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="apple-touch-icon" href="/favicon.svg" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="قصص الأنبياء" />
       </head>
       <body className={cairo.className}>
         {children}
+        {/* PWA Service Worker Registration */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                    console.log('PWA Service Worker registered with scope: ', reg.scope);
+                  }).catch(function(err) {
+                    console.log('PWA Service Worker registration failed: ', err);
+                  });
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );

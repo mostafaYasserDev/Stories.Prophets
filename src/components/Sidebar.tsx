@@ -12,6 +12,7 @@ import {
   Star,
   Layers,
   ChevronDown,
+  Smartphone,
 } from 'lucide-react';
 import { Episode, Series } from '@/types';
 import { normalizeArabicText } from '@/lib/errorHandler';
@@ -570,6 +571,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
               );
             })
           )}
+        </div>
+
+        {/* Sidebar Footer Action: Install PWA */}
+        <div className="sidebar-pwa-footer">
+          <button
+            type="button"
+            className="sidebar-pwa-btn"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('trigger-pwa-install'));
+              }
+            }}
+            title="تثبيت التطبيق على جهازك كبرنامج"
+          >
+            <Smartphone size={16} className="gold-text" />
+            <span>تثبيت التطبيق كبرنامج 📲</span>
+          </button>
         </div>
       </aside>
     </>
