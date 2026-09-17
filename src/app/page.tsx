@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import Link from 'next/link';
 import {
   Feather,
   Clock,
@@ -18,7 +17,6 @@ import {
   Copy,
   List,
   Palette,
-  ShieldCheck,
   Check,
   Pin,
   RefreshCw,
@@ -998,12 +996,18 @@ export default function HomePage() {
               </button>
             </div>
 
-            {/* Discrete Admin Link */}
-            <div className="admin-discrete-footer-wrap">
-              <Link href="/admin" className="admin-discrete-link" title="الدخول للوحة التحكم">
-                <ShieldCheck size={14} />
-                <span>لوحة تحكم المشرف</span>
-              </Link>
+            {/* Subtle Site Developer Footer */}
+            <div className="site-developer-footer">
+              <span>تم تطوير الموقع بواسطة مصطفى ياسر</span>
+              <span className="footer-dot-sep">·</span>
+              <a
+                href="https://mostafayasser.online"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="developer-credit-link"
+              >
+                mostafayasser.online
+              </a>
             </div>
           </footer>
         </main>

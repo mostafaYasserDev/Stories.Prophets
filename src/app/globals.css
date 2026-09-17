@@ -1929,32 +1929,43 @@ body {
   .reading-title { font-size: 1.45rem; }
 }
 
-/* Discrete Admin Link in Footer */
-.admin-discrete-footer-wrap {
-  margin-top: 20px;
+/* Subtle Developer Credit Footer */
+.site-developer-footer {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-light);
   display: flex;
+  align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  opacity: 0.72;
+  transition: opacity var(--transition-fast);
 }
 
-.admin-discrete-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 0.78rem;
+.site-developer-footer:hover {
+  opacity: 1;
+}
+
+.footer-dot-sep {
+  color: var(--border-color);
+  user-select: none;
+}
+
+.developer-credit-link {
   color: var(--text-muted);
   text-decoration: none;
-  padding: 5px 14px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-light);
-  background: rgba(255, 255, 255, 0.02);
+  font-weight: 600;
   transition: all var(--transition-fast);
+  border-bottom: 1px dotted rgba(212, 175, 55, 0.4);
+  padding-bottom: 1px;
 }
 
-.admin-discrete-link:hover {
+.developer-credit-link:hover {
   color: var(--gold);
-  border-color: var(--border-color);
-  background: var(--bg-surface);
-  transform: translateY(-1px);
+  border-bottom-color: var(--gold);
 }
 
 /* ========================================================
