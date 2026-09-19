@@ -2497,104 +2497,81 @@ export default function AdminPage() {
 
               {/* Active Global Audio Player / Details */}
               {globalAudio?.audioUrl && (
-                <div
-                  style={{
-                    marginTop: '16px',
-                    padding: '16px',
-                    background: 'var(--bg-surface)',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid rgba(212, 175, 55, 0.25)',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          background: 'rgba(16, 185, 129, 0.15)',
-                          color: '#10b981',
-                          border: '1px solid rgba(16, 185, 129, 0.3)',
-                          borderRadius: 'var(--radius-full)',
-                          fontSize: '0.76rem',
-                          fontWeight: 600,
-                          padding: '3px 10px',
-                        }}
-                      >
-                        <CheckCircle2 size={13} />
-                        مقطع صوتي عام نشط
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '0.76rem',
-                          color: 'var(--text-muted)',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          padding: '3px 8px',
-                          borderRadius: 'var(--radius-sm)',
-                        }}
-                      >
+                <div className="global-audio-active-card">
+                  {/* Top Meta Bar */}
+                  <div className="global-audio-meta-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <div className="audio-pulse-indicator">
+                        <span className="audio-pulse-dot" />
+                        <span>مقطع صوتي عام نشط</span>
+                      </div>
+                      <span className="audio-storage-badge">
                         {globalAudio.audioType === 'chunked'
-                          ? `مخزن سحابياً (${globalAudio.audioChunksCount || 1} أجزاء Base64)`
+                          ? `⚡ سحابي (${globalAudio.audioChunksCount || 1} أجزاء Base64)`
                           : globalAudio.audioType === 'direct'
-                          ? 'مخزن سحابياً (Base64 مباشر)'
-                          : 'رابط خارجي مباشر'}
+                          ? '⚡ سحابي (Base64 مباشر)'
+                          : '🌐 رابط خارجي'}
                       </span>
+                      {globalAudio.compressedSize && (
+                        <span className="audio-size-badge">
+                          📦 {formatBytes(globalAudio.compressedSize)}
+                        </span>
+                      )}
                     </div>
 
                     <button
                       type="button"
-                      className="btn-secondary"
-                      style={{
-                        padding: '6px 12px',
-                        fontSize: '0.8rem',
-                        color: '#ef4444',
-                        borderColor: 'rgba(239, 68, 68, 0.3)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
+                      className="audio-remove-btn"
                       onClick={handleRemoveGlobalAudioPrompt}
+                      title="إزالة المقطع الصوتي نهائياً من الموقع"
                     >
                       <Trash2 size={14} />
                       <span>إزالة المقطع</span>
                     </button>
                   </div>
 
-                  {/* Metadata if present */}
-                  {(globalAudio.originalFileName || globalAudio.compressedSize) && (
-                    <div style={{ display: 'flex', gap: '14px', fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-                      {globalAudio.originalFileName && <span>📁 الملف: {globalAudio.originalFileName}</span>}
-                      {globalAudio.compressedSize && (
-                        <span>📦 الحجم: {formatBytes(globalAudio.compressedSize)}</span>
-                      )}
+                  {/* Filename row if present */}
+                  {globalAudio.originalFileName && (
+                    <div className="audio-filename-row">
+                      <FileAudio size={16} className="gold-text" style={{ flexShrink: 0 }} />
+                      <span className="audio-filename-text" title={globalAudio.originalFileName}>
+                        {globalAudio.originalFileName}
+                      </span>
                     </div>
                   )}
 
-                  {/* Audio Preview Player */}
-                  <div style={{ marginTop: '12px' }}>
+                  {/* Luxury Custom Audio Player */}
+                  <div>
                     {isLoadingAdminGlobalAudio ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: 'var(--gold)' }}>
-                        <RefreshCw size={14} className="spin-slow" />
-                        <span>جارٍ استرجاع المقطع الصوتي العام من السحابة...</span>
+                      <div className="audio-loading-card">
+                        <RefreshCw size={18} className="animate-spin gold-text" />
+                        <span>جارٍ استرجاع ومعالجة المقطع الصوتي من السحابة...</span>
                       </div>
                     ) : (
-                      <audio
-                        controls
+                      <CustomAudioPlayer
                         src={resolvedAdminGlobalAudioUrl || globalAudio.audioUrl}
-                        style={{ width: '100%' }}
-                        preload="metadata"
+                        title="المقطع الصوتي العام لموقع قصص الأنبياء وسيرة الرسول"
+                        sizeBytes={globalAudio.compressedSize}
+                        downloadFilename={globalAudio.originalFileName || 'المقطع_الصوتي_العام.mp3'}
                       />
                     )}
                   </div>
                 </div>
               )}
 
-              {/* Upload or Update Audio Tabs */}
-              <div style={{ marginTop: '20px' }}>
-                <h5 style={{ fontSize: '0.9rem', color: 'var(--text-title)', marginBottom: '8px' }}>
-                  {globalAudio?.audioUrl ? 'استبدال أو تحديث المقطع الصوتي العام:' : 'إضافة مقطع صوتي عام جديد:'}
-                </h5>
+              {/* Upload or Update Audio Area */}
+              <div className="global-audio-upload-wrap">
+                <div className="upload-header-row">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Sparkles size={16} className="gold-text" />
+                    <h5 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-title)' }}>
+                      {globalAudio?.audioUrl ? 'استبدال أو رفع مقطع صوتي جديد:' : 'إضافة مقطع صوتي عام للموقع:'}
+                    </h5>
+                  </div>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    يتم ضغط الصوت وحفظه في السحابة مجاناً بدون ستورج خارجي
+                  </span>
+                </div>
 
                 <div className="audio-tabs-bar">
                   <button
