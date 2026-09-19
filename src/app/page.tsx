@@ -128,7 +128,7 @@ export default function LandingPage() {
     document.documentElement.setAttribute('data-theme', next);
     try {
       localStorage.setItem('seerah_theme', next);
-    } catch {}
+    } catch { }
   };
 
   const triggerPwaInstall = () => {
@@ -165,10 +165,10 @@ export default function LandingPage() {
               {currentTheme === 'midnight'
                 ? 'ليلي'
                 : currentTheme === 'obsidian'
-                ? 'داكن'
-                : currentTheme === 'sepia'
-                ? 'دافئ'
-                : 'فاتح'}
+                  ? 'داكن'
+                  : currentTheme === 'sepia'
+                    ? 'دافئ'
+                    : 'فاتح'}
             </span>
           </button>
 
@@ -242,7 +242,7 @@ export default function LandingPage() {
                     <Headphones size={20} />
                   </div>
                   <div>
-                    <h3>المقدمة والتلاوة الصوتية العامة 🎙️</h3>
+                    <h3>المقدمة الصوتية العامة 🎙️</h3>
                     <p>استمع إلى تلاوة ومقدمة مباركة لقصص الأنبياء وسيرة الرسول ﷺ</p>
                   </div>
                 </div>
