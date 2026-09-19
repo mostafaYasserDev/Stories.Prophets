@@ -41,6 +41,8 @@ import {
   Compass,
   Languages,
   BookOpen,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 import { Episode, Series, GlobalAudio, SiteSettings, ThemeType } from '@/types';
@@ -114,6 +116,7 @@ export default function AdminPage() {
   const [selectedSeriesFilter, setSelectedSeriesFilter] = useState<string>('all');
   const [filterOnlyAudio, setFilterOnlyAudio] = useState<boolean>(false);
   const [filterOnlyPinned, setFilterOnlyPinned] = useState<boolean>(false);
+  const [filterOnlyHidden, setFilterOnlyHidden] = useState<boolean>(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   // Modals State
@@ -171,6 +174,7 @@ export default function AdminPage() {
   const [formContent, setFormContent] = useState<string>('');
   const [formSources, setFormSources] = useState<string>('');
   const [formIsPinned, setFormIsPinned] = useState<boolean>(false);
+  const [formIsHidden, setFormIsHidden] = useState<boolean>(false);
   const [isSavingEpisode, setIsSavingEpisode] = useState<boolean>(false);
   const [episodeFormErrors, setEpisodeFormErrors] = useState<{
     title?: string;
@@ -460,6 +464,7 @@ export default function AdminPage() {
       const matchSeries = selectedSeriesFilter === 'all' || ep.era === selectedSeriesFilter;
       const matchAudio = !filterOnlyAudio || !!ep.audioUrl;
       const matchPinned = !filterOnlyPinned || !!ep.isPinned;
+      const matchHidden = !filterOnlyHidden || !!ep.isHidden;
       const q = searchQuery.toLowerCase().trim();
       const matchQuery =
         !q ||
@@ -468,9 +473,9 @@ export default function AdminPage() {
         ep.era.toLowerCase().includes(q) ||
         ep.html.toLowerCase().includes(q);
 
-      return matchSeries && matchAudio && matchPinned && matchQuery;
+      return matchSeries && matchAudio && matchPinned && matchHidden && matchQuery;
     });
-  }, [episodes, selectedSeriesFilter, filterOnlyAudio, filterOnlyPinned, searchQuery]);
+  }, [episodes, selectedSeriesFilter, filterOnlyAudio, filterOnlyPinned, filterOnlyHidden, searchQuery]);
 
   // Series Episode Counts
   const seriesCounts = useMemo(() => {
@@ -486,12 +491,14 @@ export default function AdminPage() {
     const total = episodes.length;
     const withAudio = episodes.filter((ep) => !!ep.audioUrl).length;
     const pinnedCount = episodes.filter((ep) => !!ep.isPinned).length;
+    const hiddenCount = episodes.filter((ep) => !!ep.isHidden).length;
+    const publishedCount = total - hiddenCount;
     let totalWords = 0;
     episodes.forEach((ep) => {
       const text = ep.html.replace(/<[^>]+>/g, '').trim();
       totalWords += text ? text.split(/\s+/).length : 0;
     });
-    return { total, withAudio, pinnedCount, totalWords, totalSeries: seriesList.length };
+    return { total, withAudio, pinnedCount, hiddenCount, publishedCount, totalWords, totalSeries: seriesList.length };
   }, [episodes, seriesList]);
 
   // Find duplicate groups in seriesList based on normalized Arabic text
@@ -637,6 +644,7 @@ export default function AdminPage() {
     setFormMoralLesson('');
     setFormSources('');
     setFormIsPinned(false);
+    setFormIsHidden(false);
     setIsEpisodeModalOpen(true);
   };
 
@@ -655,6 +663,7 @@ export default function AdminPage() {
       : (ep.sources || '');
     setFormSources(sourcesText);
     setFormIsPinned(!!ep.isPinned);
+    setFormIsHidden(!!ep.isHidden);
     setIsEpisodeModalOpen(true);
   };
 
@@ -701,6 +710,7 @@ export default function AdminPage() {
           moralLesson: formMoralLesson.trim() || null,
           sources: parsedSources.length > 0 ? parsedSources : null,
           isPinned: formIsPinned,
+          isHidden: formIsHidden,
           updatedAt: serverTimestamp(),
         });
         triggerToast('تم تحديث بيانات الحلقة بنجاح! ✓', 'success', 'تم التحديث');
@@ -716,6 +726,7 @@ export default function AdminPage() {
           sources: parsedSources.length > 0 ? parsedSources : null,
           audioUrl: null,
           isPinned: formIsPinned,
+          isHidden: formIsHidden,
           createdAt: serverTimestamp(),
         });
         triggerToast('تمت إضافة الحلقة الجديدة بنجاح! 🌟', 'success', 'إضافة حلقة');
@@ -785,6 +796,27 @@ export default function AdminPage() {
       );
     } catch (err: any) {
       const friendly = formatFriendlyError(err, 'تعذّر تحديث حالة تثبيت الحلقة');
+      triggerToast(friendly.message, 'error', friendly.title);
+    }
+  };
+
+  // Toggle Episode Visibility (Hide / Show Drafts)
+  const handleToggleHideEpisode = async (ep: Episode) => {
+    try {
+      const nextHidden = !ep.isHidden;
+      await updateDoc(doc(db, 'episodes', ep.docId), {
+        isHidden: nextHidden,
+        updatedAt: serverTimestamp(),
+      });
+      triggerToast(
+        nextHidden
+          ? `تم إخفاء حلقة «${ep.title}» عن الزوار وحفظها كمسودة 👁️‍🗨️`
+          : `تم إظهار ونشر حلقة «${ep.title}» لجميع الزوار بنجاح 👁️`,
+        nextHidden ? 'warning' : 'success',
+        nextHidden ? 'إخفاء الحلقة (مسودة)' : 'إظهار ونشر الحلقة'
+      );
+    } catch (err: any) {
+      const friendly = formatFriendlyError(err, 'تعذّر تحديث حالة ظهور الحلقة');
       triggerToast(friendly.message, 'error', friendly.title);
     }
   };
@@ -1711,6 +1743,27 @@ export default function AdminPage() {
               <span className="stat-label">حلقات مثبتة في الصدارة</span>
             </div>
           </div>
+
+          {stats.hiddenCount > 0 && (
+            <div
+              className="stat-card"
+              style={{
+                borderColor: 'rgba(239, 68, 68, 0.35)',
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.02))',
+                cursor: 'pointer',
+              }}
+              onClick={() => setFilterOnlyHidden(!filterOnlyHidden)}
+              title="انقر لتصفية الحلقات المخفية (المسودات)"
+            >
+              <div className="stat-icon rose">
+                <EyeOff size={22} />
+              </div>
+              <div className="stat-data">
+                <span className="stat-value" style={{ color: '#f87171' }}>{stats.hiddenCount}</span>
+                <span className="stat-label">مسودات مخفية عن الزوار</span>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* ==================== TAB 1: EPISODES ==================== */}
@@ -1741,6 +1794,16 @@ export default function AdminPage() {
                   >
                     <Volume2 size={15} />
                     <span>بها صوت فقط</span>
+                  </button>
+
+                  <button
+                    className={`tool-btn ${filterOnlyHidden ? 'active' : ''}`}
+                    onClick={() => setFilterOnlyHidden(!filterOnlyHidden)}
+                    title="تصفية الحلقات المخفية (المسودات غير المنشورة)"
+                    style={filterOnlyHidden ? { borderColor: '#f87171', color: '#f87171', background: 'rgba(239, 68, 68, 0.15)' } : {}}
+                  >
+                    <EyeOff size={15} />
+                    <span>المسودات المخفية ({stats.hiddenCount})</span>
                   </button>
                 </div>
 
@@ -1806,11 +1869,12 @@ export default function AdminPage() {
                       <tr>
                         <th style={{ width: '50px' }}>#</th>
                         <th style={{ width: '60px', textAlign: 'center' }}>تثبيت</th>
-                        <th style={{ width: '190px' }}>السلسلة / التصنيف</th>
+                        <th style={{ width: '105px', textAlign: 'center' }}>الظهور</th>
+                        <th style={{ width: '180px' }}>السلسلة / التصنيف</th>
                         <th>عنوان الحلقة</th>
-                        <th style={{ width: '210px' }}>🎙️ التسجيل الصوتي (AI)</th>
-                        <th style={{ width: '90px' }}>الكلمات</th>
-                        <th style={{ width: '100px', textAlign: 'center' }}>الترتيب</th>
+                        <th style={{ width: '200px' }}>🎙️ التسجيل الصوتي (AI)</th>
+                        <th style={{ width: '80px' }}>الكلمات</th>
+                        <th style={{ width: '90px', textAlign: 'center' }}>الترتيب</th>
                         <th style={{ width: '130px', textAlign: 'center' }}>الإجراءات</th>
                       </tr>
                     </thead>
@@ -1822,7 +1886,7 @@ export default function AdminPage() {
                         const isBase64 = ep.audioUrl?.startsWith('data:') || ep.audioUrl === '__CHUNKS__';
 
                         return (
-                          <tr key={ep.docId} className={`admin-table-row ${ep.isPinned ? 'row-pinned' : ''}`}>
+                          <tr key={ep.docId} className={`admin-table-row ${ep.isPinned ? 'row-pinned' : ''} ${ep.isHidden ? 'row-hidden' : ''}`}>
                             <td>
                               <span className="order-badge">{ep.order || idx + 1}</span>
                             </td>
@@ -1835,6 +1899,26 @@ export default function AdminPage() {
                                 <Pin size={15} />
                               </button>
                             </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                                <label
+                                  className="mobile-switch compact"
+                                  title={ep.isHidden ? 'الحلقة مخفية عن الزوار (مسودة) - انقر لنشرها وإظهارها' : 'الحلقة منشورة وظاهرة للزوار - انقر لإخفائها'}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={!ep.isHidden}
+                                    onChange={() => handleToggleHideEpisode(ep)}
+                                  />
+                                  <span className="mobile-switch-track">
+                                    <span className="mobile-switch-knob" />
+                                  </span>
+                                </label>
+                                <span className={`visibility-badge ${!ep.isHidden ? 'visible' : 'hidden'}`}>
+                                  {!ep.isHidden ? '👁️ ظاهرة' : '👁️‍🗨️ مسودة'}
+                                </span>
+                              </div>
+                            </td>
                             <td>
                               <span className="era-badge">
                                 {ep.era}
@@ -1845,6 +1929,18 @@ export default function AdminPage() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                   <strong className="ep-title-text">{ep.title}</strong>
                                   {ep.isPinned && <span className="pin-tiny-badge">مثبتة 📌</span>}
+                                  {ep.isHidden && (
+                                    <span
+                                      className="pin-tiny-badge"
+                                      style={{
+                                        background: 'rgba(239, 68, 68, 0.15)',
+                                        color: '#f87171',
+                                        borderColor: 'rgba(239, 68, 68, 0.35)',
+                                      }}
+                                    >
+                                      مسودة مخفية 👁️‍🗨️
+                                    </span>
+                                  )}
                                   {ep.sources && ep.sources.length > 0 && (
                                     <span
                                       className="pin-tiny-badge"
@@ -2602,6 +2698,42 @@ export default function AdminPage() {
                   />
                   <Pin size={16} className="gold-text" />
                   <span>تثبيت هذه الحلقة في الصدارة وتمييزها في الفهرس 📌</span>
+                </label>
+              </div>
+
+              {/* Mobile-Style Visibility Toggle Card */}
+              <div className={`visibility-card-box ${!formIsHidden ? 'is-live' : 'is-draft'}`}>
+                <div className="visibility-card-info">
+                  <div className={`visibility-card-icon ${!formIsHidden ? 'live' : 'draft'}`}>
+                    {!formIsHidden ? <Eye size={22} /> : <EyeOff size={22} />}
+                  </div>
+                  <div className="visibility-card-titles">
+                    <h4>
+                      {!formIsHidden ? 'الحلقة منشورة وظاهرة للزوار 👁️' : 'الحلقة مخفية (مسودة للمراجعة) 👁️‍🗨️'}
+                    </h4>
+                    <p>
+                      {!formIsHidden
+                        ? 'تظهر الحلقة في قائمة الدروس والفهرس وقراءة السيرة لجميع زوار الموقع.'
+                        : 'الحلقة محفوظة لديك في لوحة التحكم ولن تظهر للزوار في الموقع العام حتى تفعل ظهورها.'}
+                    </p>
+                  </div>
+                </div>
+
+                <label
+                  className="mobile-switch"
+                  title={!formIsHidden ? 'انقر للتحويل إلى مسودة مخفية' : 'انقر لإظهار ونشر الحلقة للزوار'}
+                >
+                  <input
+                    type="checkbox"
+                    checked={!formIsHidden}
+                    onChange={(e) => setFormIsHidden(!e.target.checked)}
+                  />
+                  <span className="mobile-switch-track">
+                    <span className="mobile-switch-knob" />
+                  </span>
+                  <span className={`visibility-badge ${!formIsHidden ? 'visible' : 'hidden'}`}>
+                    {!formIsHidden ? 'منشورة' : 'مسودة'}
+                  </span>
                 </label>
               </div>
 

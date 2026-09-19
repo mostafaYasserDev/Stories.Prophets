@@ -29,6 +29,7 @@ export interface Episode {
   moralLesson?: string | null;
   sources?: string[] | null; // Episode references and sources
   isPinned?: boolean; // Pinned episode to highlight in index
+  isHidden?: boolean; // When true, episode is hidden from public visitors (Draft/Unpublished mode)
   createdAt?: FirestoreTimestamp | any;
   updatedAt?: FirestoreTimestamp | any;
 }

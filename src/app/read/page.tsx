@@ -139,8 +139,11 @@ export default function HomePage() {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setEpisodes(parsed);
-          return;
+          const visibleOnly = parsed.filter((ep: Episode) => !ep.isHidden);
+          if (visibleOnly.length > 0) {
+            setEpisodes(visibleOnly);
+            return;
+          }
         }
       }
       // First visit fallback: load initial seed immediately to eliminate wait
@@ -196,11 +199,13 @@ export default function HomePage() {
         })) as Episode[];
 
         items.sort((a, b) => (a.order || 0) - (b.order || 0));
-        setEpisodes(items);
+        // Filter out hidden episodes so visitors only see published ones
+        const visibleItems = items.filter((ep) => !ep.isHidden);
+        setEpisodes(visibleItems);
 
         // Update local cache safely (preventing localStorage quota issues)
         try {
-          const cacheSafe = items.map((ep) => ({
+          const cacheSafe = visibleItems.map((ep) => ({
             docId: ep.docId,
             order: ep.order,
             era: ep.era,
@@ -210,6 +215,7 @@ export default function HomePage() {
             audioUrl: ep.audioUrl && ep.audioUrl.startsWith('data:') ? '__CACHED_BASE64__' : ep.audioUrl,
             audioType: ep.audioType,
             isPinned: ep.isPinned,
+            isHidden: ep.isHidden,
           }));
           localStorage.setItem('seerah_cached_episodes', JSON.stringify(cacheSafe));
         } catch (e) {

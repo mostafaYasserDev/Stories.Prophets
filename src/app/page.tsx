@@ -46,14 +46,14 @@ export default function LandingPage() {
           try {
             const parsed = JSON.parse(cachedStr);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              episodesList = parsed;
+              episodesList = parsed.filter((ep: any) => !ep.isHidden);
             }
           } catch {
             // fallback to seed
           }
         }
 
-        if (idx >= 0 && idx < episodesList.length) {
+        if (idx >= 0 && idx < episodesList.length && !episodesList[idx]?.isHidden) {
           setLastReadEpisode(episodesList[idx]);
         }
       }

@@ -2229,7 +2229,7 @@ body {
 /* Stats Grid */
 .admin-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
 }
 
@@ -2276,6 +2276,12 @@ body {
   background: rgba(245, 158, 11, 0.15);
   color: #f59e0b;
   border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.stat-icon.rose {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
 }
 
 .stat-data {
@@ -4769,6 +4775,194 @@ body.focus-mode .reading-card {
     justify-content: center;
   }
 }
+
+/* ========================================================
+   MOBILE-STYLE TOGGLE SWITCH (iOS/Android Style)
+   ======================================================== */
+.mobile-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.mobile-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.mobile-switch-track {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  background-color: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 30px;
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+}
+
+.mobile-switch-knob {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+/* Active / Visible state (Checked) */
+.mobile-switch input:checked + .mobile-switch-track {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-color: #10b981;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.45), inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.mobile-switch input:checked + .mobile-switch-track .mobile-switch-knob {
+  transform: translateX(-22px);
+  background: #ffffff;
+}
+
+/* Off / Hidden state */
+.mobile-switch input:not(:checked) + .mobile-switch-track {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Compact version for table row */
+.mobile-switch.compact {
+  gap: 6px;
+}
+
+.mobile-switch.compact .mobile-switch-track {
+  width: 40px;
+  height: 22px;
+}
+
+.mobile-switch.compact .mobile-switch-knob {
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+}
+
+.mobile-switch.compact input:checked + .mobile-switch-track .mobile-switch-knob {
+  transform: translateX(-18px);
+}
+
+/* Status text badges */
+.visibility-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.visibility-badge.visible {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.visibility-badge.hidden {
+  background: rgba(239, 68, 68, 0.14);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.admin-table-row.row-hidden {
+  opacity: 0.72;
+  background: rgba(239, 68, 68, 0.025);
+}
+
+.admin-table-row.row-hidden:hover {
+  opacity: 0.96;
+}
+
+/* Modal Visibility Switch Box */
+.visibility-card-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  margin-top: 12px;
+  margin-bottom: 16px;
+  gap: 16px;
+  transition: all 0.2s ease;
+}
+
+.visibility-card-box.is-live {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.01));
+}
+
+.visibility-card-box.is-draft {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.01));
+}
+
+.visibility-card-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: right;
+  min-width: 0;
+}
+
+.visibility-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.visibility-card-icon.live {
+  background: rgba(16, 185, 129, 0.16);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.visibility-card-icon.draft {
+  background: rgba(239, 68, 68, 0.16);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.visibility-card-titles h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+  color: var(--text-title);
+}
+
+.visibility-card-titles p {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
 
 
 
