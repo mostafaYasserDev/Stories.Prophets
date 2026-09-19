@@ -4963,6 +4963,501 @@ body.focus-mode .reading-card {
   line-height: 1.4;
 }
 
+/* ========================================================
+   ADMIN VIEW MODE TOGGLE (Cards vs Table)
+   ======================================================== */
+.table-header-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.table-title-area {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.table-header-hint {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.view-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 3px;
+}
+
+.view-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: calc(var(--radius-sm) - 2px);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-ui);
+}
+
+.view-mode-btn:hover {
+  color: var(--text-title);
+}
+
+.view-mode-btn.active {
+  background: var(--bg-card);
+  color: var(--gold);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+}
+
+/* ========================================================
+   ADMIN EPISODE CARDS (Mobile-First Card Layout)
+   ======================================================== */
+.admin-episodes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.episode-admin-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  box-shadow: var(--shadow-card);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.episode-admin-card:hover {
+  border-color: rgba(212, 175, 55, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.episode-admin-card.card-pinned {
+  border-color: rgba(212, 175, 55, 0.45);
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.05), var(--bg-card));
+}
+
+.episode-admin-card.card-hidden {
+  border-color: rgba(239, 68, 68, 0.32);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), var(--bg-card));
+}
+
+/* Card Top Bar */
+.card-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.card-top-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.card-top-toggles {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Card Content Area */
+.card-content-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-title-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-title);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.card-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.card-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.words-tiny-badge {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+/* Card Audio Bar */
+.card-audio-bar {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-audio-active {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 10px;
+}
+
+.card-add-audio-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, rgba(200, 155, 60, 0.12), rgba(200, 155, 60, 0.04));
+  border: 1px dashed rgba(200, 155, 60, 0.4);
+  border-radius: var(--radius-sm);
+  color: var(--gold);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.card-add-audio-btn:hover {
+  border-style: solid;
+  border-color: var(--gold);
+  background: rgba(200, 155, 60, 0.2);
+}
+
+/* Card Actions Bar */
+.card-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+  margin-top: auto;
+}
+
+.card-reorder-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-btn-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 11px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-ui);
+}
+
+.card-action-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.card-action-btn.danger {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.card-action-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: #ef4444;
+}
+
+/* Filter Chips Horizontally Scrollable on Mobile */
+.filter-chips-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ========================================================
+   COMPREHENSIVE MOBILE RESPONSIVENESS (< 768px & < 480px)
+   ======================================================== */
+@media (max-width: 768px) {
+  /* Top Nav */
+  .admin-nav-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 14px;
+  }
+
+  .admin-nav-right {
+    width: 100%;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .admin-badge-title {
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .admin-badge-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .admin-main-heading {
+    font-size: 0.95rem !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+  }
+
+  .admin-sub-heading {
+    display: none !important;
+  }
+
+  .admin-back-btn {
+    padding: 5px 10px;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+  }
+
+  .admin-nav-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 8px;
+  }
+
+  .admin-nav-actions .tool-btn {
+    justify-content: center;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+  }
+
+  /* Main Wrapper */
+  .admin-main-wrap {
+    padding: 14px 12px 60px;
+    gap: 16px;
+  }
+
+  /* Tabs Bar */
+  .admin-main-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 8px;
+  }
+
+  .admin-main-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-main-tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 8px 14px;
+    font-size: 0.88rem;
+  }
+
+  /* Toolbar */
+  .admin-toolbar-card {
+    padding: 12px;
+  }
+
+  .admin-actions-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .actions-primary {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .actions-primary .btn-gold {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 16px;
+    font-size: 0.92rem;
+  }
+
+  .filter-chips-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+    width: 100%;
+    padding-bottom: 4px;
+  }
+
+  .filter-chips-wrap::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-chips-wrap .tool-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 7px 12px;
+    font-size: 0.8rem;
+  }
+
+  .filters-row {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .filters-row select.form-input,
+  .admin-search-wrap {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+
+  /* Table Header Info */
+  .table-header-info {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .view-mode-toggle {
+    align-self: flex-start;
+  }
+
+  /* Episode Cards */
+  .admin-episodes-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .episode-admin-card {
+    padding: 14px;
+  }
+
+  /* Modal Responsiveness */
+  .modal-overlay {
+    padding: 10px;
+  }
+
+  .modal-card {
+    padding: 16px 14px;
+    max-height: 94vh;
+    border-radius: var(--radius-md);
+  }
+
+  .episode-modal-grid-row {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .visibility-card-box {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .visibility-card-info {
+    width: 100%;
+  }
+
+  .visibility-card-box .mobile-switch {
+    align-self: flex-end;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .modal-actions button {
+    width: 100%;
+    justify-content: center;
+    padding: 11px;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-main-heading {
+    max-width: 160px;
+    font-size: 0.88rem !important;
+  }
+
+  .card-action-btn span {
+    display: none;
+  }
+
+  .card-action-btn {
+    padding: 7px 10px;
+  }
+}
+
 
 
 

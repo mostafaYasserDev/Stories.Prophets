@@ -43,6 +43,8 @@ import {
   BookOpen,
   Eye,
   EyeOff,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 
 import { Episode, Series, GlobalAudio, SiteSettings, ThemeType } from '@/types';
@@ -117,6 +119,7 @@ export default function AdminPage() {
   const [filterOnlyAudio, setFilterOnlyAudio] = useState<boolean>(false);
   const [filterOnlyPinned, setFilterOnlyPinned] = useState<boolean>(false);
   const [filterOnlyHidden, setFilterOnlyHidden] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   // Modals State
@@ -259,6 +262,25 @@ export default function AdminPage() {
 
   const handleCloseToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // View Mode Initialization (Cards vs Table)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('admin_episodes_view_mode') as 'cards' | 'table' | null;
+      if (saved) {
+        setViewMode(saved);
+      } else if (typeof window !== 'undefined' && window.innerWidth <= 900) {
+        setViewMode('cards');
+      }
+    } catch {}
+  }, []);
+
+  const handleSetViewMode = (mode: 'cards' | 'table') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('admin_episodes_view_mode', mode);
+    } catch {}
   };
 
   // Auth Initialization
@@ -1640,16 +1662,16 @@ export default function AdminPage() {
         <div className="admin-nav-inner">
           <div className="admin-nav-right">
             <Link href="/" className="admin-back-btn" title="العودة لموقع القراءة">
-              <ArrowRight size={18} />
+              <ArrowRight size={16} />
               <span>عرض الموقع</span>
             </Link>
             <div className="admin-badge-title">
               <span className="admin-badge-icon">🕌</span>
               <div>
-                <h1 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-title)' }}>
+                <h1 className="admin-main-heading" style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-title)' }}>
                   لوحة إدارة قصص الأنبياء وسيرة الرسول
                 </h1>
-                <span style={{ fontSize: '0.75rem', color: 'var(--gold)' }}>لوحة تحكم المشرف</span>
+                <span className="admin-sub-heading" style={{ fontSize: '0.75rem', color: 'var(--gold)' }}>لوحة تحكم المشرف</span>
               </div>
             </div>
           </div>
@@ -1660,7 +1682,7 @@ export default function AdminPage() {
               onClick={() => setIsPinModalOpen(true)}
               title="تغيير رمز المرور"
             >
-              <Key size={16} />
+              <Key size={15} />
               <span>رمز المرور</span>
             </button>
             <button
@@ -1668,7 +1690,7 @@ export default function AdminPage() {
               onClick={handleLogout}
               title="تسجيل الخروج"
             >
-              <LogOut size={16} />
+              <LogOut size={15} />
               <span>خروج</span>
             </button>
           </div>
@@ -1778,33 +1800,35 @@ export default function AdminPage() {
                     <span>إضافة حلقة جديدة</span>
                   </button>
 
-                  <button
-                    className={`tool-btn ${filterOnlyPinned ? 'active' : ''}`}
-                    onClick={() => setFilterOnlyPinned(!filterOnlyPinned)}
-                    title="تصفية الحلقات المثبتة"
-                  >
-                    <Pin size={15} />
-                    <span>المثبتة فقط</span>
-                  </button>
+                  <div className="filter-chips-wrap">
+                    <button
+                      className={`tool-btn ${filterOnlyPinned ? 'active' : ''}`}
+                      onClick={() => setFilterOnlyPinned(!filterOnlyPinned)}
+                      title="تصفية الحلقات المثبتة"
+                    >
+                      <Pin size={15} />
+                      <span>المثبتة فقط</span>
+                    </button>
 
-                  <button
-                    className={`tool-btn ${filterOnlyAudio ? 'active' : ''}`}
-                    onClick={() => setFilterOnlyAudio(!filterOnlyAudio)}
-                    title="تصفية الحلقات التي تحتوي على صوت"
-                  >
-                    <Volume2 size={15} />
-                    <span>بها صوت فقط</span>
-                  </button>
+                    <button
+                      className={`tool-btn ${filterOnlyAudio ? 'active' : ''}`}
+                      onClick={() => setFilterOnlyAudio(!filterOnlyAudio)}
+                      title="تصفية الحلقات التي تحتوي على صوت"
+                    >
+                      <Volume2 size={15} />
+                      <span>بها صوت فقط</span>
+                    </button>
 
-                  <button
-                    className={`tool-btn ${filterOnlyHidden ? 'active' : ''}`}
-                    onClick={() => setFilterOnlyHidden(!filterOnlyHidden)}
-                    title="تصفية الحلقات المخفية (المسودات غير المنشورة)"
-                    style={filterOnlyHidden ? { borderColor: '#f87171', color: '#f87171', background: 'rgba(239, 68, 68, 0.15)' } : {}}
-                  >
-                    <EyeOff size={15} />
-                    <span>المسودات المخفية ({stats.hiddenCount})</span>
-                  </button>
+                    <button
+                      className={`tool-btn ${filterOnlyHidden ? 'active' : ''}`}
+                      onClick={() => setFilterOnlyHidden(!filterOnlyHidden)}
+                      title="تصفية الحلقات المخفية (المسودات غير المنشورة)"
+                      style={filterOnlyHidden ? { borderColor: '#f87171', color: '#f87171', background: 'rgba(239, 68, 68, 0.15)' } : {}}
+                    >
+                      <EyeOff size={15} />
+                      <span>المسودات المخفية ({stats.hiddenCount})</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="filters-row">
@@ -1839,18 +1863,42 @@ export default function AdminPage() {
               </div>
             </section>
 
-            {/* Episodes Table */}
+            {/* Episodes List Section (Cards or Table) */}
             <section className="admin-table-container">
               <div className="table-header-info">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <h3>قائمة الحلقات ({filteredEpisodes.length})</h3>
-                  {selectedSeriesFilter !== 'all' && (
-                    <span className="filter-active-tag">سلسلة: {selectedSeriesFilter}</span>
-                  )}
+                <div className="table-title-area">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <h3>قائمة الحلقات ({filteredEpisodes.length})</h3>
+                    {selectedSeriesFilter !== 'all' && (
+                      <span className="filter-active-tag">سلسلة: {selectedSeriesFilter}</span>
+                    )}
+                  </div>
+                  <span className="table-header-hint">
+                    يمكنك تثبيت الحلقات 📌، إخفائها أو نشرها بسويتش الموبايل 👁️، وترتيبها وتوليد الصوتيات
+                  </span>
                 </div>
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                  يمكنك تثبيت الحلقات 📌 وترتيبها ورفع ملفات صوتية مضغوطة Base64
-                </span>
+
+                {/* View Mode Switcher */}
+                <div className="view-mode-toggle" title="طريقة عرض الحلقات">
+                  <button
+                    type="button"
+                    className={`view-mode-btn ${viewMode === 'cards' ? 'active' : ''}`}
+                    onClick={() => handleSetViewMode('cards')}
+                    title="عرض كروت تفاعلية مريحة للموبايل"
+                  >
+                    <LayoutGrid size={15} />
+                    <span>كروت 📱</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`view-mode-btn ${viewMode === 'table' ? 'active' : ''}`}
+                    onClick={() => handleSetViewMode('table')}
+                    title="عرض جدول بيانات مفصل"
+                  >
+                    <List size={15} />
+                    <span>جدول 📋</span>
+                  </button>
+                </div>
               </div>
 
               {loading ? (
@@ -1862,7 +1910,211 @@ export default function AdminPage() {
                 <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
                   <p>لا توجد حلقات مطابقة للبحث أو التصفية الحالية.</p>
                 </div>
+              ) : viewMode === 'cards' ? (
+                /* ==================== CARDS VIEW (Mobile-First) ==================== */
+                <div className="admin-episodes-grid">
+                  {filteredEpisodes.map((ep, idx) => {
+                    const wordsCount = ep.html.replace(/<[^>]+>/g, '').trim().split(/\s+/).length;
+                    const isAudioPlaying = playingAudioId === ep.docId;
+                    const hasAudio = !!ep.audioUrl;
+
+                    return (
+                      <div
+                        key={ep.docId}
+                        className={`episode-admin-card ${ep.isPinned ? 'card-pinned' : ''} ${ep.isHidden ? 'card-hidden' : ''}`}
+                      >
+                        {/* Card Top: Order & Meta & Toggles */}
+                        <div className="card-top-bar">
+                          <div className="card-top-meta">
+                            <span className="order-badge">#{ep.order || idx + 1}</span>
+                            <span className="era-badge" title="السلسلة والتصنيف">{ep.era}</span>
+                          </div>
+
+                          <div className="card-top-toggles">
+                            {/* Pin Toggle */}
+                            <button
+                              className={`pin-toggle-btn ${ep.isPinned ? 'pinned' : ''}`}
+                              onClick={() => handleTogglePinEpisode(ep)}
+                              title={ep.isPinned ? 'حلقة مثبتة في الصدارة (انقر لإلغاء التثبيت)' : 'تثبيت في الصدارة'}
+                            >
+                              <Pin size={14} />
+                            </button>
+
+                            {/* Mobile Switch for Visibility */}
+                            <label
+                              className="mobile-switch compact"
+                              title={ep.isHidden ? 'الحلقة مخفية عن الزوار (مسودة) - انقر للإظهار' : 'الحلقة منشورة وظاهرة - انقر لإخفائها'}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={!ep.isHidden}
+                                onChange={() => handleToggleHideEpisode(ep)}
+                              />
+                              <span className="mobile-switch-track">
+                                <span className="mobile-switch-knob" />
+                              </span>
+                            </label>
+                            <span className={`visibility-badge ${!ep.isHidden ? 'visible' : 'hidden'}`}>
+                              {!ep.isHidden ? '👁️ ظاهرة' : '👁️‍🗨️ مسودة'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Card Content */}
+                        <div className="card-content-wrap">
+                          <div className="card-title-row">
+                            <h4 className="card-title">{ep.title}</h4>
+                            <div className="card-badges-row">
+                              {ep.isPinned && <span className="pin-tiny-badge">مثبتة 📌</span>}
+                              {ep.isHidden && (
+                                <span
+                                  className="pin-tiny-badge"
+                                  style={{
+                                    background: 'rgba(239, 68, 68, 0.15)',
+                                    color: '#f87171',
+                                    borderColor: 'rgba(239, 68, 68, 0.35)',
+                                  }}
+                                >
+                                  مسودة مخفية 👁️‍🗨️
+                                </span>
+                              )}
+                              {ep.sources && ep.sources.length > 0 && (
+                                <span
+                                  className="pin-tiny-badge"
+                                  style={{
+                                    background: 'rgba(59, 130, 246, 0.15)',
+                                    color: '#60a5fa',
+                                    borderColor: 'rgba(59, 130, 246, 0.35)',
+                                  }}
+                                  title={`تحتوي على ${ep.sources.length} مراجع ومصادر موثقة`}
+                                >
+                                  📚 {ep.sources.length} مراجع
+                                </span>
+                              )}
+                              <span className="words-tiny-badge">
+                                📝 {wordsCount} كلمة
+                              </span>
+                            </div>
+                          </div>
+                          {ep.subtitle && <p className="card-subtitle">{ep.subtitle}</p>}
+                        </div>
+
+                        {/* Audio Preview & Manage Bar */}
+                        <div className="card-audio-bar">
+                          {hasAudio ? (
+                            (() => {
+                              const sInfo = getAudioSourceInfo(ep);
+                              return (
+                                <div className="card-audio-active">
+                                  <button
+                                    className={`audio-play-mini-btn ${isAudioPlaying ? 'playing' : ''}`}
+                                    onClick={() => togglePlayPreview(ep)}
+                                    title={isAudioPlaying ? 'إيقاف المعاينة' : 'معاينة واستماع'}
+                                    style={{ padding: '5px 12px', width: 'auto', borderRadius: '20px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                                  >
+                                    {isAudioPlaying ? <Pause size={13} /> : <Play size={13} />}
+                                    <span style={{ fontSize: '0.78rem' }}>{isAudioPlaying ? 'إيقاف' : 'استماع'}</span>
+                                  </button>
+
+                                  <button
+                                    className="audio-link-tag"
+                                    onClick={() => handleOpenAudioModal(ep)}
+                                    title={`المصدر: ${sInfo.label} - انقر للإدارة`}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      background: sInfo.bg,
+                                      border: `1px solid ${sInfo.color}40`,
+                                      color: sInfo.color,
+                                    }}
+                                  >
+                                    <span>{sInfo.icon}</span>
+                                    <span>{sInfo.badgeText} ✓</span>
+                                  </button>
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            <button
+                              className="card-add-audio-btn"
+                              onClick={() => handleOpenAudioModal(ep)}
+                              title="🎙️ توليد صوت بشري بالذكاء الاصطناعي (Gemini) أو رفع ملف"
+                            >
+                              <Mic size={14} />
+                              <span>🎙️ توليد صوت (AI) / رفع ملف</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Bottom Actions Bar */}
+                        <div className="card-actions-bar">
+                          {/* Reorder Buttons */}
+                          <div className="card-reorder-group">
+                            <button
+                              className="reorder-btn"
+                              onClick={() => handleMoveOrder(idx, 'up')}
+                              disabled={idx === 0}
+                              title="رفع الترتيب لأعلى"
+                            >
+                              <ArrowUp size={14} />
+                            </button>
+                            <button
+                              className="reorder-btn"
+                              onClick={() => handleMoveOrder(idx, 'down')}
+                              disabled={idx === episodes.length - 1}
+                              title="خفض الترتيب لأسفل"
+                            >
+                              <ArrowDown size={14} />
+                            </button>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="card-btn-actions">
+                            <button
+                              className="card-action-btn"
+                              onClick={() => handleOpenMoralModal(ep)}
+                              title={ep.moralLesson ? 'العبر والفوائد الإيمانية (معتمدة ✓)' : 'استخلاص العبر والفوائد بالذكاء الاصطناعي ✨'}
+                              style={{ color: ep.moralLesson ? '#22c55e' : 'var(--gold)' }}
+                            >
+                              <Sparkles size={14} />
+                              <span>{ep.moralLesson ? 'العبر ✓' : 'العبر'}</span>
+                            </button>
+
+                            <button
+                              className="card-action-btn"
+                              onClick={() => handleOpenAudioModal(ep)}
+                              title="🎙️ إدارة أو توليد تسجيل صوتي"
+                              style={{ color: hasAudio ? 'var(--gold)' : 'var(--text-muted)' }}
+                            >
+                              <Mic size={14} />
+                            </button>
+
+                            <button
+                              className="card-action-btn"
+                              onClick={() => handleOpenEditEpisode(ep)}
+                              title="تعديل محتوى الحلقة"
+                            >
+                              <Edit3 size={14} />
+                              <span>تعديل</span>
+                            </button>
+
+                            <button
+                              className="card-action-btn danger"
+                              onClick={() => handleDeleteEpisodePrompt(ep)}
+                              title="حذف الحلقة نهائياً"
+                            >
+                              <Trash2 size={14} />
+                              <span>حذف</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
+                /* ==================== TABLE VIEW (Desktop Detailed) ==================== */
                 <div className="table-responsive">
                   <table className="admin-data-table">
                     <thead>
@@ -2574,7 +2826,7 @@ export default function AdminPage() {
 
             <form onSubmit={handleSaveEpisode}>
               {/* Order & Series Selection */}
-              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '14px' }}>
+              <div className="episode-modal-grid-row" style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '14px' }}>
                 <div className="form-group">
                   <label className="form-label">الترتيب الرقمي</label>
                   <input
@@ -2652,7 +2904,7 @@ export default function AdminPage() {
               </div>
 
               {/* Title & Subtitle */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '14px' }}>
+              <div className="episode-modal-grid-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '14px' }}>
                 <div className={`form-group ${episodeFormErrors.title ? 'has-error' : ''}`}>
                   <label className="form-label">عنوان الحلقة</label>
                   <input
