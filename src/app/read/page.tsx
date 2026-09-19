@@ -1059,43 +1059,6 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* Global Audio Card (Display only if active) */}
-          {globalAudio && globalAudio.audioUrl && (
-            <section className="global-audio-card">
-              <div className="global-audio-info">
-                <div className="global-audio-icon">
-                  <Headphones size={20} />
-                </div>
-                <div className="global-audio-text">
-                  <h4>مقطع صوتي عام لقصص الأنبياء وسيرة الرسول</h4>
-                  <p>
-                    {globalAudio.originalFileName
-                      ? globalAudio.originalFileName
-                      : 'تسجيل صوتي مبارك وشامل'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="global-audio-player-wrap">
-                {isLoadingGlobalAudio ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--gold)', fontSize: '0.85rem' }}>
-                    <RefreshCw className="animate-spin" size={16} />
-                    <span>جارٍ تجهيز المقطع الصوتي من السحابة...</span>
-                  </div>
-                ) : (
-                  resolvedGlobalAudioUrl && (
-                    <audio
-                      controls
-                      src={resolvedGlobalAudioUrl}
-                      preload="metadata"
-                      onPlay={handleOtherAudioPlay}
-                    />
-                  )
-                )}
-              </div>
-            </section>
-          )}
-
           {/* Dedication Banner & Footer */}
           <footer className="dedication-card">
             <div className="dedication-badge">{siteSettings.dedicationBadge || 'صَدَقَةٌ جَارِيَةٌ عَنّي'}</div>

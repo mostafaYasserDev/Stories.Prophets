@@ -14,8 +14,13 @@ import {
   BookmarkCheck,
   ChevronLeft,
   Compass,
+  RefreshCw,
 } from 'lucide-react';
-import { ThemeType, Episode } from '@/types';
+import { ThemeType, Episode, GlobalAudio } from '@/types';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { resolveGlobalAudioUrl } from '@/lib/audioStorage';
+import { CustomAudioPlayer } from '@/components/CustomAudioPlayer';
 import { INITIAL_SEED_EPISODES } from '@/lib/seedData';
 import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 
@@ -24,6 +29,9 @@ export default function LandingPage() {
   const [lastReadEpisode, setLastReadEpisode] = useState<Episode | null>(null);
   const [lastReadIndex, setLastReadIndex] = useState<number>(0);
   const [isClient, setIsClient] = useState<boolean>(false);
+  const [globalAudio, setGlobalAudio] = useState<GlobalAudio | null>(null);
+  const [resolvedGlobalAudioUrl, setResolvedGlobalAudioUrl] = useState<string | null>(null);
+  const [isLoadingGlobalAudio, setIsLoadingGlobalAudio] = useState<boolean>(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -61,6 +69,56 @@ export default function LandingPage() {
       console.warn('Landing page storage initialization:', e);
     }
   }, []);
+
+  // Real-time Global Audio Listener
+  useEffect(() => {
+    const docRef = doc(db, 'settings', 'global_audio');
+    const unsubscribe = onSnapshot(
+      docRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setGlobalAudio(docSnap.data() as GlobalAudio);
+        } else {
+          setGlobalAudio(null);
+        }
+      },
+      (err) => {
+        console.warn('Landing global audio listener notice:', err.message);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  // Resolve Global Audio URL (direct or chunked)
+  useEffect(() => {
+    let isMounted = true;
+    if (!globalAudio || !globalAudio.audioUrl) {
+      setResolvedGlobalAudioUrl(null);
+      return;
+    }
+
+    if (globalAudio.audioUrl !== '__CHUNKS__') {
+      setResolvedGlobalAudioUrl(globalAudio.audioUrl);
+      return;
+    }
+
+    setIsLoadingGlobalAudio(true);
+    resolveGlobalAudioUrl(globalAudio)
+      .then((url) => {
+        if (isMounted) {
+          setResolvedGlobalAudioUrl(url);
+          setIsLoadingGlobalAudio(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Error resolving landing global audio:', err);
+        if (isMounted) setIsLoadingGlobalAudio(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [globalAudio]);
 
   const cycleTheme = () => {
     const themes: ThemeType[] = ['midnight', 'obsidian', 'sepia', 'light'];
@@ -172,6 +230,39 @@ export default function LandingPage() {
                 <span>متابعة القراءة</span>
                 <ChevronLeft size={16} />
               </Link>
+            </div>
+          )}
+
+          {/* Luxury Global Audio Showcase */}
+          {globalAudio && globalAudio.audioUrl && (
+            <div className="landing-audio-showcase">
+              <div className="landing-audio-header">
+                <div className="landing-audio-titles">
+                  <div className="landing-audio-icon">
+                    <Headphones size={20} />
+                  </div>
+                  <div>
+                    <h3>المقدمة والتلاوة الصوتية العامة 🎙️</h3>
+                    <p>استمع إلى تلاوة ومقدمة مباركة لقصص الأنبياء وسيرة الرسول ﷺ</p>
+                  </div>
+                </div>
+              </div>
+
+              {isLoadingGlobalAudio ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--gold)', padding: '16px', fontSize: '0.85rem' }}>
+                  <RefreshCw className="animate-spin" size={16} />
+                  <span>جارٍ تجهيز المقطع الصوتي...</span>
+                </div>
+              ) : (
+                resolvedGlobalAudioUrl && (
+                  <CustomAudioPlayer
+                    src={resolvedGlobalAudioUrl}
+                    title="المقدمة والتلاوة الصوتية العامة"
+                    sizeBytes={globalAudio.compressedSize}
+                    downloadFilename={globalAudio.originalFileName || 'المقدمة_الصوتية_العامة.mp3'}
+                  />
+                )
+              )}
             </div>
           )}
 
