@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Episode } from '@/types';
 import { resolveAudioUrl } from '@/lib/audioStorage';
+import { audioManager } from '@/lib/audioManager';
 
 interface AudioWidgetProps {
   episode: Episode;
@@ -34,9 +35,15 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isSeekingRef = useRef<boolean>(false);
   const shouldAutoPlayRef = useRef<boolean>(false);
+  const loadRequestIdRef = useRef<number>(0);
 
   // 1. Episode switch handler: LAZY loading (Do not fetch heavy audio on initial page render!)
   useEffect(() => {
+    loadRequestIdRef.current++;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioManager.unregisterPlayingAudio(audioRef.current);
+    }
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
@@ -63,6 +70,17 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
     }
   }, [episode.docId, episode.audioUrl]);
 
+  // Clean up on component unmount
+  useEffect(() => {
+    return () => {
+      loadRequestIdRef.current++;
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioManager.unregisterPlayingAudio(audioRef.current);
+      }
+    };
+  }, []);
+
   // 2. Format Seconds -> MM:SS
   const formatTime = (secs: number) => {
     if (isNaN(secs) || secs < 0) return '00:00';
@@ -78,21 +96,33 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
     if (isPlaying) {
       if (audioRef.current) {
         audioRef.current.pause();
+        audioManager.unregisterPlayingAudio(audioRef.current);
       }
       setIsPlaying(false);
       return;
     }
 
+    // Prevent duplicate triggers if already loading
+    if (isLoadingAudio) return;
+
+    // Stop any other playing audio before starting this one
+    audioManager.stopAllAudio();
+
     // If audio is not yet resolved, stream & buffer it on demand!
     if (!resolvedUrl) {
+      const currentReq = ++loadRequestIdRef.current;
       setIsLoadingAudio(true);
       setStreamProgress(10);
       shouldAutoPlayRef.current = true;
 
       try {
         const url = await resolveAudioUrl(episode, (loaded, total) => {
-          setStreamProgress(Math.round((loaded / total) * 100));
+          if (currentReq === loadRequestIdRef.current) {
+            setStreamProgress(Math.round((loaded / total) * 100));
+          }
         });
+
+        if (currentReq !== loadRequestIdRef.current) return;
 
         if (url) {
           setResolvedUrl(url);
@@ -102,31 +132,42 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
         }
       } catch (err) {
         console.error('Streaming audio error:', err);
-        setIsLoadingAudio(false);
+        if (currentReq === loadRequestIdRef.current) {
+          setIsLoadingAudio(false);
+        }
       }
       return;
     }
 
     // If audio is already loaded and ready:
     if (audioRef.current) {
-      audioRef.current
-        .play()
-        .then(() => {
-          setIsPlaying(true);
-          onPlay?.();
-        })
-        .catch((e) => console.warn('Audio play error:', e));
+      try {
+        await audioRef.current.play();
+        setIsPlaying(true);
+        audioManager.registerPlayingAudio(audioRef.current, () => {
+          setIsPlaying(false);
+        });
+        onPlay?.();
+      } catch (e) {
+        console.warn('Audio play error:', e);
+      }
     }
-  }, [episode, isPlaying, resolvedUrl, onPlay]);
+  }, [episode, isPlaying, isLoadingAudio, resolvedUrl, onPlay]);
 
   // When audio becomes resolved after user clicked play, auto-trigger play
   useEffect(() => {
     if (resolvedUrl && shouldAutoPlayRef.current && audioRef.current) {
       shouldAutoPlayRef.current = false;
+      audioManager.stopAllAudio();
       audioRef.current
         .play()
         .then(() => {
           setIsPlaying(true);
+          if (audioRef.current) {
+            audioManager.registerPlayingAudio(audioRef.current, () => {
+              setIsPlaying(false);
+            });
+          }
           onPlay?.();
         })
         .catch((e) => console.warn('Autoplay error:', e));
@@ -240,9 +281,24 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
           onEnded={() => {
             setIsPlaying(false);
             setCurrentTime(0);
+            if (audioRef.current) {
+              audioManager.unregisterPlayingAudio(audioRef.current);
+            }
           }}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
+          onPlay={() => {
+            setIsPlaying(true);
+            if (audioRef.current) {
+              audioManager.registerPlayingAudio(audioRef.current, () => {
+                setIsPlaying(false);
+              });
+            }
+          }}
+          onPause={() => {
+            setIsPlaying(false);
+            if (audioRef.current) {
+              audioManager.unregisterPlayingAudio(audioRef.current);
+            }
+          }}
         />
       )}
 

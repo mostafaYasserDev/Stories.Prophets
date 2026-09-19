@@ -28,7 +28,8 @@ import {
   ChevronDown,
 } from 'lucide-react';
 
-import { Episode, Series, ThemeType, FontType, GlobalAudio, SiteSettings } from '@/types';
+import { Episode, Series, ThemeType, FontType, SiteSettings } from '@/types';
+import { audioManager } from '@/lib/audioManager';
 import { db, initAnalytics } from '@/lib/firebase';
 import { INITIAL_SEED_EPISODES } from '@/lib/seedData';
 import {
@@ -40,7 +41,6 @@ import {
   doc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { resolveGlobalAudioUrl } from '@/lib/audioStorage';
 
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
@@ -70,9 +70,6 @@ export default function HomePage() {
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
   const [readEpisodes, setReadEpisodes] = useState<Set<string>>(new Set());
   const [seriesList, setSeriesList] = useState<Series[]>([]);
-  const [globalAudio, setGlobalAudio] = useState<GlobalAudio | null>(null);
-  const [resolvedGlobalAudioUrl, setResolvedGlobalAudioUrl] = useState<string | null>(null);
-  const [isLoadingGlobalAudio, setIsLoadingGlobalAudio] = useState<boolean>(false);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>({
     siteTitle: 'قصص الأنبياء وسيرة الرسول',
     siteSubtitle: 'رحلة إيمانية مباركة في قصص الأنبياء وسيرة خير الأنام ﷺ',
@@ -282,56 +279,6 @@ export default function HomePage() {
     }
   }, [episodes]);
 
-  // Real-time Global Audio Listener
-  useEffect(() => {
-    const docRef = doc(db, 'settings', 'global_audio');
-    const unsubscribe = onSnapshot(
-      docRef,
-      (docSnap) => {
-        if (docSnap.exists()) {
-          setGlobalAudio(docSnap.data() as GlobalAudio);
-        } else {
-          setGlobalAudio(null);
-        }
-      },
-      (err) => {
-        console.warn('Global audio listener offline notice:', err.message);
-      }
-    );
-    return () => unsubscribe();
-  }, []);
-
-  // Resolve Global Audio URL (direct or reassemble chunks)
-  useEffect(() => {
-    let isMounted = true;
-    if (!globalAudio || !globalAudio.audioUrl) {
-      setResolvedGlobalAudioUrl(null);
-      return;
-    }
-
-    if (globalAudio.audioUrl !== '__CHUNKS__') {
-      setResolvedGlobalAudioUrl(globalAudio.audioUrl);
-      return;
-    }
-
-    setIsLoadingGlobalAudio(true);
-    resolveGlobalAudioUrl(globalAudio)
-      .then((url) => {
-        if (isMounted) {
-          setResolvedGlobalAudioUrl(url);
-          setIsLoadingGlobalAudio(false);
-        }
-      })
-      .catch((err) => {
-        console.error('Error resolving global audio:', err);
-        if (isMounted) setIsLoadingGlobalAudio(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [globalAudio]);
-
   // Real-time Site Settings Listener
   useEffect(() => {
     const docRef = doc(db, 'settings', 'site_info');
@@ -397,7 +344,16 @@ export default function HomePage() {
   }, [episodes, currentIndex]);
 
   // Coordinated Audio Playback Handler
-  const handleOtherAudioPlay = useCallback(() => {}, []);
+  const handleOtherAudioPlay = useCallback(() => {
+    audioManager.stopAllAudio();
+  }, []);
+
+  // Stop audio on unmount
+  useEffect(() => {
+    return () => {
+      audioManager.stopAllAudio();
+    };
+  }, []);
 
   // Navigate to Episode with URL sync
   const goToEpisode = (index: number) => {

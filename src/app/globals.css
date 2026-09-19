@@ -2461,9 +2461,18 @@ body {
   transition: all var(--transition-fast);
 }
 
-.audio-play-mini-btn:hover, .audio-play-mini-btn.playing {
+.audio-play-mini-btn:hover:not(:disabled), .audio-play-mini-btn.playing {
   background: #10b981;
   color: #fff;
+}
+
+.audio-play-mini-btn.loading,
+.audio-play-mini-btn:disabled {
+  opacity: 0.75;
+  cursor: wait;
+  border-color: rgba(212, 175, 55, 0.6);
+  color: var(--gold);
+  background: rgba(212, 175, 55, 0.15);
 }
 
 .audio-link-tag {

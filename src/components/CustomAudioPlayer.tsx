@@ -13,6 +13,8 @@ import {
   Radio,
 } from 'lucide-react';
 
+import { audioManager } from '@/lib/audioManager';
+
 interface CustomAudioPlayerProps {
   src: string;
   title?: string;
@@ -40,6 +42,7 @@ export const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isSeekingRef = useRef<boolean>(false);
+  const isPlayStartingRef = useRef<boolean>(false);
 
   const [safeSrc, setSafeSrc] = useState<string>('');
 
@@ -85,6 +88,16 @@ export const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({
     }
   }, [safeSrc, durationSeconds]);
 
+  // Clean up on component unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioManager.unregisterPlayingAudio(audioRef.current);
+      }
+    };
+  }, []);
+
   const formatTime = (secs: number) => {
     if (isNaN(secs) || secs < 0) return '00:00';
     const mins = Math.floor(secs / 60);
@@ -92,16 +105,29 @@ export const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({
     return `${String(mins).padStart(2, '0')}:${String(remainingSecs).padStart(2, '0')}`;
   };
 
-  const togglePlay = useCallback(() => {
+  const togglePlay = useCallback(async () => {
     if (!audioRef.current || !safeSrc) return;
+    if (isPlayStartingRef.current) return; // Prevent spamming while play() is resolving
+
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
+      audioManager.unregisterPlayingAudio(audioRef.current);
     } else {
-      audioRef.current
-        .play()
-        .then(() => setIsPlaying(true))
-        .catch((err) => console.warn('Playback failed:', err));
+      isPlayStartingRef.current = true;
+      // Stop any other playing audio before starting this one
+      audioManager.stopAllAudio();
+      try {
+        await audioRef.current.play();
+        setIsPlaying(true);
+        audioManager.registerPlayingAudio(audioRef.current, () => {
+          setIsPlaying(false);
+        });
+      } catch (err) {
+        console.warn('Playback failed:', err);
+      } finally {
+        isPlayStartingRef.current = false;
+      }
     }
   }, [isPlaying, safeSrc]);
 
@@ -175,9 +201,24 @@ export const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({
         onEnded={() => {
           setIsPlaying(false);
           setCurrentTime(0);
+          if (audioRef.current) {
+            audioManager.unregisterPlayingAudio(audioRef.current);
+          }
         }}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
+        onPlay={() => {
+          setIsPlaying(true);
+          if (audioRef.current) {
+            audioManager.registerPlayingAudio(audioRef.current, () => {
+              setIsPlaying(false);
+            });
+          }
+        }}
+        onPause={() => {
+          setIsPlaying(false);
+          if (audioRef.current) {
+            audioManager.unregisterPlayingAudio(audioRef.current);
+          }
+        }}
       />
 
       {/* Top Header Bar */}

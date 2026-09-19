@@ -48,6 +48,7 @@ import {
 } from 'lucide-react';
 
 import { Episode, Series, GlobalAudio, SiteSettings, ThemeType } from '@/types';
+import { audioManager } from '@/lib/audioManager';
 import { db, initAnalytics } from '@/lib/firebase';
 import { INITIAL_SEED_EPISODES } from '@/lib/seedData';
 import {
@@ -242,7 +243,20 @@ export default function AdminPage() {
 
   // Audio Preview State
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const [loadingAudioId, setLoadingAudioId] = useState<string | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRequestIdRef = useRef<number>(0);
+
+  // Stop audio preview when navigating away or unmounting
+  useEffect(() => {
+    return () => {
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+        audioManager.unregisterPlayingAudio(previewAudioRef.current);
+        previewAudioRef.current = null;
+      }
+    };
+  }, []);
 
   // Trigger Toast (Rich notifications with title, warning, and dismissibility)
   const triggerToast = (
@@ -1431,35 +1445,88 @@ export default function AdminPage() {
 
   // Preview Play
   const togglePlayPreview = async (ep: Episode) => {
+    // 1. If currently playing this exact episode, pause and stop cleanly
     if (playingAudioId === ep.docId) {
       if (previewAudioRef.current) {
         previewAudioRef.current.pause();
+        audioManager.unregisterPlayingAudio(previewAudioRef.current);
+        previewAudioRef.current.currentTime = 0;
       }
       setPlayingAudioId(null);
-    } else {
-      if (previewAudioRef.current) {
-        previewAudioRef.current.pause();
+      setLoadingAudioId(null);
+      return;
+    }
+
+    // 2. If currently loading this exact episode, ignore duplicate clicks to prevent spamming
+    if (loadingAudioId === ep.docId) {
+      return;
+    }
+
+    // 3. Immediately stop ANY existing preview audio or playing audio across the entire site
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      audioManager.unregisterPlayingAudio(previewAudioRef.current);
+      previewAudioRef.current.currentTime = 0;
+      previewAudioRef.current.src = '';
+      previewAudioRef.current = null;
+    }
+    audioManager.stopAllAudio();
+    setPlayingAudioId(null);
+
+    // 4. Set loading state with a sequence request ID to guard against out-of-order responses
+    const currentReqId = ++audioRequestIdRef.current;
+    setLoadingAudioId(ep.docId);
+
+    try {
+      const playableUrl = await resolveAudioUrl(ep);
+      // If user clicked another episode or cancelled while resolving, discard this stale request!
+      if (currentReqId !== audioRequestIdRef.current) {
+        return;
       }
-      try {
-        const playableUrl = await resolveAudioUrl(ep);
-        if (!playableUrl) {
-          triggerToast('تعذّر العثور على المقطع الصوتي أو لم يعد متوفراً', 'error', 'ملف غير متاح');
-          return;
+      setLoadingAudioId(null);
+
+      if (!playableUrl) {
+        triggerToast('تعذّر العثور على المقطع الصوتي أو لم يعد متوفراً', 'error', 'ملف غير متاح');
+        return;
+      }
+
+      // Stop any other audio again right before playback
+      audioManager.stopAllAudio();
+
+      const audio = new Audio(playableUrl);
+      previewAudioRef.current = audio;
+
+      // Register with global audioManager
+      audioManager.registerPlayingAudio(audio, () => {
+        if (previewAudioRef.current === audio) {
+          audio.pause();
+          setPlayingAudioId(null);
         }
-        const audio = new Audio(playableUrl);
-        previewAudioRef.current = audio;
-        audio.play().catch(() =>
-          triggerToast(
-            'منع المتصفح التشغيل التلقائي أو الرابط غير صالح',
-            'warning',
-            'تشغيل الصوت'
-          )
-        );
-        audio.onended = () => setPlayingAudioId(null);
+      });
+
+      audio.onended = () => {
+        if (previewAudioRef.current === audio) {
+          setPlayingAudioId(null);
+          audioManager.unregisterPlayingAudio(audio);
+        }
+      };
+
+      await audio.play();
+      if (currentReqId === audioRequestIdRef.current) {
         setPlayingAudioId(ep.docId);
-      } catch (e: any) {
-        const friendly = formatFriendlyError(e, 'تعذّر تشغيل المقطع الصوتي');
-        triggerToast(friendly.message, 'error', friendly.title);
+      } else {
+        audio.pause();
+        audioManager.unregisterPlayingAudio(audio);
+      }
+    } catch (e: any) {
+      if (currentReqId === audioRequestIdRef.current) {
+        setLoadingAudioId(null);
+        setPlayingAudioId(null);
+        triggerToast(
+          'منع المتصفح التشغيل التلقائي أو الرابط غير صالح',
+          'warning',
+          'تشغيل الصوت'
+        );
       }
     }
   };
@@ -1916,6 +1983,7 @@ export default function AdminPage() {
                   {filteredEpisodes.map((ep, idx) => {
                     const wordsCount = ep.html.replace(/<[^>]+>/g, '').trim().split(/\s+/).length;
                     const isAudioPlaying = playingAudioId === ep.docId;
+                    const isAudioLoading = loadingAudioId === ep.docId;
                     const hasAudio = !!ep.audioUrl;
 
                     return (
@@ -2007,13 +2075,22 @@ export default function AdminPage() {
                               return (
                                 <div className="card-audio-active">
                                   <button
-                                    className={`audio-play-mini-btn ${isAudioPlaying ? 'playing' : ''}`}
+                                    className={`audio-play-mini-btn ${isAudioPlaying ? 'playing' : ''} ${isAudioLoading ? 'loading' : ''}`}
                                     onClick={() => togglePlayPreview(ep)}
-                                    title={isAudioPlaying ? 'إيقاف المعاينة' : 'معاينة واستماع'}
+                                    disabled={isAudioLoading}
+                                    title={isAudioLoading ? 'جارٍ التحميل...' : isAudioPlaying ? 'إيقاف المعاينة' : 'معاينة واستماع'}
                                     style={{ padding: '5px 12px', width: 'auto', borderRadius: '20px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                                   >
-                                    {isAudioPlaying ? <Pause size={13} /> : <Play size={13} />}
-                                    <span style={{ fontSize: '0.78rem' }}>{isAudioPlaying ? 'إيقاف' : 'استماع'}</span>
+                                    {isAudioLoading ? (
+                                      <RefreshCw size={13} className="animate-spin" />
+                                    ) : isAudioPlaying ? (
+                                      <Pause size={13} />
+                                    ) : (
+                                      <Play size={13} />
+                                    )}
+                                    <span style={{ fontSize: '0.78rem' }}>
+                                      {isAudioLoading ? 'تحميل...' : isAudioPlaying ? 'إيقاف' : 'استماع'}
+                                    </span>
                                   </button>
 
                                   <button
@@ -2134,6 +2211,7 @@ export default function AdminPage() {
                       {filteredEpisodes.map((ep, idx) => {
                         const wordsCount = ep.html.replace(/<[^>]+>/g, '').trim().split(/\s+/).length;
                         const isAudioPlaying = playingAudioId === ep.docId;
+                        const isAudioLoading = loadingAudioId === ep.docId;
                         const hasAudio = !!ep.audioUrl;
                         const isBase64 = ep.audioUrl?.startsWith('data:') || ep.audioUrl === '__CHUNKS__';
 
@@ -2217,11 +2295,18 @@ export default function AdminPage() {
                                   return (
                                     <div className="audio-cell-active" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                       <button
-                                        className={`audio-play-mini-btn ${isAudioPlaying ? 'playing' : ''}`}
+                                        className={`audio-play-mini-btn ${isAudioPlaying ? 'playing' : ''} ${isAudioLoading ? 'loading' : ''}`}
                                         onClick={() => togglePlayPreview(ep)}
-                                        title={isAudioPlaying ? 'إيقاف المعاينة' : 'معاينة واستماع'}
+                                        disabled={isAudioLoading}
+                                        title={isAudioLoading ? 'جارٍ التحميل...' : isAudioPlaying ? 'إيقاف المعاينة' : 'معاينة واستماع'}
                                       >
-                                        {isAudioPlaying ? <Pause size={13} /> : <Play size={13} />}
+                                        {isAudioLoading ? (
+                                          <RefreshCw size={13} className="animate-spin" />
+                                        ) : isAudioPlaying ? (
+                                          <Pause size={13} />
+                                        ) : (
+                                          <Play size={13} />
+                                        )}
                                       </button>
                                       <button
                                         className="audio-link-tag"
