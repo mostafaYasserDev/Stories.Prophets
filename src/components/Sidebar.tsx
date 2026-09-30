@@ -543,7 +543,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 <span
                                   title={
                                     ep.audioSourceType === 'ai'
-                                      ? 'تسجيل صوتي ذكاء اصطناعي ✨'
+                                      ? 'صوت ذكاء اصطناعي ✨'
                                       : ep.audioSourceType === 'url'
                                       ? 'رابط صوتي خارجي 🔗'
                                       : 'ملف صوتي مرفوع يدوياً 📁'

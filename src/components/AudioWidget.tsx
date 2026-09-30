@@ -16,7 +16,14 @@ import {
   Link2,
 } from 'lucide-react';
 import { Episode } from '@/types';
-import { resolveAudioUrl, isValidPlayableUrl, getAudioSourceInfo } from '@/lib/audioStorage';
+import {
+  resolveAudioUrl,
+  isValidPlayableUrl,
+  getAudioSourceInfo,
+  dataUrlToBlob,
+  setCachedAudioBlob,
+  getCachedAudioBlob,
+} from '@/lib/audioStorage';
 import { audioManager } from '@/lib/audioManager';
 
 interface AudioWidgetProps {
@@ -25,7 +32,7 @@ interface AudioWidgetProps {
 }
 
 export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => {
-  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+  const [safeSrc, setSafeSrc] = useState<string>('');
   const [isLoadingAudio, setIsLoadingAudio] = useState<boolean>(false);
   const [streamProgress, setStreamProgress] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -36,21 +43,25 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isSeekingRef = useRef<boolean>(false);
-  const activeDocIdRef = useRef<string | null>(null);
-  const loadRequestIdRef = useRef<number>(0);
+  const isPlayStartingRef = useRef<boolean>(false);
 
   const sourceInfo = getAudioSourceInfo(episode);
 
-  // 1. Episode switch handler: Only re-initialize when episode ID actually changes
+  // 1. Episode switch & Instant synchronous source resolution (identical to CustomAudioPlayer)
   useEffect(() => {
-    // If it is the exact same episode and already resolved, do not reset state
-    if (activeDocIdRef.current === episode.docId && resolvedUrl) {
+    let isCancelled = false;
+    let localBlobUrl: string | null = null;
+
+    if (!episode || !episode.audioUrl) {
+      setSafeSrc('');
+      setIsPlaying(false);
+      setCurrentTime(0);
+      setDuration(0);
+      setIsLoadingAudio(false);
       return;
     }
 
-    activeDocIdRef.current = episode.docId;
-    const currentReq = ++loadRequestIdRef.current;
-
+    // Pause and clean up any playing audio on episode switch
     if (audioRef.current) {
       audioRef.current.pause();
       audioManager.unregisterPlayingAudio(audioRef.current);
@@ -58,45 +69,82 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
-    setStreamProgress(0);
 
-    if (!episode.audioUrl) {
-      setResolvedUrl(null);
+    const rawUrl = episode.audioUrl;
+
+    // Pattern A: Direct Base64 data URL -> Synchronous, instant Blob URL conversion (0ms delay)
+    if (rawUrl.startsWith('data:audio')) {
+      try {
+        const blob = dataUrlToBlob(rawUrl);
+        if (blob) {
+          setCachedAudioBlob(episode.docId, blob);
+          localBlobUrl = URL.createObjectURL(blob);
+          setSafeSrc(localBlobUrl);
+          setIsLoadingAudio(false);
+          return () => {
+            if (localBlobUrl) {
+              URL.revokeObjectURL(localBlobUrl);
+            }
+          };
+        }
+      } catch (err) {
+        console.warn('Sync Base64 convert error:', err);
+      }
+    }
+
+    // Pattern B: Direct playable URL (HTTP / HTTPS / Blob)
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('blob:')) {
+      setSafeSrc(rawUrl);
       setIsLoadingAudio(false);
       return;
     }
 
-    // Eager background resolution: resolves audio before user even clicks
-    resolveAudioUrl(episode, (loaded, total) => {
-      if (currentReq === loadRequestIdRef.current) {
-        setStreamProgress(Math.round((loaded / total) * 100));
-      }
-    })
-      .then((url) => {
-        if (currentReq !== loadRequestIdRef.current) return;
-        if (url && isValidPlayableUrl(url)) {
-          setResolvedUrl(url);
-          setIsLoadingAudio(false);
-          if (audioRef.current) {
-            audioRef.current.src = url;
-            audioRef.current.load();
+    // Pattern C: Placeholder ('__CACHED_BASE64__' or '__CHUNKS__') -> Resolve via IndexedDB or REST
+    setIsLoadingAudio(true);
+    setStreamProgress(0);
+
+    // Try fast IndexedDB first (< 5ms)
+    getCachedAudioBlob(episode.docId).then((idbBlob) => {
+      if (isCancelled) return;
+      if (idbBlob) {
+        localBlobUrl = URL.createObjectURL(idbBlob);
+        setSafeSrc(localBlobUrl);
+        setIsLoadingAudio(false);
+      } else {
+        // Resolve via network/REST
+        resolveAudioUrl(episode, (loaded, total) => {
+          if (!isCancelled) {
+            setStreamProgress(Math.round((loaded / total) * 100));
           }
-        } else {
-          setIsLoadingAudio(false);
-        }
-      })
-      .catch((err) => {
-        console.warn('Eager audio resolve warning:', err);
-        if (currentReq === loadRequestIdRef.current) {
-          setIsLoadingAudio(false);
-        }
-      });
-  }, [episode.docId, episode.audioUrl]);
+        })
+          .then((resolved) => {
+            if (isCancelled) return;
+            if (resolved && isValidPlayableUrl(resolved)) {
+              setSafeSrc(resolved);
+            }
+          })
+          .catch((err) => {
+            console.warn('AudioWidget resolve error:', err);
+          })
+          .finally(() => {
+            if (!isCancelled) {
+              setIsLoadingAudio(false);
+            }
+          });
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+      if (localBlobUrl) {
+        URL.revokeObjectURL(localBlobUrl);
+      }
+    };
+  }, [episode?.docId, episode?.audioUrl]);
 
   // Clean up on component unmount
   useEffect(() => {
     return () => {
-      loadRequestIdRef.current++;
       if (audioRef.current) {
         audioRef.current.pause();
         audioManager.unregisterPlayingAudio(audioRef.current);
@@ -115,9 +163,9 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
   // Play / Pause Handlers: Guaranteed synchronous user gesture invocation
   const togglePlay = useCallback(async () => {
     if (!episode.audioUrl) return;
-
     const audio = audioRef.current;
     if (!audio) return;
+    if (isPlayStartingRef.current) return;
 
     if (isPlaying) {
       audio.pause();
@@ -126,15 +174,12 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
       return;
     }
 
-    // Stop all other playing audio across the application
-    audioManager.stopAllAudio();
-
-    // Case 1: Audio is already resolved and ready in state
-    if (resolvedUrl && isValidPlayableUrl(resolvedUrl)) {
+    // Audio is already prepared with safeSrc -> Play synchronously inside user gesture!
+    if (safeSrc && isValidPlayableUrl(safeSrc)) {
+      isPlayStartingRef.current = true;
+      // Stop all other playing audio across the application
+      audioManager.stopAllAudio();
       try {
-        if (audio.src !== resolvedUrl) {
-          audio.src = resolvedUrl;
-        }
         await audio.play();
         setIsPlaying(true);
         audioManager.registerPlayingAudio(audio, () => {
@@ -144,50 +189,44 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
       } catch (err) {
         console.warn('Playback play() call failed:', err);
         setIsPlaying(false);
+      } finally {
+        isPlayStartingRef.current = false;
       }
       return;
     }
 
-    // Case 2: Audio is still resolving
+    // Fallback: If audio is still resolving in the background
     setIsLoadingAudio(true);
-    const currentReq = loadRequestIdRef.current;
-
     try {
       const url = await resolveAudioUrl(episode, (loaded, total) => {
-        if (currentReq === loadRequestIdRef.current) {
-          setStreamProgress(Math.round((loaded / total) * 100));
-        }
+        setStreamProgress(Math.round((loaded / total) * 100));
       });
 
-      if (currentReq !== loadRequestIdRef.current) return;
-
       if (url && isValidPlayableUrl(url)) {
-        setResolvedUrl(url);
-        setIsLoadingAudio(false);
-        if (audioRef.current) {
-          audioRef.current.src = url;
-          try {
-            await audioRef.current.play();
-            setIsPlaying(true);
-            audioManager.registerPlayingAudio(audioRef.current, () => {
-              setIsPlaying(false);
-            });
-            onPlay?.();
-          } catch (e) {
-            console.warn('Play after resolve failed:', e);
+        setSafeSrc(url);
+        audio.src = url;
+        isPlayStartingRef.current = true;
+        audioManager.stopAllAudio();
+        try {
+          await audio.play();
+          setIsPlaying(true);
+          audioManager.registerPlayingAudio(audio, () => {
             setIsPlaying(false);
-          }
+          });
+          onPlay?.();
+        } catch (e) {
+          console.warn('Play after resolve failed:', e);
+          setIsPlaying(false);
+        } finally {
+          isPlayStartingRef.current = false;
         }
-      } else {
-        setIsLoadingAudio(false);
       }
     } catch (err) {
       console.error('Audio resolve error in togglePlay:', err);
-      if (currentReq === loadRequestIdRef.current) {
-        setIsLoadingAudio(false);
-      }
+    } finally {
+      setIsLoadingAudio(false);
     }
-  }, [episode, isPlaying, resolvedUrl, onPlay]);
+  }, [episode, isPlaying, safeSrc, onPlay]);
 
   // Skip Backward / Forward 10s
   const skipTime = useCallback(
@@ -229,7 +268,7 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
   useEffect(() => {
     if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
 
-    if (resolvedUrl && episode) {
+    if (safeSrc && episode) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: episode.title,
         artist: 'قصص الأنبياء وسيرة الرسول',
@@ -267,7 +306,7 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
         navigator.mediaSession.setActionHandler('seekto', null);
       }
     };
-  }, [resolvedUrl, episode, skipTime]);
+  }, [safeSrc, episode, skipTime]);
 
   if (!episode.audioUrl) {
     return null;
@@ -277,54 +316,56 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
 
   return (
     <div className={`studio-audio-player player-source-${sourceInfo.type}`}>
-      {/* Native Audio Element: ALWAYS mounted in DOM */}
-      <audio
-        ref={audioRef}
-        src={isValidPlayableUrl(resolvedUrl) ? resolvedUrl : undefined}
-        preload="auto"
-        onTimeUpdate={() => {
-          if (!isSeekingRef.current && audioRef.current) {
-            setCurrentTime(audioRef.current.currentTime);
-          }
-        }}
-        onDurationChange={() => {
-          if (audioRef.current && audioRef.current.duration && !isNaN(audioRef.current.duration)) {
-            setDuration(audioRef.current.duration);
-          }
-        }}
-        onLoadedMetadata={() => {
-          if (audioRef.current && audioRef.current.duration && !isNaN(audioRef.current.duration)) {
-            setDuration(audioRef.current.duration);
-            audioRef.current.playbackRate = playbackSpeed;
-          }
-        }}
-        onCanPlay={() => {
-          if (audioRef.current && audioRef.current.duration && !isNaN(audioRef.current.duration)) {
-            setDuration(audioRef.current.duration);
-          }
-        }}
-        onEnded={() => {
-          setIsPlaying(false);
-          setCurrentTime(0);
-          if (audioRef.current) {
-            audioManager.unregisterPlayingAudio(audioRef.current);
-          }
-        }}
-        onPlay={() => {
-          setIsPlaying(true);
-          if (audioRef.current) {
-            audioManager.registerPlayingAudio(audioRef.current, () => {
-              setIsPlaying(false);
-            });
-          }
-        }}
-        onPause={() => {
-          setIsPlaying(false);
-          if (audioRef.current) {
-            audioManager.unregisterPlayingAudio(audioRef.current);
-          }
-        }}
-      />
+      {/* Native Audio Element: Mounted with safeSrc */}
+      {isValidPlayableUrl(safeSrc) && (
+        <audio
+          ref={audioRef}
+          src={safeSrc}
+          preload="metadata"
+          onTimeUpdate={() => {
+            if (!isSeekingRef.current && audioRef.current) {
+              setCurrentTime(audioRef.current.currentTime);
+            }
+          }}
+          onDurationChange={() => {
+            if (audioRef.current && audioRef.current.duration && !isNaN(audioRef.current.duration)) {
+              setDuration(audioRef.current.duration);
+            }
+          }}
+          onLoadedMetadata={() => {
+            if (audioRef.current && audioRef.current.duration && !isNaN(audioRef.current.duration)) {
+              setDuration(audioRef.current.duration);
+              audioRef.current.playbackRate = playbackSpeed;
+            }
+          }}
+          onCanPlay={() => {
+            if (audioRef.current && audioRef.current.duration && !isNaN(audioRef.current.duration)) {
+              setDuration(audioRef.current.duration);
+            }
+          }}
+          onEnded={() => {
+            setIsPlaying(false);
+            setCurrentTime(0);
+            if (audioRef.current) {
+              audioManager.unregisterPlayingAudio(audioRef.current);
+            }
+          }}
+          onPlay={() => {
+            setIsPlaying(true);
+            if (audioRef.current) {
+              audioManager.registerPlayingAudio(audioRef.current, () => {
+                setIsPlaying(false);
+              });
+            }
+          }}
+          onPause={() => {
+            setIsPlaying(false);
+            if (audioRef.current) {
+              audioManager.unregisterPlayingAudio(audioRef.current);
+            }
+          }}
+        />
+      )}
 
       {/* Top Header with Dynamic Source Differentiation */}
       <div className="studio-player-header">
@@ -376,7 +417,7 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
         </div>
       </div>
 
-      {isLoadingAudio ? (
+      {isLoadingAudio && !isValidPlayableUrl(safeSrc) ? (
         <div className="studio-player-loading">
           <RefreshCw className="animate-spin" size={18} />
           <span>جارٍ تجهيز وبث المقطع الصوتي {streamProgress > 0 ? `(${streamProgress}%)` : ''}...</span>
@@ -474,9 +515,9 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
                 {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
               </button>
 
-              {isValidPlayableUrl(resolvedUrl) && (
+              {isValidPlayableUrl(safeSrc) && (
                 <a
-                  href={resolvedUrl!}
+                  href={safeSrc}
                   download={`${episode.title || 'قصص_الأنبياء_وسيرة_الرسول'}.${
                     sourceInfo.type === 'ai' ? 'wav' : 'mp3'
                   }`}

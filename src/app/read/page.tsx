@@ -269,6 +269,9 @@ export default function HomePage() {
       }
     );
 
+    // Call REST immediately in parallel so audio data and episodes are ready in ~150ms without waiting
+    fetchViaRest();
+
     const timer = setTimeout(() => {
       if (!isSnapshotReceived) {
         fetchViaRest();
@@ -396,11 +399,6 @@ export default function HomePage() {
     const safeIndex = Math.min(Math.max(0, currentIndex), episodes.length - 1);
     return episodes[safeIndex];
   }, [episodes, currentIndex]);
-
-  // Coordinated Audio Playback Handler
-  const handleOtherAudioPlay = useCallback(() => {
-    audioManager.stopAllAudio();
-  }, []);
 
   // Stop audio on unmount
   useEffect(() => {
@@ -831,7 +829,7 @@ export default function HomePage() {
               </div>
 
               {/* Episode Audio Player (Rendered purely if audioUrl is present) */}
-              <AudioWidget episode={currentEpisode} onPlay={handleOtherAudioPlay} />
+              <AudioWidget episode={currentEpisode} />
 
               {/* Reading Content Body */}
               <div className="reading-content-body" itemProp="articleBody">
