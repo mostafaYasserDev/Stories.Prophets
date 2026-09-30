@@ -70,6 +70,7 @@ import {
   saveAudioToEpisode,
   removeAudioFromEpisode,
   resolveAudioUrl,
+  isValidPlayableUrl,
   saveGlobalAudio,
   removeGlobalAudio,
   resolveGlobalAudioUrl,
@@ -1092,10 +1093,15 @@ export default function AdminPage() {
       setIsLoadingExistingAudio(true);
       resolveAudioUrl(ep)
         .then((url) => {
-          setExistingAudioBlobUrl(url);
+          if (url && isValidPlayableUrl(url)) {
+            setExistingAudioBlobUrl(url);
+          } else {
+            setExistingAudioBlobUrl(null);
+          }
         })
         .catch((err) => {
           console.error('Failed to resolve episode audio in modal:', err);
+          setExistingAudioBlobUrl(null);
         })
         .finally(() => {
           setIsLoadingExistingAudio(false);
@@ -1485,7 +1491,7 @@ export default function AdminPage() {
       }
       setLoadingAudioId(null);
 
-      if (!playableUrl) {
+      if (!playableUrl || !isValidPlayableUrl(playableUrl)) {
         triggerToast('تعذّر العثور على المقطع الصوتي أو لم يعد متوفراً', 'error', 'ملف غير متاح');
         return;
       }

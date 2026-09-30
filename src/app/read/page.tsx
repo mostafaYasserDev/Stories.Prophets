@@ -30,6 +30,7 @@ import {
 
 import { Episode, Series, ThemeType, FontType, SiteSettings } from '@/types';
 import { audioManager } from '@/lib/audioManager';
+import { setCachedAudioBlob, dataUrlToBlob } from '@/lib/audioStorage';
 import { db, initAnalytics } from '@/lib/firebase';
 import { INITIAL_SEED_EPISODES } from '@/lib/seedData';
 import {
@@ -215,6 +216,16 @@ export default function HomePage() {
             isHidden: ep.isHidden,
           }));
           localStorage.setItem('seerah_cached_episodes', JSON.stringify(cacheSafe));
+
+          // Asynchronously cache any Base64 audio blobs in IndexedDB for 100% offline availability
+          visibleItems.forEach((ep) => {
+            if (ep.docId && ep.audioUrl && ep.audioUrl.startsWith('data:')) {
+              const b = dataUrlToBlob(ep.audioUrl);
+              if (b) {
+                setCachedAudioBlob(ep.docId, b);
+              }
+            }
+          });
         } catch (e) {
           console.warn('LocalStorage cache write error:', e);
         }

@@ -8,6 +8,7 @@ import {
   deleteDoc,
   collection,
   getDocs,
+  getDoc,
   writeBatch,
   query,
   orderBy,
@@ -17,6 +18,138 @@ import { Episode, GlobalAudio } from '@/types';
 
 const CHUNK_SIZE = 500000; // 500KB per Firestore document chunk (well below 1MB limit)
 const DIRECT_LIMIT = 800000; // 800KB max for single document field
+
+// ==================== INDEXEDDB OFFLINE BLOB STORAGE ====================
+const DB_NAME = 'seerah_audio_db';
+const STORE_NAME = 'audio_blobs';
+const DB_VERSION = 1;
+
+function openAudioDb(): Promise<IDBDatabase | null> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !window.indexedDB) {
+      resolve(null);
+      return;
+    }
+    try {
+      const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = () => {
+        const dbInstance = request.result;
+        if (!dbInstance.objectStoreNames.contains(STORE_NAME)) {
+          dbInstance.createObjectStore(STORE_NAME);
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+export async function getCachedAudioBlob(key: string): Promise<Blob | null> {
+  try {
+    const idb = await openAudioDb();
+    if (!idb) return null;
+    return new Promise((resolve) => {
+      const tx = idb.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.get(key);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function setCachedAudioBlob(key: string, blob: Blob): Promise<void> {
+  try {
+    const idb = await openAudioDb();
+    if (!idb) return;
+    return new Promise((resolve) => {
+      const tx = idb.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.put(blob, key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
+    });
+  } catch {
+    // ignore
+  }
+}
+
+export async function deleteCachedAudioBlob(key: string): Promise<void> {
+  try {
+    const idb = await openAudioDb();
+    if (!idb) return;
+    return new Promise((resolve) => {
+      const tx = idb.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
+    });
+  } catch {
+    // ignore
+  }
+}
+
+// In-memory cache for resolved native Blob URLs (eliminates DOM string overhead)
+export const blobUrlCache = new Map<string, string>();
+
+/**
+ * Validates whether a given URL is a real, playable media source.
+ * Guards against relative pseudo-paths like '__CACHED_BASE64__' or '__CHUNKS__'.
+ */
+export function isValidPlayableUrl(url: string | null | undefined): url is string {
+  if (!url || typeof url !== 'string') return false;
+  return (
+    url.startsWith('blob:') ||
+    url.startsWith('data:audio') ||
+    url.startsWith('http://') ||
+    url.startsWith('https://')
+  );
+}
+
+/**
+ * Converts a base64 Data URL to a native browser Blob object.
+ */
+export function dataUrlToBlob(dataUrl: string): Blob | null {
+  if (!dataUrl || !dataUrl.startsWith('data:')) return null;
+  try {
+    const parts = dataUrl.split(',');
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'audio/mp3';
+    const binary = atob(parts[1] || parts[0]);
+    const len = binary.length;
+    const buffer = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      buffer[i] = binary.charCodeAt(i);
+    }
+    return new Blob([buffer], { type: mime });
+  } catch (err) {
+    console.warn('Failed converting base64 data to Blob:', err);
+    return null;
+  }
+}
+
+/**
+ * Converts a base64 Data URL to a native browser Blob URL.
+ */
+export function dataUrlToBlobUrl(dataUrl: string): string {
+  if (typeof window === 'undefined') return dataUrl;
+  if (!dataUrl || !dataUrl.startsWith('data:')) return dataUrl;
+  const blob = dataUrlToBlob(dataUrl);
+  if (!blob) return dataUrl;
+  return URL.createObjectURL(blob);
+}
+
+/**
+ * Checks whether an episode audio has already been resolved and cached in memory.
+ */
+export function hasCachedAudioUrl(episodeId: string): boolean {
+  return blobUrlCache.has(episodeId);
+}
 
 /**
  * Saves audio data to Firestore for an episode.
@@ -28,12 +161,21 @@ export async function saveAudioToEpisode(
   audioData: string,
   sourceType: 'ai' | 'upload' | 'url' = 'upload'
 ): Promise<void> {
-  // Invalidate any previously cached Blob URL for this episode
+  // Invalidate any previously cached Blob URL and IndexedDB entry for this episode
   if (blobUrlCache.has(episodeId)) {
     try {
       URL.revokeObjectURL(blobUrlCache.get(episodeId)!);
     } catch {}
     blobUrlCache.delete(episodeId);
+  }
+  await deleteCachedAudioBlob(episodeId);
+
+  // If it's a data URL, save it to IndexedDB for instant future playback
+  if (audioData.startsWith('data:')) {
+    const b = dataUrlToBlob(audioData);
+    if (b) {
+      setCachedAudioBlob(episodeId, b);
+    }
   }
 
   const chunksCol = collection(db, 'episodes', episodeId, 'audioChunks');
@@ -108,13 +250,14 @@ export async function saveAudioToEpisode(
  * Deletes audio from an episode including any subcollection chunks and invalidates cache
  */
 export async function removeAudioFromEpisode(episodeId: string): Promise<void> {
-  // Invalidate cache
+  // Invalidate memory cache and IndexedDB cache
   if (blobUrlCache.has(episodeId)) {
     try {
       URL.revokeObjectURL(blobUrlCache.get(episodeId)!);
     } catch {}
     blobUrlCache.delete(episodeId);
   }
+  await deleteCachedAudioBlob(episodeId);
 
   // Delete subcollection chunks if any
   try {
@@ -196,86 +339,126 @@ export function getAudioSourceInfo(episode?: Episode | null): AudioSourceInfo {
   };
 }
 
-// In-memory cache for resolved native Blob URLs (eliminates DOM string overhead)
-export const blobUrlCache = new Map<string, string>();
-
 /**
- * Converts a base64 Data URL to a native browser Blob URL.
- * This completely prevents memory bloat and browser main-thread freezes.
- */
-export function dataUrlToBlobUrl(dataUrl: string): string {
-  if (typeof window === 'undefined') return dataUrl;
-  if (!dataUrl || !dataUrl.startsWith('data:')) return dataUrl;
-
-  try {
-    const parts = dataUrl.split(',');
-    const mimeMatch = parts[0].match(/:(.*?);/);
-    const mime = mimeMatch ? mimeMatch[1] : 'audio/mp3';
-    const binary = atob(parts[1]);
-    const len = binary.length;
-    const buffer = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      buffer[i] = binary.charCodeAt(i);
-    }
-    const blob = new Blob([buffer], { type: mime });
-    return URL.createObjectURL(blob);
-  } catch (err) {
-    console.warn('Failed converting base64 data to Blob URL:', err);
-    return dataUrl;
-  }
-}
-
-/**
- * Checks whether an episode audio has already been resolved and cached in memory.
- */
-export function hasCachedAudioUrl(episodeId: string): boolean {
-  return blobUrlCache.has(episodeId);
-}
-
-/**
- * Resolves an episode's audio URL into a high-performance native Blob URL.
- * If audio is chunked in Firestore, it streams the chunks progressively.
+ * Resolves an episode's audio URL into a playable native Blob URL or external URL.
+ * Automatically handles:
+ * - In-memory cache
+ * - IndexedDB offline storage
+ * - Resolving '__CACHED_BASE64__' by fetching fresh data from Firestore
+ * - Progressive streaming and reassembly of '__CHUNKS__'
+ * NEVER returns invalid placeholder strings that cause 404s in the browser.
  */
 export async function resolveAudioUrl(
   episode: Episode,
   onProgress?: (loadedChunks: number, totalChunks: number) => void
 ): Promise<string | null> {
-  if (!episode.audioUrl) return null;
+  if (!episode || !episode.audioUrl) return null;
 
-  // Check cache first (instant response < 1ms)
+  // 1. In-memory URL cache check (< 1ms)
   if (blobUrlCache.has(episode.docId)) {
     return blobUrlCache.get(episode.docId)!;
   }
 
-  // Direct URL (HTTP or Base64 data URL)
-  if (episode.audioUrl !== '__CHUNKS__') {
-    const blobUrl = dataUrlToBlobUrl(episode.audioUrl);
+  // 2. IndexedDB cache check (< 5ms, works completely offline)
+  const idbBlob = await getCachedAudioBlob(episode.docId);
+  if (idbBlob) {
+    const blobUrl = URL.createObjectURL(idbBlob);
     blobUrlCache.set(episode.docId, blobUrl);
     return blobUrl;
   }
 
-  // Fetch and reassemble chunks progressively
-  const chunksCol = collection(db, 'episodes', episode.docId, 'audioChunks');
-  const q = query(chunksCol, orderBy('index', 'asc'));
-  const snap = await getDocs(q);
+  // 3. Direct external HTTP / HTTPS URL
+  if (
+    episode.audioUrl.startsWith('http://') ||
+    episode.audioUrl.startsWith('https://') ||
+    episode.audioUrl.startsWith('blob:')
+  ) {
+    return episode.audioUrl;
+  }
 
-  if (snap.empty) {
+  // 4. Direct Base64 data URL
+  if (episode.audioUrl.startsWith('data:')) {
+    const blob = dataUrlToBlob(episode.audioUrl);
+    if (blob) {
+      setCachedAudioBlob(episode.docId, blob);
+      const blobUrl = URL.createObjectURL(blob);
+      blobUrlCache.set(episode.docId, blobUrl);
+      return blobUrl;
+    }
     return null;
   }
 
-  const docs = snap.docs.map((d) => d.data()).sort((a, b) => a.index - b.index);
-  const totalChunks = docs.length;
-  const chunkParts: string[] = [];
+  // 5. If audioUrl is '__CACHED_BASE64__' (from localStorage) or needs re-fetching from Firestore:
+  let effectiveAudioUrl: string | null = episode.audioUrl;
 
-  for (let i = 0; i < totalChunks; i++) {
-    chunkParts.push(docs[i].data);
-    onProgress?.(i + 1, totalChunks);
+  if (effectiveAudioUrl === '__CACHED_BASE64__') {
+    try {
+      const epSnap = await getDoc(doc(db, 'episodes', episode.docId));
+      if (epSnap.exists()) {
+        const freshData = epSnap.data();
+        effectiveAudioUrl = freshData.audioUrl || null;
+      } else {
+        effectiveAudioUrl = '__CHUNKS__';
+      }
+    } catch (err) {
+      console.warn('Could not fetch episode doc directly, attempting chunks fallback:', err);
+      effectiveAudioUrl = '__CHUNKS__';
+    }
   }
 
-  const fullBase64 = chunkParts.join('');
-  const blobUrl = dataUrlToBlobUrl(fullBase64);
-  blobUrlCache.set(episode.docId, blobUrl);
-  return blobUrl;
+  if (effectiveAudioUrl) {
+    if (
+      effectiveAudioUrl.startsWith('http://') ||
+      effectiveAudioUrl.startsWith('https://') ||
+      effectiveAudioUrl.startsWith('blob:')
+    ) {
+      return effectiveAudioUrl;
+    }
+
+    if (effectiveAudioUrl.startsWith('data:')) {
+      const blob = dataUrlToBlob(effectiveAudioUrl);
+      if (blob) {
+        setCachedAudioBlob(episode.docId, blob);
+        const blobUrl = URL.createObjectURL(blob);
+        blobUrlCache.set(episode.docId, blobUrl);
+        return blobUrl;
+      }
+      return null;
+    }
+  }
+
+  // 6. Fetch and reassemble chunks progressively from Firestore
+  try {
+    const chunksCol = collection(db, 'episodes', episode.docId, 'audioChunks');
+    const q = query(chunksCol, orderBy('index', 'asc'));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      return null;
+    }
+
+    const docs = snap.docs.map((d) => d.data()).sort((a, b) => a.index - b.index);
+    const totalChunks = docs.length;
+    const chunkParts: string[] = [];
+
+    for (let i = 0; i < totalChunks; i++) {
+      chunkParts.push(docs[i].data);
+      onProgress?.(i + 1, totalChunks);
+    }
+
+    const fullBase64 = chunkParts.join('');
+    const blob = dataUrlToBlob(fullBase64);
+    if (blob) {
+      setCachedAudioBlob(episode.docId, blob);
+      const blobUrl = URL.createObjectURL(blob);
+      blobUrlCache.set(episode.docId, blobUrl);
+      return blobUrl;
+    }
+    return null;
+  } catch (err) {
+    console.error('Failed to load and assemble audio chunks:', err);
+    return null;
+  }
 }
 
 /**
@@ -289,6 +472,21 @@ export async function saveGlobalAudio(
   const globalDocRef = doc(db, 'settings', 'global_audio');
   const chunksCol = collection(db, 'settings', 'global_audio', 'audioChunks');
 
+  // Invalidate cache
+  if (blobUrlCache.has('global_audio')) {
+    try {
+      URL.revokeObjectURL(blobUrlCache.get('global_audio')!);
+    } catch {}
+    blobUrlCache.delete('global_audio');
+  }
+  await deleteCachedAudioBlob('global_audio');
+
+  // Cache in IndexedDB
+  const b = dataUrlToBlob(base64DataUrl);
+  if (b) {
+    setCachedAudioBlob('global_audio', b);
+  }
+
   // Clean up any existing chunks first
   try {
     const existingSnap = await getDocs(chunksCol);
@@ -299,14 +497,6 @@ export async function saveGlobalAudio(
     }
   } catch (e) {
     console.warn('Could not clean old global audio chunks:', e);
-  }
-
-  // Invalidate cache
-  if (blobUrlCache.has('global_audio')) {
-    try {
-      URL.revokeObjectURL(blobUrlCache.get('global_audio')!);
-    } catch {}
-    blobUrlCache.delete('global_audio');
   }
 
   // If fits in single document:
@@ -375,6 +565,7 @@ export async function removeGlobalAudio(): Promise<void> {
     } catch {}
     blobUrlCache.delete('global_audio');
   }
+  await deleteCachedAudioBlob('global_audio');
   await deleteDoc(doc(db, 'settings', 'global_audio'));
 }
 
@@ -388,10 +579,26 @@ export async function resolveGlobalAudioUrl(globalAudio: GlobalAudio): Promise<s
     return blobUrlCache.get('global_audio')!;
   }
 
-  if (globalAudio.audioUrl !== '__CHUNKS__') {
-    const blobUrl = dataUrlToBlobUrl(globalAudio.audioUrl);
+  const idbBlob = await getCachedAudioBlob('global_audio');
+  if (idbBlob) {
+    const blobUrl = URL.createObjectURL(idbBlob);
     blobUrlCache.set('global_audio', blobUrl);
     return blobUrl;
+  }
+
+  if (globalAudio.audioUrl.startsWith('http://') || globalAudio.audioUrl.startsWith('https://')) {
+    return globalAudio.audioUrl;
+  }
+
+  if (globalAudio.audioUrl !== '__CHUNKS__' && globalAudio.audioUrl.startsWith('data:')) {
+    const blob = dataUrlToBlob(globalAudio.audioUrl);
+    if (blob) {
+      setCachedAudioBlob('global_audio', blob);
+      const blobUrl = URL.createObjectURL(blob);
+      blobUrlCache.set('global_audio', blobUrl);
+      return blobUrl;
+    }
+    return null;
   }
 
   const chunksCol = collection(db, 'settings', 'global_audio', 'audioChunks');
@@ -404,7 +611,12 @@ export async function resolveGlobalAudioUrl(globalAudio: GlobalAudio): Promise<s
 
   const docs = snap.docs.map((d) => d.data()).sort((a, b) => a.index - b.index);
   const fullBase64 = docs.map((d) => d.data).join('');
-  const blobUrl = dataUrlToBlobUrl(fullBase64);
-  blobUrlCache.set('global_audio', blobUrl);
-  return blobUrl;
+  const blob = dataUrlToBlob(fullBase64);
+  if (blob) {
+    setCachedAudioBlob('global_audio', blob);
+    const blobUrl = URL.createObjectURL(blob);
+    blobUrlCache.set('global_audio', blobUrl);
+    return blobUrl;
+  }
+  return null;
 }

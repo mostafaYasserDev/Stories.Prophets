@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import { audioManager } from '@/lib/audioManager';
+import { isValidPlayableUrl } from '@/lib/audioStorage';
 
 interface CustomAudioPlayerProps {
   src: string;
@@ -106,7 +107,7 @@ export const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({
   };
 
   const togglePlay = useCallback(async () => {
-    if (!audioRef.current || !safeSrc) return;
+    if (!audioRef.current || !safeSrc || !isValidPlayableUrl(safeSrc)) return;
     if (isPlayStartingRef.current) return; // Prevent spamming while play() is resolving
 
     if (isPlaying) {
@@ -183,9 +184,10 @@ export const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({
       }}
     >
       {/* Hidden Native Audio Element */}
-      <audio
-        ref={audioRef}
-        src={safeSrc}
+      {isValidPlayableUrl(safeSrc) && (
+        <audio
+          ref={audioRef}
+          src={safeSrc}
         preload="metadata"
         onTimeUpdate={() => {
           if (!isSeekingRef.current && audioRef.current) {
@@ -220,6 +222,7 @@ export const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({
           }
         }}
       />
+      )}
 
       {/* Top Header Bar */}
       <div
@@ -390,7 +393,7 @@ export const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({
             {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
           </button>
 
-          {safeSrc && (
+          {isValidPlayableUrl(safeSrc) && (
             <a
               href={safeSrc}
               download={downloadFilename}

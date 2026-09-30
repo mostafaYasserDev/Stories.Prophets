@@ -14,7 +14,7 @@ import {
   Radio,
 } from 'lucide-react';
 import { Episode } from '@/types';
-import { resolveAudioUrl } from '@/lib/audioStorage';
+import { resolveAudioUrl, isValidPlayableUrl } from '@/lib/audioStorage';
 import { audioManager } from '@/lib/audioManager';
 
 interface AudioWidgetProps {
@@ -34,10 +34,10 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isSeekingRef = useRef<boolean>(false);
-  const shouldAutoPlayRef = useRef<boolean>(false);
+  const shouldAutoPlayState = useRef<boolean>(false);
   const loadRequestIdRef = useRef<number>(0);
 
-  // 1. Episode switch handler: LAZY loading (Do not fetch heavy audio on initial page render!)
+  // 1. Episode switch handler: LAZY loading with instant IndexedDB check
   useEffect(() => {
     loadRequestIdRef.current++;
     if (audioRef.current) {
@@ -49,20 +49,27 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
     setDuration(0);
     setStreamProgress(0);
     setIsLoadingAudio(false);
-    shouldAutoPlayRef.current = false;
+    shouldAutoPlayState.current = false;
 
     if (!episode.audioUrl) {
       setResolvedUrl(null);
       return;
     }
 
-    // If already cached in memory, resolve instantly without any network overhead
+    // Check if already in memory or in offline IndexedDB
     if (episode.docId && typeof window !== 'undefined') {
-      import('@/lib/audioStorage').then(({ blobUrlCache }) => {
+      import('@/lib/audioStorage').then(async ({ blobUrlCache, getCachedAudioBlob }) => {
         if (blobUrlCache.has(episode.docId)) {
           setResolvedUrl(blobUrlCache.get(episode.docId)!);
         } else {
-          setResolvedUrl(null);
+          const idbBlob = await getCachedAudioBlob(episode.docId);
+          if (idbBlob) {
+            const bUrl = URL.createObjectURL(idbBlob);
+            blobUrlCache.set(episode.docId, bUrl);
+            setResolvedUrl(bUrl);
+          } else {
+            setResolvedUrl(null);
+          }
         }
       });
     } else {
@@ -109,11 +116,11 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
     audioManager.stopAllAudio();
 
     // If audio is not yet resolved, stream & buffer it on demand!
-    if (!resolvedUrl) {
+    if (!resolvedUrl || !isValidPlayableUrl(resolvedUrl)) {
       const currentReq = ++loadRequestIdRef.current;
       setIsLoadingAudio(true);
       setStreamProgress(10);
-      shouldAutoPlayRef.current = true;
+      shouldAutoPlayState.current = true;
 
       try {
         const url = await resolveAudioUrl(episode, (loaded, total) => {
@@ -124,16 +131,18 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
 
         if (currentReq !== loadRequestIdRef.current) return;
 
-        if (url) {
+        if (url && isValidPlayableUrl(url)) {
           setResolvedUrl(url);
           setIsLoadingAudio(false);
         } else {
           setIsLoadingAudio(false);
+          shouldAutoPlayState.current = false;
         }
       } catch (err) {
         console.error('Streaming audio error:', err);
         if (currentReq === loadRequestIdRef.current) {
           setIsLoadingAudio(false);
+          shouldAutoPlayState.current = false;
         }
       }
       return;
@@ -156,8 +165,8 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
 
   // When audio becomes resolved after user clicked play, auto-trigger play
   useEffect(() => {
-    if (resolvedUrl && shouldAutoPlayRef.current && audioRef.current) {
-      shouldAutoPlayRef.current = false;
+    if (resolvedUrl && isValidPlayableUrl(resolvedUrl) && shouldAutoPlayState.current && audioRef.current) {
+      shouldAutoPlayState.current = false;
       audioManager.stopAllAudio();
       audioRef.current
         .play()
@@ -262,10 +271,10 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
   return (
     <div className="studio-audio-player">
       {/* Hidden Native Audio Element for Audio Processing */}
-      {resolvedUrl && (
+      {isValidPlayableUrl(resolvedUrl) && (
         <audio
           ref={audioRef}
-          src={resolvedUrl}
+          src={resolvedUrl!}
           preload="metadata"
           onTimeUpdate={() => {
             if (!isSeekingRef.current && audioRef.current) {
@@ -432,9 +441,9 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
                 {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
               </button>
 
-              {resolvedUrl && (
+              {isValidPlayableUrl(resolvedUrl) && (
                 <a
-                  href={resolvedUrl}
+                  href={resolvedUrl!}
                   download={`${episode.title || 'قصص_الأنبياء_وسيرة_الرسول'}.wav`}
                   className="studio-aux-btn"
                   title="تحميل المقطع الصوتي للجهاز"
