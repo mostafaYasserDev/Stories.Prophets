@@ -13,6 +13,7 @@ import {
   Layers,
   ChevronDown,
   Smartphone,
+  Sparkles,
 } from 'lucide-react';
 import { Episode, Series } from '@/types';
 import { normalizeArabicText } from '@/lib/errorHandler';
@@ -539,8 +540,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                             <div className="ep-item-badges">
                               {ep.audioUrl && (
-                                <span title="تحتوي على تسجيل صوتي">
-                                  <Volume2 size={14} className="icon-badge audio" />
+                                <span
+                                  title={
+                                    ep.audioSourceType === 'ai'
+                                      ? 'تسجيل صوتي ذكاء اصطناعي ✨'
+                                      : ep.audioSourceType === 'url'
+                                      ? 'رابط صوتي خارجي 🔗'
+                                      : 'تسجيل صوتي مرفوع يدوياً 🎙️'
+                                  }
+                                >
+                                  {ep.audioSourceType === 'ai' ? (
+                                    <Sparkles size={14} className="icon-badge audio-ai" style={{ color: 'var(--gold)' }} />
+                                  ) : ep.audioSourceType === 'url' ? (
+                                    <Volume2 size={14} className="icon-badge audio-url" style={{ color: '#c084fc' }} />
+                                  ) : (
+                                    <Volume2 size={14} className="icon-badge audio-upload" style={{ color: '#38bdf8' }} />
+                                  )}
                                 </span>
                               )}
                               {isBookmarked && (

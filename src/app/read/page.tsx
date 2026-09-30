@@ -212,6 +212,9 @@ export default function HomePage() {
             html: ep.html,
             audioUrl: ep.audioUrl && ep.audioUrl.startsWith('data:') ? '__CACHED_BASE64__' : ep.audioUrl,
             audioType: ep.audioType,
+            audioSourceType: ep.audioSourceType,
+            moralLesson: ep.moralLesson,
+            sources: ep.sources,
             isPinned: ep.isPinned,
             isHidden: ep.isHidden,
           }));
@@ -684,7 +687,7 @@ export default function HomePage() {
                   {currentEpisode.audioUrl && (
                     <button
                       type="button"
-                      className="tool-btn accent"
+                      className={`tool-btn accent audio-source-${currentEpisode.audioSourceType || 'upload'}`}
                       onClick={() => {
                         const el = document.querySelector('.studio-audio-player');
                         if (el) {
@@ -694,7 +697,15 @@ export default function HomePage() {
                       title="الانتقال لمشغل التسجيل الصوتي للحلقة"
                     >
                       <Headphones size={16} />
-                      <span>الاستماع للحلقة</span>
+                      <span>
+                        {currentEpisode.audioSourceType === 'ai'
+                          ? 'الاستماع (ذكاء اصطناعي ✨)'
+                          : currentEpisode.audioSourceType === 'upload'
+                          ? 'الاستماع (تسجيل يدوي 📁)'
+                          : currentEpisode.audioSourceType === 'url'
+                          ? 'الاستماع (رابط خارجي 🔗)'
+                          : 'الاستماع للحلقة'}
+                      </span>
                     </button>
                   )}
 

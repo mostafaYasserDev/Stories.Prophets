@@ -306,8 +306,8 @@ export function getAudioSourceInfo(episode?: Episode | null): AudioSourceInfo {
   if (episode.audioSourceType === 'ai') {
     return {
       type: 'ai',
-      label: 'تسجيل استوديو بالذكاء الاصطناعي (Gemini AI)',
-      badgeText: 'توليد بالذكاء الاصطناعي',
+      label: 'تسجيل استوديو نقي (ذكاء اصطناعي AI)',
+      badgeText: 'ذكاء اصطناعي ✨',
       icon: '✨',
       color: 'var(--gold)',
       bg: 'rgba(212, 175, 55, 0.12)',
@@ -321,8 +321,8 @@ export function getAudioSourceInfo(episode?: Episode | null): AudioSourceInfo {
   ) {
     return {
       type: 'url',
-      label: 'رابط صوتي خارجي مباشر (MP3)',
-      badgeText: 'رابط خارجي',
+      label: 'بث صوتي مباشر (رابط خارجي)',
+      badgeText: 'رابط خارجي 🔗',
       icon: '🔗',
       color: '#a855f7',
       bg: 'rgba(168, 85, 247, 0.12)',
@@ -331,8 +331,8 @@ export function getAudioSourceInfo(episode?: Episode | null): AudioSourceInfo {
 
   return {
     type: 'upload',
-    label: 'ملف صوتي مرفوع ومضغوط (Base64)',
-    badgeText: 'ملف مرفوع',
+    label: 'تسجيل صوتي استوديو أصلي (ملف مرفوع)',
+    badgeText: 'تسجيل يدوي 🎙️',
     icon: '📁',
     color: '#38bdf8',
     bg: 'rgba(56, 189, 248, 0.12)',
