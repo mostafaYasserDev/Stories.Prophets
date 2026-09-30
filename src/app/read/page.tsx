@@ -62,23 +62,8 @@ const DEFAULT_INITIAL_EPISODES: Episode[] = INITIAL_SEED_EPISODES.map((ep: any, 
 }));
 
 export default function HomePage() {
-  // App Data State (Lazy-initialized from cache or seed for instant zero-flicker 0ms first paint)
-  const [episodes, setEpisodes] = useState<Episode[]>(() => {
-    if (typeof window === 'undefined') return DEFAULT_INITIAL_EPISODES;
-    try {
-      const cached = localStorage.getItem('seerah_cached_episodes');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const visibleOnly = parsed.filter((ep: Episode) => !ep.isHidden);
-          if (visibleOnly.length > 0) return visibleOnly;
-        }
-      }
-    } catch (e) {
-      console.warn('Cache lazy-init error:', e);
-    }
-    return DEFAULT_INITIAL_EPISODES;
-  });
+  // App Data State (Initialized with default seed on both server and client to guarantee zero hydration mismatch)
+  const [episodes, setEpisodes] = useState<Episode[]>(DEFAULT_INITIAL_EPISODES);
 
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [lastReadIndex, setLastReadIndex] = useState<number>(0);
@@ -140,6 +125,21 @@ export default function HomePage() {
     setBookmarks(savedBookmarks);
     setReadEpisodes(savedRead);
     setLastReadIndex(savedIndex);
+
+    try {
+      const cached = localStorage.getItem('seerah_cached_episodes');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const visibleOnly = parsed.filter((ep: Episode) => !ep.isHidden);
+          if (visibleOnly.length > 0) {
+            setEpisodes(visibleOnly);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Cache load error:', e);
+    }
 
     document.documentElement.setAttribute('data-theme', savedTheme);
     document.documentElement.setAttribute('data-font', savedFont);
