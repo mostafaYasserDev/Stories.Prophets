@@ -248,8 +248,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
+  const validReadCount = episodes.filter((e) => readEpisodes.has(e.docId)).length;
   const readPercent = episodes.length
-    ? Math.round((readEpisodes.size / episodes.length) * 100)
+    ? Math.min(100, Math.round((validReadCount / episodes.length) * 100))
     : 0;
 
   // Helper to highlight matching search term

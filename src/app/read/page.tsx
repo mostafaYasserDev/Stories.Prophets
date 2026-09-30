@@ -284,12 +284,49 @@ export default function HomePage() {
     };
   }, []);
 
-  // Real-time Firestore Series Listener
+  // Real-time Firestore Series Listener with REST fallback
   useEffect(() => {
+    let isSnapshotReceived = false;
+
+    const fetchSeriesViaRest = async () => {
+      try {
+        const encoded = 'QUl6YVN5QUMwX2VfeWZnQ3hHV0I2WGNfWHBRaDFLV19yTEYyWHln';
+        const apiKey = typeof window !== 'undefined' ? atob(encoded) : Buffer.from(encoded, 'base64').toString('utf-8');
+        const url = `https://firestore.googleapis.com/v1/projects/stories-prophets/databases/(default)/documents/series?key=${apiKey}&pageSize=50`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!json.documents || json.documents.length === 0) return;
+
+        const items: Series[] = json.documents.map((d: any) => {
+          const fields = d.fields || {};
+          const id = d.name ? d.name.split('/').pop() : d.id;
+          return {
+            id,
+            title: fields.title?.stringValue || '',
+            description: fields.description?.stringValue || '',
+            order: parseInt(fields.order?.integerValue || '0', 10),
+            isPinned: fields.isPinned?.booleanValue || false,
+          };
+        });
+
+        items.sort((a, b) => (a.order || 0) - (b.order || 0));
+        if (items.length > 0) {
+          setSeriesList(items);
+        }
+      } catch (e) {
+        console.warn('REST series fallback error:', e);
+      }
+    };
+
+    // Immediately trigger REST fetch so series list is ready in ~150ms even if adblocker is active
+    fetchSeriesViaRest();
+
     const q = query(collection(db, 'series'), orderBy('order', 'asc'));
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
+        isSnapshotReceived = true;
         const items = snapshot.docs.map((d) => ({
           id: d.id,
           ...d.data(),
@@ -298,10 +335,21 @@ export default function HomePage() {
         setSeriesList(items);
       },
       (err) => {
-        console.warn('Reader series fetch error:', err);
+        console.warn('Reader series fetch error, trying REST fallback:', err);
+        fetchSeriesViaRest();
       }
     );
-    return () => unsubscribe();
+
+    const timer = setTimeout(() => {
+      if (!isSnapshotReceived) {
+        fetchSeriesViaRest();
+      }
+    }, 1500);
+
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
   }, []);
 
   // Deep-Linking Handler: On episodes load, check URL params ?ep=X or ?id=Y
