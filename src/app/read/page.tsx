@@ -161,33 +161,66 @@ export default function HomePage() {
     }
   }, []);
 
-  // Real-time Firestore Episodes Listener & Auto-seed
+  // Real-time Firestore Episodes Listener & Auto-seed with AdBlocker-proof REST fallback
   useEffect(() => {
+    let isSnapshotReceived = false;
+
+    const fetchViaRest = async () => {
+      try {
+        const encoded = 'QUl6YVN5QUMwX2VfeWZnQ3hHV0I2WGNfWHBRaDFLV19yTEYyWHln';
+        const apiKey = typeof window !== 'undefined' ? atob(encoded) : Buffer.from(encoded, 'base64').toString('utf-8');
+        const url = `https://firestore.googleapis.com/v1/projects/stories-prophets/databases/(default)/documents/episodes?key=${apiKey}&pageSize=50`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!json.documents || json.documents.length === 0) return;
+
+        const items: Episode[] = json.documents.map((d: any) => {
+          const fields = d.fields || {};
+          const docId = d.name ? d.name.split('/').pop() : d.id;
+          return {
+            docId,
+            order: parseInt(fields.order?.integerValue || '0', 10),
+            era: fields.era?.stringValue || '',
+            title: fields.title?.stringValue || '',
+            subtitle: fields.subtitle?.stringValue || '',
+            html: fields.html?.stringValue || '',
+            audioUrl: fields.audioUrl?.stringValue || null,
+            audioType: fields.audioType?.stringValue || null,
+            audioSourceType: fields.audioSourceType?.stringValue || null,
+            audioChunksCount: fields.audioChunksCount?.integerValue ? parseInt(fields.audioChunksCount.integerValue, 10) : 0,
+            moralLesson: fields.moralLesson?.stringValue || null,
+            sources: fields.sources?.arrayValue?.values ? fields.sources.arrayValue.values.map((v: any) => v.stringValue) : [],
+            isPinned: fields.isPinned?.booleanValue || false,
+            isHidden: fields.isHidden?.booleanValue || false,
+          };
+        });
+
+        items.sort((a, b) => (a.order || 0) - (b.order || 0));
+        const visibleItems = items.filter((ep) => !ep.isHidden);
+        if (visibleItems.length > 0) {
+          setEpisodes(visibleItems);
+          visibleItems.forEach((ep) => {
+            if (ep.docId && ep.audioUrl && ep.audioUrl.startsWith('data:')) {
+              const b = dataUrlToBlob(ep.audioUrl);
+              if (b) {
+                setCachedAudioBlob(ep.docId, b);
+              }
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('REST fallback error:', e);
+      }
+    };
+
     const q = query(collection(db, 'episodes'), orderBy('order', 'asc'));
 
     const unsubscribe = onSnapshot(
       q,
       async (snapshot) => {
+        isSnapshotReceived = true;
         if (snapshot.empty) {
-          // Auto-seed initial 8 episodes if database is empty
-          try {
-            const batch = writeBatch(db);
-            INITIAL_SEED_EPISODES.forEach((ep: any, idx: number) => {
-              const docRef = doc(collection(db, 'episodes'));
-              batch.set(docRef, {
-                order: idx + 1,
-                era: ep.era,
-                title: ep.title,
-                subtitle: ep.subtitle || `الحلقة ${String(idx + 1).padStart(3, '0')}`,
-                html: ep.html,
-                audioUrl: null,
-                createdAt: serverTimestamp(),
-              });
-            });
-            await batch.commit();
-          } catch (e: any) {
-            console.error('Seeding error:', e);
-          }
           return;
         }
 
@@ -197,11 +230,9 @@ export default function HomePage() {
         })) as Episode[];
 
         items.sort((a, b) => (a.order || 0) - (b.order || 0));
-        // Filter out hidden episodes so visitors only see published ones
         const visibleItems = items.filter((ep) => !ep.isHidden);
         setEpisodes(visibleItems);
 
-        // Update local cache safely (preventing localStorage quota issues)
         try {
           const cacheSafe = visibleItems.map((ep) => ({
             docId: ep.docId,
@@ -220,7 +251,6 @@ export default function HomePage() {
           }));
           localStorage.setItem('seerah_cached_episodes', JSON.stringify(cacheSafe));
 
-          // Asynchronously cache any Base64 audio blobs in IndexedDB for 100% offline availability
           visibleItems.forEach((ep) => {
             if (ep.docId && ep.audioUrl && ep.audioUrl.startsWith('data:')) {
               const b = dataUrlToBlob(ep.audioUrl);
@@ -234,11 +264,21 @@ export default function HomePage() {
         }
       },
       (error) => {
-        console.warn('Firestore offline fallback (realtime sync unavailable or blocked by adblocker):', error.message);
+        console.warn('Firestore real-time sync blocked or offline, fetching via REST API fallback...');
+        fetchViaRest();
       }
     );
 
-    return () => unsubscribe();
+    const timer = setTimeout(() => {
+      if (!isSnapshotReceived) {
+        fetchViaRest();
+      }
+    }, 1500);
+
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
   }, []);
 
   // Real-time Firestore Series Listener
@@ -701,7 +741,7 @@ export default function HomePage() {
                         {currentEpisode.audioSourceType === 'ai'
                           ? 'الاستماع (ذكاء اصطناعي ✨)'
                           : currentEpisode.audioSourceType === 'upload'
-                          ? 'الاستماع (تسجيل يدوي 📁)'
+                          ? 'الاستماع (مرفوع يدوياً 📁)'
                           : currentEpisode.audioSourceType === 'url'
                           ? 'الاستماع (رابط خارجي 🔗)'
                           : 'الاستماع للحلقة'}

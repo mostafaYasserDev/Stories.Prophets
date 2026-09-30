@@ -546,7 +546,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                       ? 'تسجيل صوتي ذكاء اصطناعي ✨'
                                       : ep.audioSourceType === 'url'
                                       ? 'رابط صوتي خارجي 🔗'
-                                      : 'تسجيل صوتي مرفوع يدوياً 🎙️'
+                                      : 'ملف صوتي مرفوع يدوياً 📁'
                                   }
                                 >
                                   {ep.audioSourceType === 'ai' ? (

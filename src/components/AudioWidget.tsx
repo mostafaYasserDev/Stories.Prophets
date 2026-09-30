@@ -12,7 +12,7 @@ import {
   Sparkles,
   RefreshCw,
   Radio,
-  Mic,
+  UploadCloud,
   Link2,
 } from 'lucide-react';
 import { Episode } from '@/types';
@@ -36,48 +36,20 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isSeekingRef = useRef<boolean>(false);
-  const pendingPlayRef = useRef<boolean>(false);
+  const activeDocIdRef = useRef<string | null>(null);
   const loadRequestIdRef = useRef<number>(0);
 
   const sourceInfo = getAudioSourceInfo(episode);
 
-  // Safe Play Helper: Plays the audio element reliably once media data is ready
-  const playSafely = useCallback((audio: HTMLAudioElement) => {
-    audioManager.stopAllAudio();
-    setIsLoadingAudio(false);
-
-    const executePlay = () => {
-      audio
-        .play()
-        .then(() => {
-          setIsPlaying(true);
-          audioManager.registerPlayingAudio(audio, () => {
-            setIsPlaying(false);
-          });
-          onPlay?.();
-        })
-        .catch((err) => {
-          console.warn('Audio playback error:', err);
-          setIsPlaying(false);
-        });
-    };
-
-    if (audio.readyState >= 2) {
-      executePlay();
-    } else {
-      const handleCanPlay = () => {
-        audio.removeEventListener('canplay', handleCanPlay);
-        executePlay();
-      };
-      audio.addEventListener('canplay', handleCanPlay);
-      audio.load();
-    }
-  }, [onPlay]);
-
-  // Episode switch handler: Stop current playback & eagerly resolve audio in background
+  // 1. Episode switch handler: Only re-initialize when episode ID actually changes
   useEffect(() => {
+    // If it is the exact same episode and already resolved, do not reset state
+    if (activeDocIdRef.current === episode.docId && resolvedUrl) {
+      return;
+    }
+
+    activeDocIdRef.current = episode.docId;
     const currentReq = ++loadRequestIdRef.current;
-    pendingPlayRef.current = false;
 
     if (audioRef.current) {
       audioRef.current.pause();
@@ -94,7 +66,7 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
       return;
     }
 
-    // Eager resolution in background: audio is ready before the user clicks play
+    // Eager background resolution: resolves audio before user even clicks
     resolveAudioUrl(episode, (loaded, total) => {
       if (currentReq === loadRequestIdRef.current) {
         setStreamProgress(Math.round((loaded / total) * 100));
@@ -105,23 +77,21 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
         if (url && isValidPlayableUrl(url)) {
           setResolvedUrl(url);
           setIsLoadingAudio(false);
-          if (pendingPlayRef.current && audioRef.current) {
-            pendingPlayRef.current = false;
-            playSafely(audioRef.current);
+          if (audioRef.current) {
+            audioRef.current.src = url;
+            audioRef.current.load();
           }
         } else {
           setIsLoadingAudio(false);
-          pendingPlayRef.current = false;
         }
       })
       .catch((err) => {
         console.warn('Eager audio resolve warning:', err);
         if (currentReq === loadRequestIdRef.current) {
           setIsLoadingAudio(false);
-          pendingPlayRef.current = false;
         }
       });
-  }, [episode.docId, episode.audioUrl, episode, playSafely]);
+  }, [episode.docId, episode.audioUrl]);
 
   // Clean up on component unmount
   useEffect(() => {
@@ -142,32 +112,44 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
     return `${String(mins).padStart(2, '0')}:${String(remainingSecs).padStart(2, '0')}`;
   };
 
-  // Play / Pause Handlers with User-Gesture Preservation
+  // Play / Pause Handlers: Guaranteed synchronous user gesture invocation
   const togglePlay = useCallback(async () => {
     if (!episode.audioUrl) return;
-
-    if (isPlaying) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioManager.unregisterPlayingAudio(audioRef.current);
-      }
-      setIsPlaying(false);
-      pendingPlayRef.current = false;
-      return;
-    }
 
     const audio = audioRef.current;
     if (!audio) return;
 
-    // Case 1: Audio is already resolved and ready in state
-    if (resolvedUrl && isValidPlayableUrl(resolvedUrl)) {
-      playSafely(audio);
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+      audioManager.unregisterPlayingAudio(audio);
       return;
     }
 
-    // Case 2: Audio is still resolving or awaiting lazy load
+    // Stop all other playing audio across the application
+    audioManager.stopAllAudio();
+
+    // Case 1: Audio is already resolved and ready in state
+    if (resolvedUrl && isValidPlayableUrl(resolvedUrl)) {
+      try {
+        if (audio.src !== resolvedUrl) {
+          audio.src = resolvedUrl;
+        }
+        await audio.play();
+        setIsPlaying(true);
+        audioManager.registerPlayingAudio(audio, () => {
+          setIsPlaying(false);
+        });
+        onPlay?.();
+      } catch (err) {
+        console.warn('Playback play() call failed:', err);
+        setIsPlaying(false);
+      }
+      return;
+    }
+
+    // Case 2: Audio is still resolving
     setIsLoadingAudio(true);
-    pendingPlayRef.current = true;
     const currentReq = loadRequestIdRef.current;
 
     try {
@@ -181,28 +163,37 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
 
       if (url && isValidPlayableUrl(url)) {
         setResolvedUrl(url);
-        if (pendingPlayRef.current && audioRef.current) {
-          pendingPlayRef.current = false;
-          playSafely(audioRef.current);
+        setIsLoadingAudio(false);
+        if (audioRef.current) {
+          audioRef.current.src = url;
+          try {
+            await audioRef.current.play();
+            setIsPlaying(true);
+            audioManager.registerPlayingAudio(audioRef.current, () => {
+              setIsPlaying(false);
+            });
+            onPlay?.();
+          } catch (e) {
+            console.warn('Play after resolve failed:', e);
+            setIsPlaying(false);
+          }
         }
       } else {
         setIsLoadingAudio(false);
-        pendingPlayRef.current = false;
       }
     } catch (err) {
       console.error('Audio resolve error in togglePlay:', err);
       if (currentReq === loadRequestIdRef.current) {
         setIsLoadingAudio(false);
-        pendingPlayRef.current = false;
       }
     }
-  }, [episode, isPlaying, resolvedUrl, playSafely]);
+  }, [episode, isPlaying, resolvedUrl, onPlay]);
 
   // Skip Backward / Forward 10s
   const skipTime = useCallback(
     (delta: number) => {
       if (!audioRef.current) return;
-      const newTime = Math.max(0, Math.min(duration, audioRef.current.currentTime + delta));
+      const newTime = Math.max(0, Math.min(duration || 9999, audioRef.current.currentTime + delta));
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
     },
@@ -249,7 +240,9 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
       });
 
       navigator.mediaSession.setActionHandler('play', () => {
-        if (audioRef.current) playSafely(audioRef.current);
+        if (audioRef.current) {
+          audioRef.current.play().then(() => setIsPlaying(true)).catch(console.warn);
+        }
       });
       navigator.mediaSession.setActionHandler('pause', () => {
         audioRef.current?.pause();
@@ -274,36 +267,40 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
         navigator.mediaSession.setActionHandler('seekto', null);
       }
     };
-  }, [resolvedUrl, episode, skipTime, playSafely]);
+  }, [resolvedUrl, episode, skipTime]);
 
   if (!episode.audioUrl) {
     return null;
   }
 
-  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const progressPercent = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
 
   return (
     <div className={`studio-audio-player player-source-${sourceInfo.type}`}>
-      {/* Native Audio Element: ALWAYS mounted in DOM to preload metadata & prevent missing source bugs */}
+      {/* Native Audio Element: ALWAYS mounted in DOM */}
       <audio
         ref={audioRef}
         src={isValidPlayableUrl(resolvedUrl) ? resolvedUrl : undefined}
-        preload="metadata"
+        preload="auto"
         onTimeUpdate={() => {
           if (!isSeekingRef.current && audioRef.current) {
             setCurrentTime(audioRef.current.currentTime);
           }
         }}
+        onDurationChange={() => {
+          if (audioRef.current && audioRef.current.duration && !isNaN(audioRef.current.duration)) {
+            setDuration(audioRef.current.duration);
+          }
+        }}
         onLoadedMetadata={() => {
-          if (audioRef.current) {
-            setDuration(audioRef.current.duration || 0);
+          if (audioRef.current && audioRef.current.duration && !isNaN(audioRef.current.duration)) {
+            setDuration(audioRef.current.duration);
             audioRef.current.playbackRate = playbackSpeed;
           }
         }}
         onCanPlay={() => {
-          if (pendingPlayRef.current && audioRef.current) {
-            pendingPlayRef.current = false;
-            playSafely(audioRef.current);
+          if (audioRef.current && audioRef.current.duration && !isNaN(audioRef.current.duration)) {
+            setDuration(audioRef.current.duration);
           }
         }}
         onEnded={() => {
@@ -337,7 +334,7 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
           ) : sourceInfo.type === 'url' ? (
             <Link2 size={15} className="badge-icon-url" />
           ) : (
-            <Mic size={15} className="badge-icon-upload" />
+            <UploadCloud size={15} className="badge-icon-upload" />
           )}
 
           <span className="badge-text">{sourceInfo.label}</span>
@@ -435,7 +432,7 @@ export const AudioWidget: React.FC<AudioWidgetProps> = ({ episode, onPlay }) => 
                 <input
                   type="range"
                   min="0"
-                  max={duration || 100}
+                  max={duration > 0 ? duration : 100}
                   step="0.5"
                   value={currentTime}
                   onChange={handleSeek}

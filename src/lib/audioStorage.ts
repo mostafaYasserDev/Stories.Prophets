@@ -295,9 +295,9 @@ export function getAudioSourceInfo(episode?: Episode | null): AudioSourceInfo {
   if (!episode || !episode.audioUrl) {
     return {
       type: 'none',
-      label: 'لا يوجد تسجيل صوتي',
+      label: 'لا يوجد ملف صوتي',
       badgeText: 'غير متوفر',
-      icon: '🎙️',
+      icon: '🔊',
       color: 'var(--text-muted)',
       bg: 'rgba(255, 255, 255, 0.05)',
     };
@@ -306,7 +306,7 @@ export function getAudioSourceInfo(episode?: Episode | null): AudioSourceInfo {
   if (episode.audioSourceType === 'ai') {
     return {
       type: 'ai',
-      label: 'تسجيل استوديو نقي (ذكاء اصطناعي AI)',
+      label: 'توليد بالذكاء الاصطناعي (AI)',
       badgeText: 'ذكاء اصطناعي ✨',
       icon: '✨',
       color: 'var(--gold)',
@@ -321,7 +321,7 @@ export function getAudioSourceInfo(episode?: Episode | null): AudioSourceInfo {
   ) {
     return {
       type: 'url',
-      label: 'بث صوتي مباشر (رابط خارجي)',
+      label: 'رابط خارجي مباشر',
       badgeText: 'رابط خارجي 🔗',
       icon: '🔗',
       color: '#a855f7',
@@ -331,8 +331,8 @@ export function getAudioSourceInfo(episode?: Episode | null): AudioSourceInfo {
 
   return {
     type: 'upload',
-    label: 'تسجيل صوتي استوديو أصلي (ملف مرفوع)',
-    badgeText: 'تسجيل يدوي 🎙️',
+    label: 'ملف صوتي مرفوع يدوياً',
+    badgeText: 'مرفوع يدوياً',
     icon: '📁',
     color: '#38bdf8',
     bg: 'rgba(56, 189, 248, 0.12)',
@@ -388,21 +388,80 @@ export async function resolveAudioUrl(
     return null;
   }
 
+/**
+ * Safely fetches an episode document directly via Firestore REST API
+ * (completely immune to AdBlocker WebChannel blocking like net::ERR_BLOCKED_BY_CLIENT)
+ */
+async function fetchEpisodeDocRest(docId: string): Promise<string | null> {
+  try {
+    const encoded = 'QUl6YVN5QUMwX2VfeWZnQ3hHV0I2WGNfWHBRaDFLV19yTEYyWHln';
+    const apiKey = typeof window !== 'undefined' ? atob(encoded) : Buffer.from(encoded, 'base64').toString('utf-8');
+    const url = `https://firestore.googleapis.com/v1/projects/stories-prophets/databases/(default)/documents/episodes/${docId}?key=${apiKey}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.fields?.audioUrl?.stringValue || null;
+  } catch (e) {
+    console.warn('REST episode fetch error:', e);
+    return null;
+  }
+}
+
+/**
+ * Safely fetches audio chunks directly via Firestore REST API
+ * (completely immune to AdBlocker WebChannel blocking like net::ERR_BLOCKED_BY_CLIENT)
+ */
+async function fetchAudioChunksRest(
+  docId: string,
+  onProgress?: (loaded: number, total: number) => void
+): Promise<string | null> {
+  try {
+    const encoded = 'QUl6YVN5QUMwX2VfeWZnQ3hHV0I2WGNfWHBRaDFLV19yTEYyWHln';
+    const apiKey = typeof window !== 'undefined' ? atob(encoded) : Buffer.from(encoded, 'base64').toString('utf-8');
+    const url = `https://firestore.googleapis.com/v1/projects/stories-prophets/databases/(default)/documents/episodes/${docId}/audioChunks?key=${apiKey}&pageSize=100`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json.documents || json.documents.length === 0) return null;
+    const chunks = json.documents
+      .map((d: any) => ({
+        index: parseInt(d.fields?.index?.integerValue || '0', 10),
+        data: d.fields?.data?.stringValue || '',
+      }))
+      .sort((a: any, b: any) => a.index - b.index);
+    const total = chunks.length;
+    const parts = chunks.map((c: any, idx: number) => {
+      onProgress?.(idx + 1, total);
+      return c.data;
+    });
+    return parts.join('');
+  } catch (e) {
+    console.warn('REST audio chunks error:', e);
+    return null;
+  }
+}
+
   // 5. If audioUrl is '__CACHED_BASE64__' (from localStorage) or needs re-fetching from Firestore:
   let effectiveAudioUrl: string | null = episode.audioUrl;
 
   if (effectiveAudioUrl === '__CACHED_BASE64__') {
-    try {
-      const epSnap = await getDoc(doc(db, 'episodes', episode.docId));
-      if (epSnap.exists()) {
-        const freshData = epSnap.data();
-        effectiveAudioUrl = freshData.audioUrl || null;
-      } else {
+    // Try fast REST fetch directly first to avoid adblocker WebChannel hangs
+    const restAudio = await fetchEpisodeDocRest(episode.docId);
+    if (restAudio) {
+      effectiveAudioUrl = restAudio;
+    } else {
+      try {
+        const epSnap = await getDoc(doc(db, 'episodes', episode.docId));
+        if (epSnap.exists()) {
+          const freshData = epSnap.data();
+          effectiveAudioUrl = freshData.audioUrl || null;
+        } else {
+          effectiveAudioUrl = '__CHUNKS__';
+        }
+      } catch (err) {
+        console.warn('Could not fetch episode doc directly, attempting chunks fallback:', err);
         effectiveAudioUrl = '__CHUNKS__';
       }
-    } catch (err) {
-      console.warn('Could not fetch episode doc directly, attempting chunks fallback:', err);
-      effectiveAudioUrl = '__CHUNKS__';
     }
   }
 
@@ -429,6 +488,18 @@ export async function resolveAudioUrl(
 
   // 6. Fetch and reassemble chunks progressively from Firestore
   try {
+    // Try REST fetch first for chunks: fast and bypasses adblockers
+    const restFullBase64 = await fetchAudioChunksRest(episode.docId, onProgress);
+    if (restFullBase64) {
+      const blob = dataUrlToBlob(restFullBase64);
+      if (blob) {
+        setCachedAudioBlob(episode.docId, blob);
+        const blobUrl = URL.createObjectURL(blob);
+        blobUrlCache.set(episode.docId, blobUrl);
+        return blobUrl;
+      }
+    }
+
     const chunksCol = collection(db, 'episodes', episode.docId, 'audioChunks');
     const q = query(chunksCol, orderBy('index', 'asc'));
     const snap = await getDocs(q);
