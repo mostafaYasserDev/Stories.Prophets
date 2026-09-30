@@ -62,8 +62,24 @@ const DEFAULT_INITIAL_EPISODES: Episode[] = INITIAL_SEED_EPISODES.map((ep: any, 
 }));
 
 export default function HomePage() {
-  // App Data State (Initialized with default seed so static pre-rendering contains full content for SEO crawlers)
-  const [episodes, setEpisodes] = useState<Episode[]>(DEFAULT_INITIAL_EPISODES);
+  // App Data State (Lazy-initialized from cache or seed for instant zero-flicker 0ms first paint)
+  const [episodes, setEpisodes] = useState<Episode[]>(() => {
+    if (typeof window === 'undefined') return DEFAULT_INITIAL_EPISODES;
+    try {
+      const cached = localStorage.getItem('seerah_cached_episodes');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const visibleOnly = parsed.filter((ep: Episode) => !ep.isHidden);
+          if (visibleOnly.length > 0) return visibleOnly;
+        }
+      }
+    } catch (e) {
+      console.warn('Cache lazy-init error:', e);
+    }
+    return DEFAULT_INITIAL_EPISODES;
+  });
+
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [lastReadIndex, setLastReadIndex] = useState<number>(0);
   const [activeEra, setActiveEra] = useState<string>('all');
@@ -128,37 +144,6 @@ export default function HomePage() {
     document.documentElement.setAttribute('data-theme', savedTheme);
     document.documentElement.setAttribute('data-font', savedFont);
     document.documentElement.style.setProperty('--font-size-base', `${savedFontSize}px`);
-  }, []);
-
-  // Instant Cache-First Initialization (0ms initial load)
-  useEffect(() => {
-    try {
-      const cached = localStorage.getItem('seerah_cached_episodes');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const visibleOnly = parsed.filter((ep: Episode) => !ep.isHidden);
-          if (visibleOnly.length > 0) {
-            setEpisodes(visibleOnly);
-            return;
-          }
-        }
-      }
-      // First visit fallback: load initial seed immediately to eliminate wait
-      const seedMapped: Episode[] = INITIAL_SEED_EPISODES.map((ep: any, idx: number) => ({
-        docId: `seed-${idx + 1}`,
-        order: idx + 1,
-        era: ep.era,
-        title: ep.title,
-        subtitle: ep.subtitle || `الحلقة ${String(idx + 1).padStart(3, '0')}`,
-        html: ep.html,
-        audioUrl: null,
-        createdAt: null,
-      }));
-      setEpisodes(seedMapped);
-    } catch (e) {
-      console.warn('Cache initialization error:', e);
-    }
   }, []);
 
   // Real-time Firestore Episodes Listener & Auto-seed with AdBlocker-proof REST fallback
