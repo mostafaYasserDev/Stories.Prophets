@@ -32,7 +32,6 @@ import { Episode, Series, ThemeType, FontType, SiteSettings } from '@/types';
 import { audioManager } from '@/lib/audioManager';
 import { setCachedAudioBlob, dataUrlToBlob } from '@/lib/audioStorage';
 import { db, initAnalytics } from '@/lib/firebase';
-import { INITIAL_SEED_EPISODES } from '@/lib/seedData';
 import {
   collection,
   query,
@@ -50,20 +49,10 @@ import { Reflections } from '@/components/Reflections';
 import { Toast, ToastMessage } from '@/components/Toast';
 import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 
-const DEFAULT_INITIAL_EPISODES: Episode[] = INITIAL_SEED_EPISODES.map((ep: any, idx: number) => ({
-  docId: `seed-${idx + 1}`,
-  order: idx + 1,
-  era: ep.era,
-  title: ep.title,
-  subtitle: ep.subtitle || `الحلقة ${String(idx + 1).padStart(3, '0')}`,
-  html: ep.html,
-  audioUrl: null,
-  createdAt: null,
-}));
-
 export default function HomePage() {
-  // App Data State (Initialized with default seed on both server and client to guarantee zero hydration mismatch)
-  const [episodes, setEpisodes] = useState<Episode[]>(DEFAULT_INITIAL_EPISODES);
+  // App Data State (Initialized empty with isLoadingData=true: zero dummy data is ever shown)
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
 
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [lastReadIndex, setLastReadIndex] = useState<number>(0);
@@ -126,6 +115,7 @@ export default function HomePage() {
     setReadEpisodes(savedRead);
     setLastReadIndex(savedIndex);
 
+    // Fallback: If offline after 3 seconds, load valid local cache if available
     try {
       const cached = localStorage.getItem('seerah_cached_episodes');
       if (cached) {
@@ -133,12 +123,20 @@ export default function HomePage() {
         if (Array.isArray(parsed) && parsed.length > 0) {
           const visibleOnly = parsed.filter((ep: Episode) => !ep.isHidden);
           if (visibleOnly.length > 0) {
-            setEpisodes(visibleOnly);
+            setTimeout(() => {
+              setEpisodes((current) => {
+                if (current.length === 0) {
+                  setIsLoadingData(false);
+                  return visibleOnly;
+                }
+                return current;
+              });
+            }, 3000);
           }
         }
       }
     } catch (e) {
-      console.warn('Cache load error:', e);
+      console.warn('Cache fallback setup error:', e);
     }
 
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -150,22 +148,38 @@ export default function HomePage() {
   useEffect(() => {
     let isSnapshotReceived = false;
 
+    // Full pagination REST fetch to guarantee all documents across all pages are retrieved
     const fetchViaRest = async () => {
       try {
         const encoded = 'QUl6YVN5QUMwX2VfeWZnQ3hHV0I2WGNfWHBRaDFLV19yTEYyWHln';
         const apiKey = typeof window !== 'undefined' ? atob(encoded) : Buffer.from(encoded, 'base64').toString('utf-8');
-        const url = `https://firestore.googleapis.com/v1/projects/stories-prophets/databases/(default)/documents/episodes?key=${apiKey}&pageSize=50`;
-        const res = await fetch(url);
-        if (!res.ok) return;
-        const json = await res.json();
-        if (!json.documents || json.documents.length === 0) return;
+        
+        let pageToken = '';
+        const rawDocs: any[] = [];
+        let loopCount = 0;
 
-        const items: Episode[] = json.documents.map((d: any) => {
+        while (loopCount < 10) {
+          loopCount++;
+          let url = `https://firestore.googleapis.com/v1/projects/stories-prophets/databases/(default)/documents/episodes?key=${apiKey}&pageSize=100`;
+          if (pageToken) url += `&pageToken=${encodeURIComponent(pageToken)}`;
+          const res = await fetch(url);
+          if (!res.ok) break;
+          const json = await res.json();
+          if (json.documents && Array.isArray(json.documents)) {
+            rawDocs.push(...json.documents);
+          }
+          pageToken = json.nextPageToken || '';
+          if (!pageToken) break;
+        }
+
+        if (rawDocs.length === 0) return;
+
+        const items: Episode[] = rawDocs.map((d: any) => {
           const fields = d.fields || {};
           const docId = d.name ? d.name.split('/').pop() : d.id;
           return {
             docId,
-            order: parseInt(fields.order?.integerValue || '0', 10),
+            order: parseInt(fields.order?.integerValue || fields.order?.stringValue || '0', 10),
             era: fields.era?.stringValue || '',
             title: fields.title?.stringValue || '',
             subtitle: fields.subtitle?.stringValue || '',
@@ -183,8 +197,17 @@ export default function HomePage() {
 
         items.sort((a, b) => (a.order || 0) - (b.order || 0));
         const visibleItems = items.filter((ep) => !ep.isHidden);
+
         if (visibleItems.length > 0) {
-          setEpisodes(visibleItems);
+          setEpisodes((prev) => {
+            // If snapshot already arrived with equal or greater count, keep snapshot
+            if (isSnapshotReceived && prev.length >= visibleItems.length) {
+              return prev;
+            }
+            return visibleItems;
+          });
+          setIsLoadingData(false);
+
           visibleItems.forEach((ep) => {
             if (ep.docId && ep.audioUrl && ep.audioUrl.startsWith('data:')) {
               const b = dataUrlToBlob(ep.audioUrl);
@@ -193,9 +216,28 @@ export default function HomePage() {
               }
             }
           });
+
+          try {
+            const cacheSafe = visibleItems.map((ep) => ({
+              docId: ep.docId,
+              order: ep.order,
+              era: ep.era,
+              title: ep.title,
+              subtitle: ep.subtitle,
+              html: ep.html,
+              audioUrl: ep.audioUrl && ep.audioUrl.startsWith('data:') ? '__CACHED_BASE64__' : ep.audioUrl,
+              audioType: ep.audioType,
+              audioSourceType: ep.audioSourceType,
+              moralLesson: ep.moralLesson,
+              sources: ep.sources,
+              isPinned: ep.isPinned,
+              isHidden: ep.isHidden,
+            }));
+            localStorage.setItem('seerah_cached_episodes', JSON.stringify(cacheSafe));
+          } catch {}
         }
       } catch (e) {
-        console.warn('REST fallback error:', e);
+        console.warn('REST episodes fallback error:', e);
       }
     };
 
@@ -206,6 +248,7 @@ export default function HomePage() {
       async (snapshot) => {
         isSnapshotReceived = true;
         if (snapshot.empty) {
+          setIsLoadingData(false);
           return;
         }
 
@@ -217,6 +260,7 @@ export default function HomePage() {
         items.sort((a, b) => (a.order || 0) - (b.order || 0));
         const visibleItems = items.filter((ep) => !ep.isHidden);
         setEpisodes(visibleItems);
+        setIsLoadingData(false);
 
         try {
           const cacheSafe = visibleItems.map((ep) => ({
@@ -367,7 +411,7 @@ export default function HomePage() {
     if (savedIndex >= 0 && savedIndex < episodes.length) {
       setCurrentIndex(savedIndex);
     }
-  }, [episodes]);
+  }, [episodes.length]);
 
   // Real-time Site Settings Listener
   useEffect(() => {
@@ -639,6 +683,56 @@ export default function HomePage() {
   const progressPercent = episodes.length
     ? Math.round(((currentIndex + 1) / episodes.length) * 100)
     : 0;
+
+  // Dedicated Royal Islamic Brand Loader (Zero demo data, zero flashing or clipping)
+  if (isLoadingData || episodes.length === 0 || !currentEpisode) {
+    return (
+      <div className="royal-loader-screen" id="islamicLoadingScreen">
+        <div className="royal-loader-card">
+          {/* Islamic Medallion with Dual Concentric Rotating Celestial Rings */}
+          <div className="royal-loader-medallion">
+            <div className="royal-loader-outer-ring" />
+            <div className="royal-loader-inner-ring" />
+            <div className="royal-loader-core-icon">
+              <BookOpen size={40} />
+            </div>
+          </div>
+
+          {/* Salawat Badge */}
+          <div className="royal-loader-salawat">
+            <span>اللَّهُمَّ صَلِّ وَسَلِّمْ وَبَارِكْ عَلَى نَبِيِّنَا مُحَمَّدٍ ﷺ</span>
+          </div>
+
+          {/* Royal Platform Title */}
+          <h1 className="royal-loader-title">
+            {siteSettings.siteTitle || 'قصص الأنبياء وسيرة الرسول ﷺ'}
+          </h1>
+          <p className="royal-loader-sub">
+            {siteSettings.siteSubtitle || 'رحلة إيمانية مباركة في قصص الأنبياء وسيرة خير الأنام ﷺ'}
+          </p>
+
+          {/* Golden Shimmer Progress Track */}
+          <div className="royal-loader-progress-track">
+            <div className="royal-loader-progress-fill" />
+          </div>
+
+          {/* Dynamic Status */}
+          <div className="royal-loader-status">
+            <Sparkles size={16} style={{ animation: 'spinSlow 4s linear infinite', color: 'var(--gold)' }} />
+            <span>جاري استحضار الحلقات والسلاسل المباركة...</span>
+          </div>
+
+          {/* Dedication Tag */}
+          <div className="royal-loader-dedication">
+            <span>
+              {siteSettings.dedicationBadge || 'صَدَقَةٌ جَارِيَةٌ عَنّي'}{' '}
+              {siteSettings.dedicationName || 'محمد هاشم ضيف الله'}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
@@ -1075,38 +1169,7 @@ export default function HomePage() {
                 </button>
               </div>
             </article>
-          ) : (
-            <div className="islamic-loading-screen" id="islamicLoadingScreen">
-              <div className="islamic-loader-card">
-                <div className="islamic-loader-emblem-wrap">
-                  <div className="islamic-loader-ring" />
-                  <div className="islamic-loader-ring-inner" />
-                  <div className="islamic-loader-core-icon">🕌</div>
-                </div>
-
-                <div className="loader-salawat-badge">
-                  اللَّهُمَّ صَلِّ وَسَلِّمْ وَبَارِكْ عَلَى سَيِّدِنَا مُحَمَّدٍ ﷺ
-                </div>
-
-                <h3 className="loader-title">جارٍ فتح صحائف قصص الأنبياء وسيرة الرسول...</h3>
-                <p className="loader-sub">رحلة إيمانية مباركة في قصص الأنبياء وسيرة خير الأنام ﷺ</p>
-
-                {/* Shimmer Skeleton Reader Representation */}
-                <div className="skeleton-header-row">
-                  <div className="skeleton-box skeleton-tag" />
-                </div>
-                <div className="skeleton-box skeleton-title" />
-                <div className="skeleton-box skeleton-subtitle" />
-
-                <div className="skeleton-paragraphs">
-                  <div className="skeleton-box skeleton-line" />
-                  <div className="skeleton-box skeleton-line medium" />
-                  <div className="skeleton-box skeleton-line" />
-                  <div className="skeleton-box skeleton-line short" />
-                </div>
-              </div>
-            </div>
-          )}
+          ) : null}
 
           {/* Dedication Banner & Footer */}
           <footer className="dedication-card">

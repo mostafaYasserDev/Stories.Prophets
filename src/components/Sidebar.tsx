@@ -211,7 +211,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (collapsedSeries.has(key)) return false;
     if (isSearchOrFilterActive) return true;
     if (hasActiveEpisode) return true;
-    return false;
+    return true; // Default all series groups to expanded so all published episodes are instantly visible without clipping
   };
 
   // Toggle single series

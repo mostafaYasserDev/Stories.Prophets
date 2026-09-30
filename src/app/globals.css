@@ -4003,6 +4003,188 @@ body.focus-mode .reading-card {
 .skeleton-line.short { width: 65%; }
 .skeleton-line.medium { width: 85%; }
 
+/* ==================== ROYAL ISLAMIC BRAND LOADER ==================== */
+.royal-loader-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: radial-gradient(circle at 50% 35%, rgba(212, 175, 55, 0.08) 0%, rgba(12, 16, 26, 0.98) 65%, var(--bg-primary, #0c101a) 100%);
+  position: relative;
+  z-index: 1000;
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.royal-loader-card {
+  width: 100%;
+  max-width: 620px;
+  background: rgba(18, 23, 37, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 24px;
+  padding: 48px 32px 36px;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), 0 0 40px rgba(212, 175, 55, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.royal-loader-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--gold, #d4af37), transparent);
+}
+
+/* Islamic Medallion */
+.royal-loader-medallion {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  margin: 0 auto 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.royal-loader-outer-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px dashed rgba(212, 175, 55, 0.45);
+  animation: spinSlow 14s linear infinite;
+}
+
+.royal-loader-inner-ring {
+  position: absolute;
+  inset: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(212, 175, 55, 0.25);
+  border-top-color: var(--gold, #d4af37);
+  border-bottom-color: var(--gold, #d4af37);
+  animation: spinReverse 3.5s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite;
+}
+
+@keyframes spinReverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+.royal-loader-core-icon {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold, #d4af37);
+  animation: royalPulse 2.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 14px rgba(212, 175, 55, 0.6));
+}
+
+@keyframes royalPulse {
+  0%, 100% {
+    transform: scale(0.96);
+    filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.45));
+  }
+  50% {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 22px rgba(212, 175, 55, 0.85));
+  }
+}
+
+.royal-loader-salawat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 22px;
+  border-radius: 50px;
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  color: var(--gold, #d4af37);
+  font-family: var(--font-title, 'Amiri', serif);
+  font-size: 0.96rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  margin-bottom: 18px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.royal-loader-title {
+  font-family: var(--font-title, 'Amiri', serif);
+  font-size: 1.85rem;
+  font-weight: 800;
+  line-height: 1.35;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #ffffff 30%, var(--gold, #d4af37) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+[data-theme="light"] .royal-loader-title {
+  background: linear-gradient(135deg, #1e293b 30%, #b48c28 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.royal-loader-sub {
+  font-size: 0.92rem;
+  color: var(--text-muted, #94a3b8);
+  margin-bottom: 30px;
+  line-height: 1.6;
+}
+
+/* Shimmer Progress Track */
+.royal-loader-progress-track {
+  width: 100%;
+  max-width: 320px;
+  height: 4px;
+  margin: 0 auto 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.royal-loader-progress-fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, var(--gold, #d4af37) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: royalShimmer 1.6s ease-in-out infinite;
+  border-radius: 10px;
+}
+
+@keyframes royalShimmer {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.royal-loader-status {
+  font-size: 0.85rem;
+  color: var(--gold, #d4af37);
+  opacity: 0.9;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.royal-loader-dedication {
+  display: inline-block;
+  font-size: 0.76rem;
+  color: var(--text-muted, #94a3b8);
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 /* ==================== SIDEBAR MOBILE CLOSE BUTTON ==================== */
 
 .sidebar-mobile-close-btn {
